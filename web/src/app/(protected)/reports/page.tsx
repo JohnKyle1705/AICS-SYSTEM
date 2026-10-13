@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { BARANGAYS, ASSISTANCE_TYPES, ASSISTANCE_COLORS } from '@/lib/constants'
 import {
@@ -62,19 +63,38 @@ export default function ReportsPage() {
 
   useEffect(() => { load() }, [load])
 
+  // Real-time synchronization when request records change in database
   useEffect(() => {
-    // Base rule: always exclude Declined unless the toggle is ON
-    let result = includeDeclined
-      ? [...allData]
-      : allData.filter(r => r.status !== 'Declined')
+    const channel = supabase
+      .channel('reports_page_realtime_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+        load()
+      })
+      .subscribe()
 
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [load])
+
+  // Base scoped data matching current filters
+  const scopedData = useMemo(() => {
+    let result = [...allData]
     if (filters.from) result = result.filter(r => r.created_at >= filters.from)
     if (filters.to) result = result.filter(r => r.created_at <= filters.to + 'T23:59:59')
     if (filters.barangay) result = result.filter(r => r.beneficiaries?.barangay === filters.barangay)
     if (filters.type) result = result.filter(r => r.assistance_type === filters.type)
     if (filters.status) result = result.filter(r => r.status === filters.status)
+    return result
+  }, [allData, filters])
+
+  useEffect(() => {
+    // Breakdown table and charts dataset (respects includeDeclined toggle)
+    const result = includeDeclined
+      ? scopedData
+      : scopedData.filter(r => r.status !== 'Declined')
     setFilteredData(result)
-  }, [allData, filters, includeDeclined])
+  }, [scopedData, includeDeclined])
 
   // Compute monthly trend (last 6 months) — always excludes Declined
   useEffect(() => {
@@ -92,13 +112,13 @@ export default function ReportsPage() {
     setMonthlyData(months)
   }, [allData, includeDeclined])
 
-  // Stats
+  // Stats — numbers directly match the actual database requests
   const stats = {
-    total: filteredData.length,
-    pending: filteredData.filter(r => r.status === 'Pending').length,
-    approved: filteredData.filter(r => ['Approved', 'Released'].includes(r.status)).length,
-    declined: filteredData.filter(r => r.status === 'Declined').length,
-    totalAmount: filteredData.reduce((s, r) => s + Number(r.amount_approved || 0), 0),
+    total: scopedData.length,
+    pending: scopedData.filter(r => r.status === 'Pending').length,
+    approved: scopedData.filter(r => ['Approved', 'Released'].includes(r.status)).length,
+    declined: scopedData.filter(r => r.status === 'Declined').length,
+    totalAmount: scopedData.reduce((s, r) => s + Number(r.amount_approved || 0), 0),
   }
 
   // Chart data
@@ -150,10 +170,10 @@ export default function ReportsPage() {
   }
 
   const statCards = [
-    { label: t('dashboard_totalRequests'), value: stats.total, icon: FileText, color: '#7c3aed', bg: '#f5f3ff' },
-    { label: t('dashboard_approved'), value: stats.approved, icon: CheckCircle, color: '#059669', bg: '#ecfdf5' },
-    { label: t('dashboard_pending'), value: stats.pending, icon: Clock, color: '#d97706', bg: '#fffbeb' },
-    { label: t('dashboard_declined'), value: stats.declined, icon: XCircle, color: '#dc2626', bg: '#fef2f2' },
+    { label: t('dashboard_totalRequests'), value: stats.total, icon: FileText, color: '#7c3aed', bg: '#f5f3ff', status: 'All' },
+    { label: t('dashboard_approved'), value: stats.approved, icon: CheckCircle, color: '#059669', bg: '#ecfdf5', status: 'Approved' },
+    { label: t('dashboard_pending'), value: stats.pending, icon: Clock, color: '#d97706', bg: '#fffbeb', status: 'Pending' },
+    { label: t('dashboard_declined'), value: stats.declined, icon: XCircle, color: '#dc2626', bg: '#fef2f2', status: 'Declined' },
   ]
 
 
@@ -181,23 +201,30 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Stat Cards */}
+      {/* Stat Cards - Interactive Navigation */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="card p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bg }}>
+        {statCards.map(({ label, value, icon: Icon, color, bg, status }) => (
+          <Link
+            key={label}
+            href={status === 'All' ? '/requests' : `/requests?status=${status}`}
+            className="card p-5 flex items-center gap-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-blue-500 group border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+            role="button"
+            tabIndex={0}
+            title={`View ${label} AICS requests`}
+          >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110" style={{ background: bg }}>
               <Icon size={22} style={{ color }} />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-[var(--color-text-secondary)] text-xs font-medium">{label}</p>
               <p className="text-2xl font-bold text-[var(--color-text)] mt-0.5">{value}</p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
       {/* Total Amount Banner */}
-      <div className="card p-5 flex items-center gap-4 bg-gradient-to-r from-blue-600 to-violet-600 border-0">
+      <div className="card p-5 flex items-center gap-4 bg-linear-to-r from-blue-600 to-violet-600 border-0">
         <TrendingUp size={28} className="text-white/80" />
         <div>
           <p className="text-white/70 text-sm font-medium">{t('reports_totalAmount')}</p>

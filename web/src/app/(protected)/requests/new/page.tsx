@@ -7,8 +7,9 @@ import { ASSISTANCE_TYPES } from '@/lib/constants'
 import {
   Loader2, Check, X, FileText, AlertCircle, ChevronRight,
   ChevronLeft, GraduationCap, Stethoscope, UtensilsCrossed, Cross,
-  Camera, RotateCcw, User, CreditCard, Upload
+  Camera, RotateCcw, User, CreditCard, Upload, ShieldAlert
 } from 'lucide-react'
+import Link from 'next/link'
 import { BARANGAYS } from '@/lib/constants'
 import CameraModal from '@/components/CameraModal'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -17,16 +18,12 @@ import { useLanguage } from '@/lib/LanguageContext'
 
 
 const TYPE_ICONS: Record<string, any> = {
-  Educational: GraduationCap,
   Medical: Stethoscope,
-  Foods: UtensilsCrossed,
   Burial: Cross,
 }
 
 const AMOUNT_RANGES: Record<string, string[]> = {
-  Educational: ['₱2,000 - ₱5,000', '₱5,001 - ₱10,000'],
   Medical: ['₱1,000 - ₱3,000', '₱3,001 - ₱5,000', '₱5,001 - ₱10,000'],
-  Foods: ['₱1,000 - ₱3,000', '₱3,001 - ₱5,000'],
   Burial: ['₱5,000 - ₱10,000', '₱10,001+']
 }
 
@@ -37,18 +34,10 @@ export default function NewRequestPage() {
   
   // ── Per-type field configurations ──────────────────────────────
   const TYPE_FIELDS: Record<string, { key: string; label: string; type: string; placeholder: string; required?: boolean }[]> = {
-    Educational: [
-      { key: 'school_name', label: t('newRequest_fields.school_name'), type: 'text', placeholder: t('newRequest_placeholders.school_name'), required: true },
-      { key: 'course_grade', label: t('newRequest_fields.course_grade'), type: 'text', placeholder: t('newRequest_placeholders.course_grade'), required: true },
-    ],
     Medical: [
       { key: 'hospital_name', label: t('newRequest_fields.hospital_name'), type: 'text', placeholder: t('newRequest_placeholders.hospital_name'), required: true },
       { key: 'diagnosis', label: t('newRequest_fields.diagnosis'), type: 'text', placeholder: t('newRequest_placeholders.diagnosis'), required: true },
       { key: 'estimated_cost', label: t('newRequest_fields.estimated_cost'), type: 'number', placeholder: '0.00', required: true },
-    ],
-    Foods: [
-      { key: 'household_size', label: t('newRequest_fields.household_size'), type: 'number', placeholder: 'e.g. 5', required: true },
-      { key: 'monthly_income', label: t('newRequest_fields.monthly_income'), type: 'number', placeholder: '0.00', required: true },
     ],
     Burial: [
       { key: 'deceased_name', label: t('newRequest_fields.deceased_name'), type: 'text', placeholder: t('newRequest_placeholders.deceased_name'), required: true },
@@ -67,6 +56,16 @@ export default function NewRequestPage() {
   const [cameraOpen, setCameraOpen] = useState<'front' | 'back' | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Duplicate Prevention States
+  const [isBlocked, setIsBlocked] = useState(false)
+  const [blockedMessage, setBlockedMessage] = useState('')
+  const [recentRequests, setRecentRequests] = useState<any[]>([])
+  const [restrictionDays, setRestrictionDays] = useState(30)
+
+  // Registration gate states
+  const [isUnregistered, setIsUnregistered] = useState(false)
+  const [loadingCheck, setLoadingCheck] = useState(true)
 
   const fileInputFrontRef = useRef<HTMLInputElement>(null)
   const fileInputBackRef = useRef<HTMLInputElement>(null)
@@ -97,50 +96,77 @@ export default function NewRequestPage() {
   const updatePersonal = (key: string, value: string) =>
     setPersonalInfo(prev => ({ ...prev, [key]: value }))
 
-  // ── Role Guard ───────────────────────────────────────────────
+  // ── Role Guard & Load Beneficiary ────────────────────────────
   useEffect(() => {
-    const checkRole = async () => {
+    const initPage = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-        if (profile?.role && profile.role !== 'resident') {
-          router.replace('/requests')
-        }
-      }
-    }
-    checkRole()
-  }, [router, supabase])
+      if (!user) return
 
-  // ── Load user's beneficiary record ───────────────────────────
-  useEffect(() => {
-    const loadMyBeneficiary = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: b } = await supabase.from('beneficiaries').select('*').eq('created_by', user.id).single()
-        if (b) {
-          setMyBeneficiary(b)
-          setBeneficiaryId(b.id)
-          setPersonalInfo({
-            full_name: `${b.last_name}, ${b.first_name}${b.middle_name ? ' ' + b.middle_name : ''}${b.suffix ? ' ' + b.suffix : ''}`,
-            address: b.address || '',
-            contact_number: b.contact_number || '',
-            email: '',
-            birthdate: b.birthdate || '',
-            civil_status: b.civil_status || '',
-            occupation: b.occupation || '',
-            monthly_income: b.monthly_income?.toString() || '',
-            household_size: b.family_size?.toString() || '',
-            barangay: b.barangay || '',
-            sex: b.sex || '',
-            is_pwd: b.is_pwd || false,
-            is_senior: b.is_senior || false,
-            is_4ps: b.is_4ps || false
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role && profile.role !== 'resident') {
+        router.replace('/requests')
+        return
+      }
+
+      const { data: b } = await supabase.from('beneficiaries').select('*').eq('created_by', user.id).maybeSingle()
+      if (!b) {
+        setIsUnregistered(true)
+        setLoadingCheck(false)
+        return
+      }
+
+      setMyBeneficiary(b)
+      setBeneficiaryId(b.id)
+      setPersonalInfo({
+        full_name: `${b.last_name}, ${b.first_name}${b.middle_name ? ' ' + b.middle_name : ''}${b.suffix ? ' ' + b.suffix : ''}`,
+        address: b.address || '',
+        contact_number: b.contact_number || '',
+        email: '',
+        birthdate: b.birthdate || '',
+        civil_status: b.civil_status || '',
+        occupation: b.occupation || '',
+        monthly_income: b.monthly_income?.toString() || '',
+        household_size: b.family_size?.toString() || '',
+        barangay: b.barangay || '',
+        sex: b.sex || '',
+        is_pwd: b.is_pwd || false,
+        is_senior: b.is_senior || false,
+        is_4ps: b.is_4ps || false
+      })
+
+      // DUPLICATE PREVENTION CHECK
+      // 1. Get restriction days
+      const { data: settings } = await supabase.from('system_settings').select('setting_value').eq('setting_key', 'duplicate_restriction_days').single()
+      const rDays = settings ? parseInt(settings.setting_value) : 30
+      setRestrictionDays(rDays)
+
+      // 2. Fetch all requests for this beneficiary
+      const { data: requests } = await supabase.from('requests').select('*').eq('beneficiary_id', b.id)
+      if (requests) {
+        // Check for active requests
+        const activeReq = requests.find((r: any) => r.status === 'Pending' || r.status === 'Approved')
+        if (activeReq) {
+          setIsBlocked(true)
+          setBlockedMessage('You already have an existing AICS request that is currently being processed. Multiple active requests are not allowed. Please wait for the status of your current application.')
+          
+          await supabase.from('system_logs').insert({
+            user_id: user.id,
+            action: 'BLOCKED_DUPLICATE_REQUEST',
+            details: { reason: 'Active request exists', beneficiary_id: b.id }
           })
+        } else {
+          // Check for recent requests
+          const cutoff = new Date()
+          cutoff.setDate(cutoff.getDate() - rDays)
+          const recent = requests.filter((r: any) => new Date(r.created_at) >= cutoff)
+          setRecentRequests(recent)
         }
       }
+
+      setLoadingCheck(false)
     }
-    loadMyBeneficiary()
-  }, [supabase])
+    initPage()
+  }, [router, supabase])
 
   // ── Load requirements when type changes ──────────────────────
   useEffect(() => {
@@ -148,7 +174,7 @@ export default function NewRequestPage() {
       supabase.from('assistance_requirements')
         .select('*')
         .eq('assistance_type', assistanceType)
-        .then(({ data }) => {
+        .then(({ data }: { data: any }) => {
           setRequirements(data ?? [])
           setPreparedDocs({})
         })
@@ -189,6 +215,11 @@ export default function NewRequestPage() {
 
   // ── Submit ───────────────────────────────────────────────────
   const onSubmit = async () => {
+    if (!beneficiaryId || isUnregistered) {
+      setError('You must complete your beneficiary registration before submitting an AICS request.')
+      return
+    }
+
     if (!validIdFront || !validIdBack) {
       setError(t('newRequest_frontRequired'))
       return
@@ -276,24 +307,43 @@ export default function NewRequestPage() {
           {ASSISTANCE_TYPES.map(type => {
             const Icon = TYPE_ICONS[type]
             const active = assistanceType === type
+            const isRestricted = recentRequests.some(r => r.assistance_type === type)
+            
             return (
               <button
                 key={type}
-                onClick={() => setAssistanceType(type)}
+                onClick={() => {
+                  if (isRestricted) {
+                    setError(`You have already submitted a request for ${type} assistance within the last ${restrictionDays} days. Please wait for the restriction period to end.`)
+                    supabase.from('system_logs').insert({
+                       action: 'BLOCKED_DUPLICATE_REQUEST',
+                       details: { reason: 'Restriction period', type, beneficiary_id: myBeneficiary?.id }
+                    })
+                  } else {
+                    setAssistanceType(type)
+                  }
+                }}
                 className={`flex flex-col items-center p-6 rounded-2xl border-2 transition-all duration-300 group ${
                   active 
                   ? 'border-blue-500 bg-blue-500/5 ring-4 ring-blue-500/10' 
+                  : isRestricted
+                  ? 'border-red-200 bg-red-50/50 opacity-60 cursor-not-allowed'
                   : 'border-[var(--color-border)] hover:border-blue-500/50 hover:bg-slate-50'
                 }`}
               >
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all duration-300 ${
-                  active ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'
+                  active ? 'bg-blue-500 text-white' : isRestricted ? 'bg-red-100 text-red-400' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'
                 }`}>
                   <Icon size={28} />
                 </div>
-                <span className={`font-bold text-sm ${active ? 'text-blue-600' : 'text-[var(--color-text-secondary)]'}`}>
+                <span className={`font-bold text-sm ${active ? 'text-blue-600' : isRestricted ? 'text-red-500' : 'text-[var(--color-text-secondary)]'}`}>
                   {t(type.toLowerCase() as any)}
                 </span>
+                {isRestricted && (
+                  <span className="text-[10px] font-bold text-red-500 mt-2 bg-red-100 px-2 py-0.5 rounded uppercase tracking-widest">
+                    Restricted
+                  </span>
+                )}
               </button>
             )
           })}
@@ -543,6 +593,39 @@ export default function NewRequestPage() {
     </div>
   )
 
+  if (loadingCheck) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 size={32} className="animate-spin text-blue-500" />
+        <p className="text-slate-400 text-sm font-medium">Checking beneficiary registration status...</p>
+      </div>
+    )
+  }
+
+  if (isUnregistered) {
+    return (
+      <div className="max-w-lg mx-auto my-14 card p-8 sm:p-10 text-center space-y-6 bg-slate-900/90 border border-slate-800 shadow-2xl rounded-2xl animate-fade-in">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+          <ShieldAlert size={36} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-white">Beneficiary Registration Required</h2>
+          <p className="text-slate-300 text-sm leading-relaxed max-w-md mx-auto">
+            You must complete your beneficiary registration before submitting an AICS request.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <Link href="/beneficiaries/new" className="btn btn-primary px-7 py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 text-center">
+            Complete Registration
+          </Link>
+          <Link href="/resident/dashboard" className="px-6 py-3 rounded-xl text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 text-sm font-semibold transition-colors text-center border border-slate-700/50">
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in" id="new-request-page">
       <div>
@@ -568,9 +651,24 @@ export default function NewRequestPage() {
         ))}
       </div>
 
-      {step === 1 && renderStep1()}
-      {step === 2 && renderStep2()}
-      {step === 3 && renderStep3()}
+      {isBlocked ? (
+        <div className="bg-red-50/80 border border-red-200 rounded-2xl p-8 text-center animate-in fade-in slide-in-from-bottom-4">
+          <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-red-700 mb-2">Request Blocked</h2>
+          <p className="text-red-600/80 max-w-md mx-auto mb-6">{blockedMessage}</p>
+          <button onClick={() => router.push('/requests')} className="btn btn-secondary bg-white">
+            Return to My Requests
+          </button>
+        </div>
+      ) : (
+        <>
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+        </>
+      )}
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -580,26 +678,28 @@ export default function NewRequestPage() {
       )}
 
       <div className="flex justify-between items-center pt-4">
-        {step > 1 ? (
+        {!isBlocked && step > 1 ? (
           <button onClick={prevStep} className="btn btn-secondary flex items-center gap-2 px-6">
             <ChevronLeft size={18} /> {t('back')}
           </button>
         ) : <div />}
 
-        <button
-          onClick={step === 3 ? onSubmit : nextStep}
-          disabled={saving}
-          className="btn btn-primary flex items-center gap-2 min-w-[140px] justify-center py-3 shadow-xl shadow-blue-500/20"
-        >
-          {saving ? (
-            <><Loader2 size={18} className="animate-spin" /> {t('submitting')}</>
-          ) : (
-            <>
-              {step === 3 ? t('newRequest_submit') : t('next')}
-              <ChevronRight size={18} />
-            </>
-          )}
-        </button>
+        {!isBlocked && (
+          <button
+            onClick={step === 3 ? onSubmit : nextStep}
+            disabled={saving}
+            className="btn btn-primary flex items-center gap-2 min-w-[140px] justify-center py-3 shadow-xl shadow-blue-500/20"
+          >
+            {saving ? (
+              <><Loader2 size={18} className="animate-spin" /> {t('submitting')}</>
+            ) : (
+              <>
+                {step === 3 ? t('newRequest_submit') : t('next')}
+                <ChevronRight size={18} />
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       <CameraModal

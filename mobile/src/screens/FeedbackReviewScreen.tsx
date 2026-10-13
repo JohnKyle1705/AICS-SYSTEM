@@ -99,7 +99,7 @@ export default function FeedbackReviewScreen({ navigation }: any) {
                   </View>
                   <View style={{ flexDirection: 'row' }}>
                     {[1, 2, 3, 4, 5].map(star => (
-                      <Feather key={star} name="star" size={14} color={star <= f.rating ? '#facc15' : colors.border} style={star <= f.rating ? { fill: '#facc15' } : {}} />
+                      <Feather key={star} name="star" size={14} color={star <= f.rating ? '#facc15' : colors.border} />
                     ))}
                   </View>
                 </View>

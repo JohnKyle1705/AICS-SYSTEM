@@ -33,7 +33,11 @@ export default function RequestsScreen({ route, navigation }: any) {
       .order('created_at', { ascending: false })
 
     if (statusFilter !== 'All') {
-      query = query.eq('status', statusFilter)
+      if (statusFilter === 'Approved') {
+        query = query.in('status', ['Approved', 'Released'])
+      } else {
+        query = query.eq('status', statusFilter)
+      }
     }
 
     if (profile?.role === 'resident') {
@@ -50,6 +54,20 @@ export default function RequestsScreen({ route, navigation }: any) {
   }, [search, statusFilter])
 
   useEffect(() => { load() }, [load])
+
+  // Real-time synchronization when requests change in database
+  useEffect(() => {
+    const channel = supabase
+      .channel('mobile_requests_screen_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+        load()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [load])
 
   useEffect(() => {
     if (route.params?.statusFilter) {
@@ -109,7 +127,7 @@ export default function RequestsScreen({ route, navigation }: any) {
               onPress={() => setStatusFilter(status)}
               activeOpacity={0.7}
             >
-              <Text style={[s.filterChipText, statusFilter === status && s.filterChipTextActive]}>{status === 'All' ? t('dashboard_totalRequests').split(' ')[0] : t('dashboard_' + status.toLowerCase()) || status}</Text>
+              <Text style={[s.filterChipText, statusFilter === status && s.filterChipTextActive]}>{status === 'All' ? t('dashboard_totalRequests').split(' ')[0] : t(('dashboard_' + status.toLowerCase()) as any) || status}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -132,18 +150,27 @@ export default function RequestsScreen({ route, navigation }: any) {
                   <Text style={s.cardSub}>{item.beneficiaries?.barangay} • {item.assistance_type}</Text>
                 </View>
                 <View style={[s.badge, { backgroundColor: isDark ? c.darkBg : c.bg }]}>
-                  <Text style={[s.badgeText, { color: isDark ? c.darkText : c.text }]}>{t('dashboard_' + item.status.toLowerCase()) || item.status}</Text>
+                  <Text style={[s.badgeText, { color: isDark ? c.darkText : c.text }]}>{t(('dashboard_' + item.status.toLowerCase()) as any) || item.status}</Text>
                 </View>
               </View>
               <Text style={s.purpose} numberOfLines={1}>{item.purpose}</Text>
+              {item.status === 'Declined' && !!item.remarks && (
+                <Text style={{ fontSize: 12, color: '#ef4444', fontStyle: 'italic', marginTop: 4 }} numberOfLines={2}>
+                  Reason: {item.remarks}
+                </Text>
+              )}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, alignItems: 'center' }}>
                 <Text style={s.amount}>
-                  {item.amount_requested ? `₱${Number(item.amount_requested).toLocaleString()}` : '—'}
+                  {(item.status === 'Approved' || item.status === 'Released') && item.amount_approved
+                    ? `₱${Number(item.amount_approved).toLocaleString()}`
+                    : item.amount_requested
+                    ? `₱${Number(item.amount_requested).toLocaleString()}`
+                    : '—'}
                 </Text>
                 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <Text style={s.date}>{format(new Date(item.created_at), 'MMM d, yyyy')}</Text>
-                  {(userRole === 'admin' || userRole === 'staff' || userRole === 'resident') && (
+                  {(userRole === 'admin' || userRole === 'resident') && (
                     <TouchableOpacity 
                       onPress={(e) => {
                         e.stopPropagation(); // prevent navigation

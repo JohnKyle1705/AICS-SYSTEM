@@ -8,12 +8,10 @@ import { Feather } from '@expo/vector-icons'
 
 import { PieChart, BarChart, LineChart } from 'react-native-chart-kit'
 
-const ASSISTANCE_TYPES = ['Medical', 'Burial', 'Educational', 'Foods'] as const
+const ASSISTANCE_TYPES = ['Medical', 'Burial'] as const
 const ASSISTANCE_COLORS: Record<string, string> = {
   Medical: '#3b82f6',
-  Burial: '#6b7280',
-  Educational: '#8b5cf6',
-  Foods: '#f59e0b',
+  Burial: '#64748b'
 }
 const STATUS_COLORS: Record<string, string> = {
   Pending: '#f59e0b',
@@ -65,21 +63,40 @@ export default function ReportsScreen({ navigation }: any) {
 
   useEffect(() => { load() }, [load])
 
-  // Apply filters — Declined excluded by default
-  const filtered = allData.filter(r => {
-    if (!includeDeclined && r.status === 'Declined') return false
+  // Real-time synchronization when requests change in database
+  useEffect(() => {
+    const channel = supabase
+      .channel('mobile_reports_requests_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+        load()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [load])
+
+  // Base scoped data respecting type & status filters
+  const scopedData = allData.filter(r => {
     if (filterType && r.assistance_type !== filterType) return false
     if (filterStatus && r.status !== filterStatus) return false
     return true
   })
 
-  // Stats
+  // Apply filters — Declined excluded by default for charts and breakdown tables
+  const filtered = scopedData.filter(r => {
+    if (!includeDeclined && r.status === 'Declined') return false
+    return true
+  })
+
+  // Stats — numbers directly match database requests for synchronization
   const stats = {
-    total: filtered.length,
-    pending: filtered.filter(r => r.status === 'Pending').length,
-    approved: filtered.filter(r => ['Approved', 'Released'].includes(r.status)).length,
-    declined: filtered.filter(r => r.status === 'Declined').length,
-    totalAmount: filtered.reduce((s, r) => s + Number(r.amount_approved || 0), 0),
+    total: scopedData.length,
+    pending: scopedData.filter(r => r.status === 'Pending').length,
+    approved: scopedData.filter(r => ['Approved', 'Released'].includes(r.status)).length,
+    declined: scopedData.filter(r => r.status === 'Declined').length,
+    totalAmount: scopedData.reduce((s, r) => s + Number(r.amount_approved || 0), 0),
   }
 
   // Pie data - by type
@@ -192,22 +209,26 @@ export default function ReportsScreen({ navigation }: any) {
             </View>
 
 
-            {/* Stat Grid */}
+            {/* Stat Grid - Clickable Summary Cards */}
             <View style={s.grid}>
               {[
-                { label: t('all'), value: stats.total, color: '#7c3aed', bg: isDark ? '#2d2442' : '#f5f3ff', icon: 'file-text' },
-                { label: t('dashboard_approved'), value: stats.approved, color: '#059669', bg: isDark ? '#143d2c' : '#ecfdf5', icon: 'check-circle' },
-                { label: t('dashboard_pending'), value: stats.pending, color: '#d97706', bg: isDark ? '#3d3014' : '#fffbeb', icon: 'clock' },
-                { label: t('dashboard_declined'), value: stats.declined, color: '#dc2626', bg: isDark ? '#3d1414' : '#fef2f2', icon: 'x-circle' },
-              ].map(({ label, value, color, bg, icon }) => (
-
-                <View key={label} style={[s.statCard, { borderLeftColor: color }]}>
+                { label: t('all'), value: stats.total, color: '#7c3aed', bg: isDark ? '#2d2442' : '#f5f3ff', icon: 'file-text', status: 'All' },
+                { label: t('dashboard_approved'), value: stats.approved, color: '#059669', bg: isDark ? '#143d2c' : '#ecfdf5', icon: 'check-circle', status: 'Approved' },
+                { label: t('dashboard_pending'), value: stats.pending, color: '#d97706', bg: isDark ? '#3d3014' : '#fffbeb', icon: 'clock', status: 'Pending' },
+                { label: t('dashboard_declined'), value: stats.declined, color: '#dc2626', bg: isDark ? '#3d1414' : '#fef2f2', icon: 'x-circle', status: 'Declined' },
+              ].map(({ label, value, color, bg, icon, status }) => (
+                <TouchableOpacity
+                  key={label}
+                  style={[s.statCard, { borderLeftColor: color }]}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('Main' as never, { screen: 'Requests', params: { statusFilter: status } } as never)}
+                >
                   <View style={[s.statIcon, { backgroundColor: bg }]}>
                     <Feather name={icon as any} size={18} color={color} />
                   </View>
                   <Text style={[s.statValue, { color }]}>{value}</Text>
                   <Text style={s.statLabel}>{label}</Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
 
@@ -241,15 +262,17 @@ export default function ReportsScreen({ navigation }: any) {
             {monthlyDataSets.some(v => v > 0) ? (
               <View style={s.chartCard}>
                 <LineChart
-                  data={{ labels: monthlyLabels, datasets: [{ data: monthlyDataSets, color: (o = 1) => `rgba(59,130,246,${o})`, strokeWidth: 2 }, { data: monthlyApproved, color: (o = 1) => `rgba(16,185,129,${o})`, strokeWidth: 2 }] }}
-                  width={chartWidth}
-                  height={200}
-                  chartConfig={chartConfig}
-                  bezier
-                  style={{ borderRadius: 16 }}
-                  withDots
-                  withInnerLines={false}
-                  legend={[t('all'), t('dashboard_approved')]}
+                  {...({
+                    data: { labels: monthlyLabels, datasets: [{ data: monthlyDataSets, color: (o = 1) => `rgba(59,130,246,${o})`, strokeWidth: 2 }, { data: monthlyApproved, color: (o = 1) => `rgba(16,185,129,${o})`, strokeWidth: 2 }] },
+                    width: chartWidth,
+                    height: 200,
+                    chartConfig: chartConfig,
+                    bezier: true,
+                    style: { borderRadius: 16 },
+                    withDots: true,
+                    withInnerLines: false,
+                    legend: [t('all'), t('dashboard_approved')]
+                  } as any)}
                 />
               </View>
             ) : <View style={s.empty}><Text style={s.emptyText}>{t('reports_noTrend')}</Text></View>}

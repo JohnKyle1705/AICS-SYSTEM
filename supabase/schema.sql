@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('admin', 'staff', 'encoder', 'resident')),
+  role TEXT NOT NULL CHECK (role IN ('admin', 'resident', 'treasurer')),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -37,7 +37,7 @@ CREATE TABLE beneficiaries (
   is_pwd BOOLEAN DEFAULT false,
   is_senior BOOLEAN DEFAULT false,
   is_4ps BOOLEAN DEFAULT false,
-  created_by UUID REFERENCES profiles(id),
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -48,15 +48,16 @@ CREATE TABLE beneficiaries (
 CREATE TABLE requests (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   beneficiary_id UUID REFERENCES beneficiaries(id) ON DELETE CASCADE NOT NULL,
-  assistance_type TEXT NOT NULL CHECK (assistance_type IN ('Medical', 'Burial', 'Educational', 'Foods')),
+  assistance_type TEXT NOT NULL CHECK (assistance_type IN ('Medical', 'Burial')),
   status TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Released', 'Declined')),
+  release_status TEXT CHECK (release_status IN ('Pending Release', 'Ready for Release', 'Released')),
   amount_requested NUMERIC(10,2),
   amount_approved NUMERIC(10,2),
   purpose TEXT NOT NULL,
   remarks TEXT,
-  encoded_by UUID REFERENCES profiles(id),
-  assessed_by UUID REFERENCES profiles(id),
-  approved_by UUID REFERENCES profiles(id),
+  encoded_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  assessed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  approved_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -70,7 +71,7 @@ CREATE TABLE request_documents (
   file_name TEXT NOT NULL,
   file_path TEXT NOT NULL,
   file_type TEXT,
-  uploaded_by UUID REFERENCES profiles(id),
+  uploaded_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   uploaded_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -84,7 +85,7 @@ CREATE TABLE assessments (
   findings TEXT NOT NULL,
   recommendation TEXT NOT NULL,
   home_visit BOOLEAN DEFAULT false,
-  assessed_by UUID REFERENCES profiles(id),
+  assessed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -97,7 +98,7 @@ CREATE TABLE payouts (
   request_id UUID REFERENCES requests(id) ON DELETE CASCADE NOT NULL,
   amount_released NUMERIC(10,2) NOT NULL,
   release_date DATE NOT NULL,
-  released_by UUID REFERENCES profiles(id),
+  released_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   acknowledgment_notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -121,7 +122,7 @@ CREATE TABLE notifications (
 -- ============================================================
 CREATE TABLE system_logs (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES profiles(id),
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   action TEXT NOT NULL,
   table_name TEXT,
   record_id UUID,
@@ -161,14 +162,14 @@ CREATE POLICY "Authenticated read profiles" ON profiles FOR SELECT USING (auth.r
 -- Only admins/staff can manage beneficiaries, Residents see only their own
 CREATE POLICY "Beneficiaries access" ON beneficiaries FOR ALL USING (
   auth.uid() = created_by OR EXISTS (
-    SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'encoder')
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
   )
 );
 
 -- Only admins/staff can manage requests, Residents see only their own
 CREATE POLICY "Requests access" ON requests FOR ALL USING (
   auth.uid() = encoded_by OR EXISTS (
-    SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'encoder')
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
   )
 );
 CREATE POLICY "Authenticated access" ON request_documents FOR ALL USING (auth.role() = 'authenticated');
@@ -200,6 +201,23 @@ CREATE TRIGGER trg_profiles_updated BEFORE UPDATE ON profiles FOR EACH ROW EXECU
 CREATE TRIGGER trg_beneficiaries_updated BEFORE UPDATE ON beneficiaries FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_requests_updated BEFORE UPDATE ON requests FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_assessments_updated BEFORE UPDATE ON assessments FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
+-- SYSTEM SETTINGS
+-- ============================================================
+CREATE TABLE system_settings (
+  setting_key TEXT PRIMARY KEY,
+  setting_value TEXT NOT NULL,
+  description TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES profiles(id) ON DELETE SET NULL
+);
+
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read settings" ON system_settings FOR SELECT USING (true);
+CREATE POLICY "Admins update settings" ON system_settings FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- ============================================================
 -- STORAGE BUCKET (run via Supabase Dashboard → Storage → New Bucket)

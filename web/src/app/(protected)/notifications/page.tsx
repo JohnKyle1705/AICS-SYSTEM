@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Notification } from '@/types'
 import { format } from 'date-fns'
@@ -23,6 +24,7 @@ const TYPE_ICONS: Record<string, any> = {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
   const supabase = createClient()
 
   const load = async () => {
@@ -35,11 +37,56 @@ export default function NotificationsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { 
+    load() 
+
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const channel = supabase.channel(`notifications-page-${Date.now()}`)
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications', 
+          filter: `user_id=eq.${user.id}` 
+        }, (payload) => {
+          setNotifications(prev => [payload.new as Notification, ...prev])
+        })
+        .subscribe()
+
+      return () => { supabase.removeChannel(channel) }
+    }
+
+    let cleanup: any
+    setupRealtime().then(fn => cleanup = fn)
+    return () => { if (cleanup) cleanup() }
+  }, [])
 
   const markRead = async (id: string) => {
     await supabase.from('notifications').update({ is_read: true }).eq('id', id)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+  }
+
+  const handleNotificationClick = async (n: Notification) => {
+    if (!n.is_read) {
+      await markRead(n.id)
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('system_logs').insert({
+        user_id: user.id,
+        action: 'VIEW_NOTIFICATION',
+        table_name: 'notifications',
+        record_id: n.id,
+        details: { request_id: n.request_id }
+      })
+    }
+
+    if (n.request_id) {
+      router.push(`/requests/${n.request_id}?highlight=true`)
+    }
   }
 
   const markAllRead = async () => {
@@ -81,7 +128,8 @@ export default function NotificationsPage() {
             const IconComp = TYPE_ICONS[n.type] || Info
             return (
               <div key={n.id}
-                className={`border rounded-xl p-4 flex items-start gap-3 transition-all duration-200 ${TYPE_STYLES[n.type]} ${!n.is_read ? 'shadow-sm' : 'opacity-60'}`}>
+                onClick={() => handleNotificationClick(n)}
+                className={`border rounded-xl p-4 flex items-start gap-3 transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md ${TYPE_STYLES[n.type]} ${!n.is_read ? 'shadow-sm ring-1 ring-blue-500/20' : 'opacity-70'}`}>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${!n.is_read ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-slate-100 dark:bg-slate-800'}`}>
                   <IconComp size={14} className={!n.is_read ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'} />
                 </div>
@@ -91,7 +139,8 @@ export default function NotificationsPage() {
                   <p className="text-[var(--color-text-secondary)] text-xs mt-1.5">{format(new Date(n.created_at), 'MMM d, yyyy h:mm a')}</p>
                 </div>
                 {!n.is_read && (
-                  <button onClick={() => markRead(n.id)}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); markRead(n.id) }}
                     className="text-xs text-blue-600 hover:text-blue-800 flex-shrink-0 font-medium">
                     Mark read
                   </button>

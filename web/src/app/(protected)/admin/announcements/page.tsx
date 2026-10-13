@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Megaphone, Plus, Trash2, Edit, Calendar, Info, Loader2, X, Image as ImageIcon } from 'lucide-react'
+import { Megaphone, Plus, Trash2, Edit, Calendar, Info, Loader2, X, Image as ImageIcon, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function AdminAnnouncements() {
@@ -11,7 +11,7 @@ export default function AdminAnnouncements() {
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [form, setForm] = useState({
     title: '',
     content: '',
@@ -20,6 +20,34 @@ export default function AdminAnnouncements() {
   })
 
   const supabase = createClient()
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!e.target.files || e.target.files.length === 0) return
+      const file = e.target.files[0]
+      setUploadingImage(true)
+      
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('announcements')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('announcements')
+        .getPublicUrl(filePath)
+        
+      setForm({ ...form, image_url: publicUrl })
+    } catch (error: any) {
+      alert('Error uploading image: ' + error.message)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
 
   const load = async () => {
     setLoading(true)
@@ -39,7 +67,8 @@ export default function AdminAnnouncements() {
     e.preventDefault()
     setSaving(true)
     
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     
     const payload = {
       ...form,
@@ -143,7 +172,14 @@ export default function AdminAnnouncements() {
                 <div className="flex gap-5">
                   {ann.image_url && (
                     <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-[var(--color-border)] shadow-sm">
-                      <img src={ann.image_url} alt="" className="w-full h-full object-cover" />
+                      <img 
+                        src={ann.image_url} 
+                        alt="" 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => {
+                          (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
+                        }}
+                      />
                     </div>
                   )}
                   <div className="space-y-2">
@@ -221,8 +257,8 @@ export default function AdminAnnouncements() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">Image URL (Optional)</label>
-                <div className="flex gap-2">
+                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">Announcement Image (Optional)</label>
+                <div className="flex gap-2 items-center">
                   <div className="relative flex-1">
                     <ImageIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]" />
                     <input 
@@ -232,6 +268,18 @@ export default function AdminAnnouncements() {
                       onChange={e => setForm({...form, image_url: e.target.value})}
                     />
                   </div>
+                  <span className="text-xs text-[var(--color-text-secondary)] font-medium">OR</span>
+                  <label className="btn bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 cursor-pointer px-4 flex items-center gap-2 transition-colors">
+                    {uploadingImage ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Upload size={16} />}
+                    <span className="text-sm font-bold">Upload</span>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      className="hidden" 
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                    />
+                  </label>
                 </div>
               </div>
 

@@ -21,7 +21,7 @@ export default function AboutPage() {
       {/* Hero Section */}
       <div className="card overflow-hidden border-0 shadow-2xl bg-slate-900 relative">
         <div className="absolute inset-0 bg-[url('/images/bg_community_service.png')] bg-cover bg-center opacity-30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/80 to-transparent z-0" />
+        <div className="absolute inset-0 bg-linear-to-r from-slate-950 via-slate-900/80 to-transparent z-0" />
         <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl" />
         <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl" />
         
@@ -60,7 +60,7 @@ export default function AboutPage() {
           <p className="text-[var(--color-text-secondary)] text-sm mt-1">Providing targeted support for various crisis situations</p>
         </div>
         
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+        <div className="grid sm:grid-cols-2 gap-6 mt-8">
           <div className="card p-6 hover:border-blue-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
             <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mb-4">
               <HeartPulse size={24} />
@@ -80,26 +80,6 @@ export default function AboutPage() {
               Aid provided to families experiencing the loss of a loved one. This helps cover funeral costs, casket, and related expenses to provide a dignified farewell.
             </p>
           </div>
-
-          <div className="card p-6 hover:border-blue-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
-              <GraduationCap size={24} />
-            </div>
-            <h3 className="font-bold text-lg text-[var(--color-text)] mb-2">Educational Support</h3>
-            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-              Financial aid for eligible students to help cover school supplies, transportation, and other educational necessities, ensuring continuous learning despite crises.
-            </p>
-          </div>
-
-          <div className="card p-6 hover:border-blue-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-4">
-              <Utensils size={24} />
-            </div>
-            <h3 className="font-bold text-lg text-[var(--color-text)] mb-2">Food Assistance</h3>
-            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-              Provision of food packs or financial aid to alleviate hunger for families experiencing sudden emergencies, disasters, or prolonged crises.
-            </p>
-          </div>
         </div>
       </div>
 
@@ -115,9 +95,9 @@ export default function AboutPage() {
           />
         </div>
         <div className="order-1 md:order-2 space-y-4">
-          <h2 className="text-2xl font-bold text-[var(--color-text)]">The Role of AICS Staff</h2>
+          <h2 className="text-2xl font-bold text-[var(--color-text)]">The Role of the AICS Admin Team</h2>
           <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
-            Our staff operates as the crucial bridge between government resources and the individuals who need them most. From the moment you walk through our doors or submit an application online, our dedicated encoders, social workers, and administrators work collaboratively to process your request.
+            Our admin team operates as the crucial bridge between government resources and the individuals who need them most. From the moment you walk through our doors or submit an application online, our dedicated administrators and social workers work collaboratively to process your request.
           </p>
           <ul className="space-y-3 mt-4">
             {[

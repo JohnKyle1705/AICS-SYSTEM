@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+.expo/
+web-build/
+
+# Environment files & Secrets
+.env
+.env*.local
+.env.production
+.env.staging
+!.env.example
+!.env.local.example
+
+# Inspection / scratch scripts containing secrets
+web/inspect_*.js
+web/list_users.js
+web/test_*.js
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

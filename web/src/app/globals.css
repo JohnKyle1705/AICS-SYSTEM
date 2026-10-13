@@ -300,6 +300,11 @@ body {
   .form-input::placeholder {
     color: var(--color-text-muted);
   }
+
+  select.form-input option {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
 }
 
 .form-label {

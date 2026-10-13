@@ -15,7 +15,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem('aics_lang').then(saved => {
-      if (saved === 'en' || saved === 'fil') {
+      if (saved === 'en') {
         setLanguageState(saved)
       }
     })
@@ -28,7 +28,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const t = (key: string): string => {
     const keys = key.split('.')
-    let value: any = translations[language]
+    let value: any = (translations as any)[language] || translations['en']
     for (const k of keys) {
       value = value?.[k]
     }

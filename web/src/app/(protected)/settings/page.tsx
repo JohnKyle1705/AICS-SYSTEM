@@ -22,6 +22,10 @@ export default function SettingsPage() {
   const [supportForm, setSupportForm] = useState({ concern_type: 'General Inquiry', message: '' })
   const [feedbackForm, setFeedbackForm] = useState({ rating: 5, comments: '' })
   
+  // System Settings state
+  const [restrictionDays, setRestrictionDays] = useState('30')
+  const [savingSettings, setSavingSettings] = useState(false)
+  
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
@@ -54,9 +58,14 @@ export default function SettingsPage() {
             })
           }
         }
-        if (data?.role === 'admin' || data?.role === 'staff') {
+        if (data?.role === 'admin') {
           const { data: reqs } = await supabase.from('assistance_requirements').select('*').order('created_at', { ascending: true })
           if (reqs) setRequirements(reqs)
+          
+          if (data?.role === 'admin') {
+            const { data: settings } = await supabase.from('system_settings').select('*').eq('setting_key', 'duplicate_restriction_days').single()
+            if (settings) setRestrictionDays(settings.setting_value)
+          }
         }
       }
       setLoading(false)
@@ -97,6 +106,24 @@ export default function SettingsPage() {
     if (!confirm('Are you sure you want to delete this requirement?')) return
     const { error } = await supabase.from('assistance_requirements').delete().eq('id', id)
     if (!error) await loadRequirements()
+  }
+
+  const handleSaveSystemSettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingSettings(true)
+    setMessage({ type: '', text: '' })
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase.from('system_settings').upsert({
+      setting_key: 'duplicate_restriction_days',
+      setting_value: restrictionDays,
+      updated_by: user?.id
+    })
+    if (error) {
+      setMessage({ type: 'error', text: 'Error saving settings: ' + error.message })
+    } else {
+      setMessage({ type: 'success', text: 'System settings updated successfully!' })
+    }
+    setSavingSettings(false)
   }
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -292,7 +319,7 @@ export default function SettingsPage() {
       <div className="flex border-b border-[var(--color-border)] mb-6 overflow-x-auto no-scrollbar">
         {[
           { id: 'profile', icon: User, label: t('settings_profileInfo') },
-          ...(profile?.role === 'admin' || profile?.role === 'staff' ? [{ id: 'requirements', icon: FileText, label: t('settings_requirementsSetup') }] : []),
+          ...(profile?.role === 'admin' ? [{ id: 'requirements', icon: FileText, label: t('settings_requirementsSetup') }] : []),
           { id: 'support', icon: MessageSquare, label: t('settings_contactSupport') },
           { id: 'feedback', icon: Heart, label: t('settings_feedback') }
         ].map(tab => (
@@ -427,8 +454,27 @@ export default function SettingsPage() {
       )}
 
       {/* Requirements Setup Tab (Admin/Staff) */}
-      {activeTab === 'requirements' && (profile?.role === 'admin' || profile?.role === 'staff') && (
+      {activeTab === 'requirements' && profile?.role === 'admin' && (
         <div className="card p-8">
+          {profile?.role === 'admin' && (
+            <div className="mb-10 pb-8 border-b border-[var(--color-border)]">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-[var(--color-text)]">System Settings</h3>
+                <p className="text-[var(--color-text-secondary)] text-sm">Configure global system parameters.</p>
+              </div>
+              <form onSubmit={handleSaveSystemSettings} className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex-1 w-full">
+                  <label className="form-label">Duplicate Claim Restriction Period (Days)</label>
+                  <p className="text-xs text-[var(--color-text-secondary)] mb-2">Number of days residents must wait before submitting a request for the same assistance type.</p>
+                  <input type="number" value={restrictionDays} onChange={e => setRestrictionDays(e.target.value)} className="form-input" min="0" required />
+                </div>
+                <button type="submit" disabled={savingSettings} className="btn btn-primary w-full sm:w-auto whitespace-nowrap">
+                  {savingSettings ? <Loader2 size={16} className="animate-spin" /> : 'Save Settings'}
+                </button>
+              </form>
+            </div>
+          )}
+
           <div className="mb-6">
             <h3 className="text-lg font-bold text-[var(--color-text)]">{t('req_manageRequirements')}</h3>
             <p className="text-[var(--color-text-secondary)] text-sm">{t('req_configureDocuments')}</p>
@@ -440,8 +486,6 @@ export default function SettingsPage() {
               <select value={reqTypeFilter} onChange={e => setReqTypeFilter(e.target.value)} className="form-input">
                 <option value="Medical">Medical</option>
                 <option value="Burial">Burial</option>
-                <option value="Educational">Educational</option>
-                <option value="Foods">Foods</option>
               </select>
             </div>
           </div>

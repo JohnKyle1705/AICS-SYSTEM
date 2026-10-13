@@ -71,28 +71,6 @@ export default function AboutScreen() {
           </Text>
         </View>
 
-
-        <View style={[s.serviceCard, { borderTopColor: '#10b981' }]}>
-          <View style={[s.serviceIcon, { backgroundColor: '#d1fae5' }]}>
-            <Feather name="book-open" size={24} color="#10b981" />
-          </View>
-          <Text style={s.serviceTitle}>{t('about_educationalTitle')}</Text>
-          <Text style={s.serviceDesc}>
-            {t('about_educationalDesc')}
-          </Text>
-        </View>
-
-
-        <View style={[s.serviceCard, { borderTopColor: '#f59e0b' }]}>
-          <View style={[s.serviceIcon, { backgroundColor: '#fef3c7' }]}>
-            <Feather name="shopping-bag" size={24} color="#f59e0b" />
-          </View>
-          <Text style={s.serviceTitle}>{t('about_foodTitle')}</Text>
-          <Text style={s.serviceDesc}>
-            {t('about_foodDesc')}
-          </Text>
-        </View>
-
       </View>
 
       {/* Role of Staff */}

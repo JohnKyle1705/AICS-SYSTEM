@@ -10,10 +10,13 @@ import * as FileSystem from 'expo-file-system/legacy'
 import { decode } from 'base64-arraybuffer'
 import { Picker } from '@react-native-picker/picker'
 
-const BARANGAYS = [
-  'Aguho','Bagay','Bakhaw','Bateria','Bitoon','Calape','Carnaza','Daanbantayan',
-  'Dalingding','Lanao','Logon','Malbago','Malingin','Maya','Pajo','Paypay',
-  'Poblacion','Talisay','Tapilon','Tinubdan','Tominjao'
+const BARANGAY_PAJO = 'Barangay Pajo'
+
+const PUROKS_PAJO = [
+  'Purok 1', 'Purok 2', 'Purok 3', 'Purok 4', 'Purok 5',
+  'Purok 6', 'Purok 7', 'Purok 8', 'Purok 9', 'Purok 10',
+  'Purok Centro', 'Purok Riverside', 'Purok San Isidro',
+  'Purok Lower Pajo', 'Purok Upper Pajo',
 ]
 
 type TabType = 'profile' | 'support' | 'feedback' | 'requirements'
@@ -62,7 +65,8 @@ export default function SettingsScreen() {
               birthdate: '',
               civil_status: 'Single',
               occupation: '',
-              barangay: '',
+              barangay: BARANGAY_PAJO,
+              purok: '',
               sex: 'Male',
               monthly_income: '0',
               family_size: '1'
@@ -70,7 +74,7 @@ export default function SettingsScreen() {
           }
         }
         
-        if (profile?.role === 'admin' || profile?.role === 'staff') {
+        if (profile?.role === 'admin') {
           loadRequirements()
         }
       }
@@ -130,9 +134,7 @@ export default function SettingsScreen() {
     ])
   }
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'fil' : 'en')
-  }
+
 
   const handleUpdateProfile = async () => {
     if (!profile) return
@@ -336,7 +338,7 @@ export default function SettingsScreen() {
           <Text style={[s.tabText, activeTab === 'profile' && s.activeTabText]}>{t('settings_profile')}</Text>
 
         </TouchableOpacity>
-        {(profile?.role === 'admin' || profile?.role === 'staff') && (
+        {(profile?.role === 'admin') && (
           <TouchableOpacity style={[s.tab, activeTab === 'requirements' && s.activeTab]} onPress={() => setActiveTab('requirements')}>
             <Feather name="file-text" size={16} color={activeTab === 'requirements' ? colors.primary : colors.textSecondary} />
             <Text style={[s.tabText, activeTab === 'requirements' && s.activeTabText]}>{t('settings_setup')}</Text>
@@ -397,17 +399,19 @@ export default function SettingsScreen() {
 
               <View style={s.field}>
                 <Text style={s.label}>{t('settings_emailAddress')}</Text>
-                <TextInput style={[s.input, s.inputDisabled]} value={email} editable={false} />
+                <TextInput style={[s.input, s.inputDisabled, { color: colors.textSecondary }]} value={email} editable={false} />
               </View>
 
               <View style={s.field}>
                 <Text style={s.label}>{t('settings_fullName')}</Text>
                 <TextInput
-                  style={s.input}
+                  style={[s.input, { color: colors.text }]}
                   value={fullName}
                   onChangeText={setFullName}
                   placeholder={t('settings_fullNamePlaceholder')}
                   placeholderTextColor={colors.textSecondary}
+                  cursorColor={colors.primary}
+                  selectionColor={colors.primary}
                 />
               </View>
             </View>
@@ -419,11 +423,13 @@ export default function SettingsScreen() {
                 <View style={s.field}>
                   <Text style={s.label}>{t('settings_dateOfBirth')}</Text>
                   <TextInput
-                    style={s.input}
+                    style={[s.input, { color: colors.text }]}
                     value={beneficiary.birthdate}
                     onChangeText={(v) => setBeneficiary({ ...beneficiary, birthdate: v })}
                     placeholder={t('settings_dobPlaceholder')}
                     placeholderTextColor={colors.textSecondary}
+                    cursorColor={colors.primary}
+                    selectionColor={colors.primary}
                   />
                 </View>
 
@@ -437,7 +443,7 @@ export default function SettingsScreen() {
                       dropdownIconColor={colors.textSecondary}
                     >
                       {['Single','Married','Widowed','Separated','Annulled'].map(st => (
-                        <Picker.Item key={st} label={st} value={st} color={colors.text} />
+                        <Picker.Item key={st} label={st} value={st} color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
                       ))}
                     </Picker>
                   </View>
@@ -446,35 +452,41 @@ export default function SettingsScreen() {
                 <View style={s.field}>
                   <Text style={s.label}>{t('settings_contactNumber')}</Text>
                   <TextInput
-                    style={s.input}
+                    style={[s.input, { color: colors.text }]}
                     value={beneficiary.contact_number}
                     onChangeText={(v) => setBeneficiary({ ...beneficiary, contact_number: v })}
                     keyboardType="phone-pad"
                     placeholder={t('settings_contactPlaceholder')}
                     placeholderTextColor={colors.textSecondary}
+                    cursorColor={colors.primary}
+                    selectionColor={colors.primary}
                   />
                 </View>
 
                 <View style={s.field}>
                   <Text style={s.label}>{t('settings_occupation')}</Text>
                   <TextInput
-                    style={s.input}
+                    style={[s.input, { color: colors.text }]}
                     value={beneficiary.occupation}
                     onChangeText={(v) => setBeneficiary({ ...beneficiary, occupation: v })}
                     placeholder={t('settings_occupationPlaceholder')}
                     placeholderTextColor={colors.textSecondary}
+                    cursorColor={colors.primary}
+                    selectionColor={colors.primary}
                   />
                 </View>
 
                 <View style={s.field}>
                   <Text style={s.label}>{t('settings_completeAddress')}</Text>
                   <TextInput
-                    style={[s.input, { height: 80, textAlignVertical: 'top' }]}
+                    style={[s.input, { height: 80, textAlignVertical: 'top', color: colors.text }]}
                     value={beneficiary.address}
                     onChangeText={(v) => setBeneficiary({ ...beneficiary, address: v })}
                     multiline
                     placeholder={t('settings_addressPlaceholder')}
                     placeholderTextColor={colors.textSecondary}
+                    cursorColor={colors.primary}
+                    selectionColor={colors.primary}
                   />
                 </View>
 
@@ -487,23 +499,39 @@ export default function SettingsScreen() {
                       style={s.picker}
                       dropdownIconColor={colors.textSecondary}
                     >
-                      <Picker.Item label={t('beneficiary_male')} value="Male" color={colors.text} />
-                      <Picker.Item label={t('beneficiary_female')} value="Female" color={colors.text} />
+                      <Picker.Item label={t('beneficiary_male')} value="Male" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+                      <Picker.Item label={t('beneficiary_female')} value="Female" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
                     </Picker>
                   </View>
                 </View>
 
                 <View style={s.field}>
                   <Text style={s.label}>{t('beneficiary_barangay')}</Text>
-                  <View style={s.pickerWrap}>
+                  <View style={[s.pickerWrap, { opacity: 0.7 }]}>
                     <Picker
-                      selectedValue={beneficiary.barangay}
-                      onValueChange={(v) => setBeneficiary({ ...beneficiary, barangay: v })}
+                      selectedValue={BARANGAY_PAJO}
+                      enabled={false}
                       style={s.picker}
                       dropdownIconColor={colors.textSecondary}
                     >
-                      <Picker.Item label={t('beneficiary_selectBarangay')} value="" color={colors.textSecondary} />
-                      {BARANGAYS.map(b => <Picker.Item key={b} label={b} value={b} color={colors.text} />)}
+                      <Picker.Item label={BARANGAY_PAJO} value={BARANGAY_PAJO} color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+                    </Picker>
+                  </View>
+                </View>
+
+                <View style={s.field}>
+                  <Text style={s.label}>Purok</Text>
+                  <View style={s.pickerWrap}>
+                    <Picker
+                      selectedValue={beneficiary.purok || ''}
+                      onValueChange={(v) => setBeneficiary({ ...beneficiary, purok: v })}
+                      style={s.picker}
+                      dropdownIconColor={colors.textSecondary}
+                    >
+                      <Picker.Item label="Select Purok" value="" color={Platform.OS === 'android' ? '#64748b' : colors.textSecondary} />
+                      {PUROKS_PAJO.map(p => (
+                        <Picker.Item key={p} label={p} value={p} color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+                      ))}
                     </Picker>
                   </View>
                 </View>
@@ -511,10 +539,12 @@ export default function SettingsScreen() {
                 <View style={s.field}>
                   <Text style={s.label}>{t('beneficiary_monthlyIncome')}</Text>
                   <TextInput
-                    style={s.input}
+                    style={[s.input, { color: colors.text }]}
                     value={beneficiary.monthly_income?.toString()}
                     onChangeText={(v) => setBeneficiary({ ...beneficiary, monthly_income: v.replace(/[^0-9]/g, '') })}
                     keyboardType="numeric"
+                    cursorColor={colors.primary}
+                    selectionColor={colors.primary}
                     placeholder="0"
                     placeholderTextColor={colors.textSecondary}
                   />
@@ -573,9 +603,9 @@ export default function SettingsScreen() {
                   style={s.picker}
                   dropdownIconColor={colors.textSecondary}
                 >
-                  <Picker.Item label="General Inquiry" value="General Inquiry" color={colors.text} />
-                  <Picker.Item label="Technical Issue" value="Technical Issue" color={colors.text} />
-                  <Picker.Item label="Request Follow-up" value="Request Follow-up" color={colors.text} />
+                  <Picker.Item label="General Inquiry" value="General Inquiry" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+                  <Picker.Item label="Technical Issue" value="Technical Issue" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+                  <Picker.Item label="Request Follow-up" value="Request Follow-up" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
                 </Picker>
               </View>
             </View>
@@ -583,12 +613,14 @@ export default function SettingsScreen() {
             <View style={s.field}>
               <Text style={s.label}>{t('support_message')}</Text>
               <TextInput
-                style={[s.input, { height: 120, textAlignVertical: 'top' }]}
+                style={[s.input, { height: 120, textAlignVertical: 'top', color: colors.text }]}
                 value={supportForm.message}
                 onChangeText={(v) => setSupportForm({ ...supportForm, message: v })}
                 multiline
                 placeholder={t('support_messagePlaceholder')}
                 placeholderTextColor={colors.textSecondary}
+                cursorColor={colors.primary}
+                selectionColor={colors.primary}
               />
             </View>
 
@@ -599,7 +631,7 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {activeTab === 'requirements' && (profile?.role === 'admin' || profile?.role === 'staff') && (
+        {activeTab === 'requirements' && (profile?.role === 'admin') && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>{t('req_manageRequirements')}</Text>
             <Text style={s.helperText}>{t('req_configureDocuments')}</Text>
@@ -614,10 +646,8 @@ export default function SettingsScreen() {
                   style={s.picker}
                   dropdownIconColor={colors.textSecondary}
                 >
-                  <Picker.Item label="Medical" value="Medical" color={colors.text} />
-                  <Picker.Item label="Burial" value="Burial" color={colors.text} />
-                  <Picker.Item label="Educational" value="Educational" color={colors.text} />
-                  <Picker.Item label="Foods" value="Foods" color={colors.text} />
+                  <Picker.Item label="Medical" value="Medical" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+                  <Picker.Item label="Burial" value="Burial" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
                 </Picker>
               </View>
             </View>
@@ -626,11 +656,13 @@ export default function SettingsScreen() {
               <Text style={[s.label, { color: colors.text, marginBottom: 12 }]}>{t('req_addNewDocument')}</Text>
 
               <TextInput
-                style={[s.input, { marginBottom: 12 }]}
+                style={[s.input, { marginBottom: 12, color: colors.text }]}
                 value={newReqName}
                 onChangeText={setNewReqName}
                 placeholder={t('req_documentPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
+                cursorColor={colors.primary}
+                selectionColor={colors.primary}
               />
               <View style={s.pickerWrap}>
                 <Picker
@@ -639,8 +671,8 @@ export default function SettingsScreen() {
                   style={s.picker}
                   dropdownIconColor={colors.textSecondary}
                 >
-                  <Picker.Item label={t('req_required')} value="true" color={colors.text} />
-                  <Picker.Item label={t('req_optional')} value="false" color={colors.text} />
+                  <Picker.Item label={t('req_required')} value="true" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+                  <Picker.Item label={t('req_optional')} value="false" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
 
                 </Picker>
               </View>
@@ -698,7 +730,6 @@ export default function SettingsScreen() {
                       name="star" 
                       size={36} 
                       color={star <= feedbackForm.rating ? '#facc15' : colors.border} 
-                      style={star <= feedbackForm.rating ? { fill: '#facc15' } : {}}
                     />
                   </TouchableOpacity>
                 ))}
@@ -708,12 +739,14 @@ export default function SettingsScreen() {
             <View style={s.field}>
               <Text style={s.label}>{t('feedback_commentsLabel')}</Text>
               <TextInput
-                style={[s.input, { height: 120, textAlignVertical: 'top' }]}
+                style={[s.input, { height: 120, textAlignVertical: 'top', color: colors.text }]}
                 value={feedbackForm.comments}
                 onChangeText={(v) => setFeedbackForm({ ...feedbackForm, comments: v })}
                 multiline
                 placeholder={t('feedback_commentsPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
+                cursorColor={colors.primary}
+                selectionColor={colors.primary}
               />
             </View>
 
@@ -755,7 +788,7 @@ const styles = (colors: any) => StyleSheet.create({
   avatarWrapper: { width: 90, height: 90, borderRadius: 20, backgroundColor: colors.background, overflow: 'hidden', borderWidth: 2, borderColor: colors.border },
   avatar: { width: '100%', height: '100%' },
   avatarPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  avatarOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
+  avatarOverlay: { ...(StyleSheet.absoluteFill as object), backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
   editIconBadge: { position: 'absolute', bottom: -5, right: -5, backgroundColor: colors.primary, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: colors.card },
   avatarInfo: { flex: 1, gap: 2 },
   avatarName: { fontSize: 18, fontWeight: '800', color: colors.text },

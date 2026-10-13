@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Request } from '@/types'
 import { ASSISTANCE_TYPES, REQUEST_STATUSES, STATUS_COLORS } from '@/lib/constants'
@@ -9,15 +10,34 @@ import { Plus, Search, FileText, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useLanguage } from '@/lib/LanguageContext'
 
-export default function RequestsPage() {
+function RequestsContent() {
+  const searchParams = useSearchParams()
+  const initialStatus = searchParams.get('status') || ''
+
   const [requests, setRequests] = useState<Request[]>([])
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
-  const [type, setType] = useState('')
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [status, setStatus] = useState(initialStatus === 'All' ? '' : initialStatus)
+  const [type, setType] = useState(searchParams.get('type') || '')
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<any>(null)
   const supabase = createClient()
   const { t } = useLanguage()
+
+  // Sync state if URL query params change (e.g. from System Reports cards)
+  useEffect(() => {
+    const s = searchParams.get('status')
+    if (s !== null) {
+      setStatus(s === 'All' ? '' : s)
+    }
+    const q = searchParams.get('search')
+    if (q !== null) {
+      setSearch(q)
+    }
+    const tp = searchParams.get('type')
+    if (tp !== null) {
+      setType(tp)
+    }
+  }, [searchParams])
 
   // Load profile first
   useEffect(() => {
@@ -45,7 +65,13 @@ export default function RequestsPage() {
       query = query.eq('encoded_by', user.id)
     }
 
-    if (status) query = query.eq('status', status)
+    if (status) {
+      if (status === 'Approved') {
+        query = query.in('status', ['Approved', 'Released'])
+      } else {
+        query = query.eq('status', status)
+      }
+    }
     if (type) query = query.eq('assistance_type', type)
     const { data } = await query
     const filtered = search
@@ -57,6 +83,20 @@ export default function RequestsPage() {
   }, [search, status, type, profile])
 
   useEffect(() => { load() }, [load])
+
+  // Real-time synchronization when requests change
+  useEffect(() => {
+    const channel = supabase
+      .channel('requests_page_realtime_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+        load()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [load])
 
   const handleDelete = async (id: string) => {
     if (!window.confirm(t('requests_deleteConfirm') || 'Are you sure you want to delete this request?\nThis action cannot be undone.')) return
@@ -79,7 +119,7 @@ export default function RequestsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text)]">
-            {profile?.role === 'resident' ? t('requests_title_resident') : t('requests_title_staff')}
+            {profile?.role === 'resident' ? t('requests_title_resident') : t('requests_title_admin')}
           </h1>
           <p className="text-[var(--color-text-secondary)] text-sm mt-0.5">{requests.length} {t('nav_requests').toLowerCase()}</p>
         </div>
@@ -134,8 +174,28 @@ export default function RequestsPage() {
                     {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
                   </td>
                   <td><span className="badge bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">{r.assistance_type}</span></td>
-                  <td className="max-w-[180px] truncate">{r.purpose}</td>
-                  <td>{r.amount_requested ? `₱${Number(r.amount_requested).toLocaleString()}` : '—'}</td>
+                  <td className="max-w-[220px]">
+                    <div className="truncate font-medium">{r.purpose}</div>
+                    {r.status === 'Declined' && r.remarks && (
+                      <div className="text-xs text-red-500 italic mt-0.5 truncate" title={r.remarks}>
+                        Reason: {r.remarks}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    {(r.status === 'Approved' || r.status === 'Released') && r.amount_approved ? (
+                      <div>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          ₱{Number(r.amount_approved).toLocaleString()}
+                        </span>
+                        <span className="block text-[10px] text-[var(--color-text-secondary)] uppercase">Approved</span>
+                      </div>
+                    ) : r.amount_requested ? (
+                      `₱${Number(r.amount_requested).toLocaleString()}`
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td><span className={`badge ${STATUS_COLORS[r.status]}`}>{r.status}</span></td>
                   <td className="text-slate-500 text-xs">{format(new Date(r.created_at), 'MMM d, yyyy')}</td>
                   <td>
@@ -143,7 +203,7 @@ export default function RequestsPage() {
                       <Link href={`/requests/${r.id}`} className="text-blue-600 hover:text-blue-800 text-xs font-semibold hover:underline">
                         {t('view')}
                       </Link>
-                      {(profile?.role === 'admin' || profile?.role === 'staff' || profile?.role === 'resident') && (
+                      {(profile?.role === 'admin' || profile?.role === 'resident') && (
                         <button 
                           onClick={() => handleDelete(r.id)}
                           className="text-slate-400 hover:text-red-600 transition-colors"
@@ -161,5 +221,13 @@ export default function RequestsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RequestsPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-[var(--color-text-secondary)]">Loading requests...</div>}>
+      <RequestsContent />
+    </Suspense>
   )
 }

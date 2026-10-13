@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   headerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...(StyleSheet.absoluteFill as object),
   },
   headerTopRow: {
     flexDirection: 'row',

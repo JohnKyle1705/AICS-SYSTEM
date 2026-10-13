@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
-import { BARANGAYS } from '@/lib/constants'
+import { BARANGAY_PAJO, PUROKS_PAJO } from '@/lib/constants'
 import { Loader2 } from 'lucide-react'
 import { useLanguage } from '@/lib/LanguageContext'
 
@@ -20,6 +20,7 @@ const schema = z.object({
   sex: z.enum(['Male', 'Female']),
   civil_status: z.enum(['Single', 'Married', 'Widowed', 'Separated', 'Annulled']),
   barangay: z.string().min(1, 'Required'),
+  purok: z.string().min(1, 'Required'),
   address: z.string().min(1, 'Required'),
   contact_number: z.string().optional().refine(val => !val || (val.length === 11 && val.startsWith('09') && /^\d+$/.test(val)), 'Enter a valid 11-digit contact number (e.g., 09XXXXXXXXX)'),
   is_pwd: z.boolean(),
@@ -42,40 +43,71 @@ export default function BeneficiaryForm({ beneficiaryId }: Props) {
   const [error, setError] = useState('')
 
 
+  const [effectiveBeneficiaryId, setEffectiveBeneficiaryId] = useState<string | undefined>(beneficiaryId)
+  const [isResident, setIsResident] = useState(false)
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
-    defaultValues: { is_pwd: false, is_senior: false, is_4ps: false, monthly_income: 0, family_size: 1 },
+    defaultValues: { is_pwd: false, is_senior: false, is_4ps: false, monthly_income: 0, family_size: 1, barangay: BARANGAY_PAJO },
   })
 
   useEffect(() => {
-    if (!beneficiaryId) return
-    supabase.from('beneficiaries').select('*').eq('id', beneficiaryId).single()
-      .then(({ data }) => { if (data) reset(data) })
-  }, [beneficiaryId])
+    const loadBeneficiary = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      const userIsResident = profile?.role === 'resident'
+      setIsResident(userIsResident)
+
+      if (beneficiaryId) {
+        setEffectiveBeneficiaryId(beneficiaryId)
+        const { data } = await supabase.from('beneficiaries').select('*').eq('id', beneficiaryId).single()
+        if (data) reset(data)
+      } else if (userIsResident) {
+        // If resident is visiting registration form, check if they already registered
+        const { data: existing } = await supabase.from('beneficiaries').select('*').eq('created_by', user.id).maybeSingle()
+        if (existing) {
+          setEffectiveBeneficiaryId(existing.id)
+          reset(existing)
+        }
+      }
+    }
+    loadBeneficiary()
+  }, [beneficiaryId, reset, supabase])
 
   const onSubmit = async (data: FormData) => {
     setSaving(true)
     setError('')
     const { data: { user } } = await supabase.auth.getUser()
-    const payload = { ...data, created_by: user?.id }
+    if (!user) {
+      setError('You must be logged in to register.')
+      setSaving(false)
+      return
+    }
 
-    const { error: err, data: newBeneficiary } = beneficiaryId
-      ? await supabase.from('beneficiaries').update(payload).eq('id', beneficiaryId).select('id').single()
+    const payload = { ...data, created_by: user.id }
+    const targetId = effectiveBeneficiaryId || beneficiaryId
+
+    const { error: err, data: savedBeneficiary } = targetId
+      ? await supabase.from('beneficiaries').update(payload).eq('id', targetId).select('id').single()
       : await supabase.from('beneficiaries').insert(payload).select('id').single()
 
     if (err) { setError(err.message); setSaving(false); return }
 
     // Log action
-    if (user) {
-      await supabase.from('system_logs').insert({
-        user_id: user.id,
-        action: beneficiaryId ? 'UPDATE_BENEFICIARY' : 'CREATE_BENEFICIARY',
-        table_name: 'beneficiaries',
-        record_id: beneficiaryId || newBeneficiary?.id,
-      })
-    }
+    await supabase.from('system_logs').insert({
+      user_id: user.id,
+      action: targetId ? 'UPDATE_BENEFICIARY' : 'CREATE_BENEFICIARY',
+      table_name: 'beneficiaries',
+      record_id: targetId || savedBeneficiary?.id,
+    })
 
-    router.push('/beneficiaries')
+    if (isResident) {
+      router.push('/resident/dashboard?registered=true')
+    } else {
+      router.push('/beneficiaries')
+    }
   }
 
   return (
@@ -139,11 +171,20 @@ export default function BeneficiaryForm({ beneficiaryId }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="form-label">{t('requests_barangay')} *</label>
-            <select {...register('barangay')} className="form-input">
-              <option value="">{t('settings_selectBarangay')}</option>
-              {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
+            <input
+              {...register('barangay')}
+              className="form-input bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed"
+              value={BARANGAY_PAJO}
+              readOnly
+            />
+          </div>
+          <div>
+            <label className="form-label">Purok *</label>
+            <select {...register('purok')} className="form-input">
+              <option value="">Select Purok</option>
+              {PUROKS_PAJO.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            {errors.barangay && <p className="text-red-500 text-xs mt-1">{t('required')}</p>}
+            {errors.purok && <p className="text-red-500 text-xs mt-1">{t('required')}</p>}
           </div>
           <div className="sm:col-span-2">
             <label className="form-label">{t('settings_completeAddress')}</label>

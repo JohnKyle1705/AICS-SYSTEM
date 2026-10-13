@@ -47,7 +47,7 @@ function PayoutForm() {
     
     if (err) { setError(err.message); setSaving(false); return }
     
-    await supabase.from('requests').update({ status: 'Released' }).eq('id', data.request_id)
+    await supabase.from('requests').update({ status: 'Released', release_status: 'Released' }).eq('id', data.request_id)
 
     // Log action
     if (user) {

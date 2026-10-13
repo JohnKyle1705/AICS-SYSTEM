@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_COLORS, REQUEST_STATUSES } from '@/lib/constants'
 import { format } from 'date-fns'
@@ -26,41 +26,77 @@ export default function RequestDetailPage() {
   const [profile, setProfile] = useState<any>(null)
   const [updating, setUpdating] = useState(false)
   const [isAssessing, setIsAssessing] = useState(false)
-
+  const searchParams = useSearchParams()
+  const [highlight, setHighlight] = useState(false)
 
   useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      const [{ data: req }, { data: docs }, { data: assess }, { data: pay }] = await Promise.all([
-        supabase.from('requests').select('*, beneficiaries(*)').eq('id', id).single(),
-        supabase.from('request_documents').select('*').eq('request_id', id),
-        supabase.from('assessments').select('*').eq('request_id', id).maybeSingle(),
-        supabase.from('payouts').select('*').eq('request_id', id).maybeSingle(),
-      ])
-
-      if (user) {
-        const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-        setProfile(p)
-
-        // Residents can only view their own requests
-        if (p?.role === 'resident' && req?.encoded_by !== user.id) {
-          router.push('/requests')
-          return
-        }
-      }
-
-      setRequest(req); setDocuments(docs ?? []); setAssessment(assess); setPayout(pay)
-      setIsAssessing(false)
+    if (searchParams.get('highlight') === 'true') {
+      setHighlight(true)
+      setTimeout(() => {
+        document.getElementById('request-detail-page')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+      
+      const timer = setTimeout(() => {
+        setHighlight(false)
+        window.history.replaceState({}, '', `/requests/${id}`)
+      }, 3000)
+      
+      return () => clearTimeout(timer)
     }
-    load()
+  }, [searchParams, id])
+
+
+  const loadData = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const [{ data: req }, { data: docs }, { data: assess }, { data: pay }] = await Promise.all([
+      supabase.from('requests').select('*, beneficiaries(*)').eq('id', id).single(),
+      supabase.from('request_documents').select('*').eq('request_id', id),
+      supabase.from('assessments').select('*').eq('request_id', id).maybeSingle(),
+      supabase.from('payouts').select('*').eq('request_id', id).maybeSingle(),
+    ])
+
+    if (user) {
+      const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      setProfile(p)
+
+      // Residents can only view their own requests
+      if (p?.role === 'resident' && req?.encoded_by !== user.id) {
+        router.push('/requests')
+        return
+      }
+    }
+
+    setRequest(req); setDocuments(docs ?? []); setAssessment(assess); setPayout(pay)
+    setIsAssessing(false)
+  }
+
+  useEffect(() => {
+    loadData()
   }, [id])
 
   const updateStatus = async (status: string) => {
     setUpdating(true)
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('requests').update({
+    const updatePayload: any = {
       status, ...(status === 'Approved' ? { approved_by: user?.id } : {}),
-    }).eq('id', id)
+    }
+    if (status === 'Released') {
+      updatePayload.release_status = 'Released'
+    }
+    await supabase.from('requests').update(updatePayload).eq('id', id)
+
+    if (status === 'Released' && request.amount_approved) {
+      const { data: existingPayout } = await supabase.from('payouts').select('id').eq('request_id', id).maybeSingle()
+      if (!existingPayout) {
+        await supabase.from('payouts').insert({
+          request_id: id,
+          amount_released: Number(request.amount_approved),
+          release_date: new Date().toISOString().split('T')[0],
+          released_by: user?.id ?? null,
+          acknowledgment_notes: 'Released via Request Details'
+        })
+      }
+    }
 
     // Notify Resident
     if (request.encoded_by) {
@@ -71,6 +107,33 @@ export default function RequestDetailPage() {
         type: status === 'Approved' || status === 'Released' ? 'info' : 'pending',
         request_id: id
       })
+    }
+
+    // Admin Audit Log and Treasurer Notification
+    if (status === 'Approved') {
+      // Audit Log for Admin
+      await supabase.from('system_logs').insert({
+        user_id: user?.id,
+        action: 'APPROVE_REQUEST',
+        table_name: 'requests',
+        record_id: id,
+        details: { new_status: status }
+      })
+
+      // Notify all Treasurers
+      const { data: treasurers } = await supabase.from('profiles').select('id').eq('role', 'treasurer')
+      if (treasurers && treasurers.length > 0) {
+        const benName = request.beneficiaries ? `${request.beneficiaries.first_name} ${request.beneficiaries.last_name}` : 'Unknown'
+        
+        const notifications = treasurers.map((t: any) => ({
+          user_id: t.id,
+          title: 'Ready for Processing',
+          message: `New approved request ready for processing: ${benName} – ${request.assistance_type} Assistance – Request #${id.slice(0, 8).toUpperCase()} is now For Release.`,
+          type: 'info',
+          request_id: id
+        }))
+        await supabase.from('notifications').insert(notifications)
+      }
     }
 
 
@@ -95,7 +158,7 @@ export default function RequestDetailPage() {
   const StatusIcon = STATUS_ICONS[request.status] || Clock
 
   return (
-    <div className="space-y-5 max-w-4xl" id="request-detail-page">
+    <div className={`space-y-5 max-w-4xl transition-all duration-700 ${highlight ? 'ring-4 ring-cyan-500/50 shadow-2xl shadow-cyan-500/20 rounded-2xl p-4 bg-cyan-50/50 dark:bg-cyan-900/10' : ''}`} id="request-detail-page">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text)]">{t('requests_details')}</h1>
@@ -198,7 +261,7 @@ export default function RequestDetailPage() {
           <AssessmentForm 
             requestId={id} 
             beneficiaryData={request.beneficiaries} 
-            onComplete={() => router.refresh()} 
+            onComplete={() => { loadData() }} 
           />
         </div>
       ) : null}
@@ -217,7 +280,7 @@ export default function RequestDetailPage() {
 
 
       {/* Actions */}
-      {(profile?.role === 'admin' || profile?.role === 'staff') && (
+      {(profile?.role === 'admin') && (
         <div className="card p-6">
           <h2 className="font-semibold text-[var(--color-text)] mb-4 text-[15px]">{t('actions')}</h2>
           <div className="flex flex-wrap gap-2">

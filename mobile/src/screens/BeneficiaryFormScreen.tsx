@@ -1,27 +1,33 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { useTheme } from '../lib/ThemeContext'
 import { useLanguage } from '../lib/LanguageContext'
 import { Picker } from '@react-native-picker/picker'
+import { Feather } from '@expo/vector-icons'
 
 
-const BARANGAYS = [
-  'Aguho','Bagay','Bakhaw','Bateria','Bitoon','Calape','Carnaza','Daanbantayan',
-  'Dalingding','Lanao','Logon','Malbago','Malingin','Maya','Pajo','Paypay',
-  'Poblacion','Talisay','Tapilon','Tinubdan','Tominjao'
+const BARANGAY_PAJO = 'Barangay Pajo'
+
+const PUROKS_PAJO = [
+  'Purok 1', 'Purok 2', 'Purok 3', 'Purok 4', 'Purok 5',
+  'Purok 6', 'Purok 7', 'Purok 8', 'Purok 9', 'Purok 10',
+  'Purok Centro', 'Purok Riverside', 'Purok San Isidro',
+  'Purok Lower Pajo', 'Purok Upper Pajo',
 ]
 
 const Field = ({ label, field, value, onChangeText, keyboardType, placeholder, error, colors, styles }: any) => (
   <View style={styles.field}>
     <Text style={styles.label}>{label}</Text>
     <TextInput 
-      style={[styles.input, error ? { borderColor: '#ef4444' } : {}]} 
+      style={[styles.input, { color: colors.text }, error ? { borderColor: '#ef4444' } : {}]} 
       value={value || ''}
       onChangeText={onChangeText} 
       keyboardType={keyboardType} 
       placeholder={placeholder}
       placeholderTextColor={colors.textSecondary} 
+      cursorColor={colors.primary}
+      selectionColor={colors.primary}
     />
     {error && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{error}</Text>}
   </View>
@@ -36,7 +42,7 @@ export default function BeneficiaryFormScreen({ navigation, route }: any) {
 
     first_name: '', middle_name: '', last_name: '', suffix: '',
     birthdate: '', sex: 'Male', civil_status: 'Single',
-    barangay: '', address: '', contact_number: '',
+    barangay: BARANGAY_PAJO, purok: '', address: '', contact_number: '',
     is_pwd: false, is_senior: false, is_4ps: false,
     monthly_income: '0', occupation: '', family_size: '1',
   })
@@ -52,7 +58,7 @@ export default function BeneficiaryFormScreen({ navigation, route }: any) {
   const update = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }))
 
   const save = async () => {
-    if (!form.first_name || !form.last_name || !form.birthdate || !form.barangay || !form.address) {
+    if (!form.first_name || !form.last_name || !form.birthdate || !form.barangay || !form.purok || !form.address) {
       return Alert.alert(t('error'), t('beneficiary_requiredFields'))
     }
     if (form.contact_number && (form.contact_number.length !== 11 || !form.contact_number.startsWith('09'))) {
@@ -72,7 +78,7 @@ export default function BeneficiaryFormScreen({ navigation, route }: any) {
   const s = styles(colors)
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+    <ScrollView style={s.container} contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
       <Text style={s.section}>{t('beneficiary_personalInfo')}</Text>
       <Field label={t('beneficiary_firstName')} field="first_name" value={form.first_name} onChangeText={(v: string) => update('first_name', v)} colors={colors} styles={s} />
       <Field label={t('beneficiary_middleName')} field="middle_name" value={form.middle_name} onChangeText={(v: string) => update('middle_name', v)} colors={colors} styles={s} />
@@ -102,8 +108,8 @@ export default function BeneficiaryFormScreen({ navigation, route }: any) {
             style={s.picker}
             dropdownIconColor={colors.textSecondary}
           >
-            <Picker.Item label={t('beneficiary_male')} value="Male" color={colors.text} />
-            <Picker.Item label={t('beneficiary_female')} value="Female" color={colors.text} />
+            <Picker.Item label={t('beneficiary_male')} value="Male" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+            <Picker.Item label={t('beneficiary_female')} value="Female" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
           </Picker>
         </View>
       </View>
@@ -117,26 +123,40 @@ export default function BeneficiaryFormScreen({ navigation, route }: any) {
             style={s.picker}
             dropdownIconColor={colors.textSecondary}
           >
-            <Picker.Item label={t('settings_single')} value="Single" color={colors.text} />
-            <Picker.Item label={t('settings_married')} value="Married" color={colors.text} />
-            <Picker.Item label={t('settings_widowed')} value="Widowed" color={colors.text} />
-            <Picker.Item label={t('settings_separated')} value="Separated" color={colors.text} />
-            <Picker.Item label={t('settings_annulled')} value="Annulled" color={colors.text} />
+            <Picker.Item label={t('settings_single')} value="Single" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+            <Picker.Item label={t('settings_married')} value="Married" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+            <Picker.Item label={t('settings_widowed')} value="Widowed" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+            <Picker.Item label={t('settings_separated')} value="Separated" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+            <Picker.Item label={t('settings_annulled')} value="Annulled" color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
           </Picker>
         </View>
       </View>
 
       <View style={s.field}>
         <Text style={s.label}>{t('beneficiary_barangay')}</Text>
-        <View style={s.pickerWrap}>
-          <Picker 
-            selectedValue={form.barangay} 
-            onValueChange={(v) => update('barangay', v)} 
+        <View style={[s.pickerWrap, { opacity: 0.7 }]}>
+          <Picker
+            selectedValue={BARANGAY_PAJO}
+            enabled={false}
             style={s.picker}
             dropdownIconColor={colors.textSecondary}
           >
-            <Picker.Item label={t('beneficiary_selectBarangay')} value="" color={colors.textSecondary} />
-            {BARANGAYS.map(b => <Picker.Item key={b} label={b} value={b} color={colors.text} />)}
+            <Picker.Item label={BARANGAY_PAJO} value={BARANGAY_PAJO} color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+          </Picker>
+        </View>
+      </View>
+
+      <View style={s.field}>
+        <Text style={s.label}>Purok *</Text>
+        <View style={s.pickerWrap}>
+          <Picker
+            selectedValue={form.purok}
+            onValueChange={(v) => update('purok', v)}
+            style={s.picker}
+            dropdownIconColor={colors.textSecondary}
+          >
+            <Picker.Item label="Select Purok" value="" color={Platform.OS === 'android' ? '#64748b' : colors.textSecondary} />
+            {PUROKS_PAJO.map(p => <Picker.Item key={p} label={p} value={p} color={Platform.OS === 'android' ? '#0f172a' : colors.text} />)}
           </Picker>
         </View>
       </View>
@@ -189,7 +209,10 @@ const styles = (colors: any) => StyleSheet.create({
   pickerWrap: { borderWidth: 1.5, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.card, overflow: 'hidden' },
   picker: { height: 50, color: colors.text },
   checkbox: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+  checkboxRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 14 },
+  checkboxItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 16, marginBottom: 8 },
   checkBox: { width: 22, height: 22, borderWidth: 2, borderColor: colors.border, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
   checked: { backgroundColor: colors.primary, borderColor: colors.primary },
   checkMark: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   checkLabel: { fontSize: 14, color: colors.text },

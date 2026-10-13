@@ -15,7 +15,7 @@ export default function PayoutFormScreen({ route, navigation }: any) {
 
   const s = styles(colors)
 
-  if (profile?.role !== 'admin' && profile?.role !== 'staff') {
+  if (profile?.role !== 'admin') {
     return (
       <View style={s.centerContainer}>
         <Text style={s.errorText}>Unauthorized Access</Text>
@@ -43,8 +43,7 @@ export default function PayoutFormScreen({ route, navigation }: any) {
       return
     }
 
-    // Update request status to Released
-    await supabase.from('requests').update({ status: 'Released' }).eq('id', request_id)
+    await supabase.from('requests').update({ status: 'Released', release_status: 'Released' }).eq('id', request_id)
 
     // Notify Resident
     const { data: req } = await supabase.from('requests').select('encoded_by, assistance_type').eq('id', request_id).single()

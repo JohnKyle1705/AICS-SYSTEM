@@ -11,16 +11,31 @@ export default function DashboardRouter() {
 
   useEffect(() => {
     const routeUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         router.push('/login')
         return
       }
-
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      const user = session.user
+      const { data: profile } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).single()
       
+      // If no profile found, try to create one (upsert to avoid duplicate key errors).
+      // Then redirect to /pending since new accounts need admin activation.
       if (!profile) {
-        router.push('/login')
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+          role: 'resident',
+          is_active: false,
+        }, { onConflict: 'id', ignoreDuplicates: true })
+
+        router.replace('/pending')
+        return
+      }
+
+      // If profile exists but is not active, go to pending
+      if (!profile.is_active) {
+        router.replace('/pending')
         return
       }
 
@@ -28,12 +43,11 @@ export default function DashboardRouter() {
         case 'admin':
           router.replace('/admin/dashboard')
           break
-        case 'staff':
-        case 'encoder':
-          router.replace('/staff/dashboard')
-          break
         case 'resident':
           router.replace('/resident/dashboard')
+          break
+        case 'treasurer':
+          router.replace('/treasurer')
           break
         default:
           router.replace('/login')

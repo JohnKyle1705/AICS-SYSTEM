@@ -17,6 +17,8 @@ export default function AdminDashboard() {
   const { t } = useLanguage()
   const [stats, setStats] = useState<any>(null)
   const [pendingUsers, setPendingUsers] = useState<any[]>([])
+  const [duplicateSuspects, setDuplicateSuspects] = useState<any[]>([])
+  const [releaseNotifications, setReleaseNotifications] = useState<any[]>([])
   const [activatingId, setActivatingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -83,6 +85,41 @@ export default function AdminDashboard() {
       monthMap[month] = (monthMap[month] || 0) + 1
     })
 
+    // Duplicate Detection Logic
+    const { data: allReqs } = await supabase.from('requests').select('*, beneficiaries(first_name, last_name)')
+    const suspects: any[] = []
+    if (allReqs) {
+      const bIdGroups = allReqs.reduce((acc: any, r: any) => {
+        acc[r.beneficiary_id] = acc[r.beneficiary_id] || []
+        acc[r.beneficiary_id].push(r)
+        return acc
+      }, {})
+      
+      Object.entries(bIdGroups).forEach(([bId, reqs]: [string, any]) => {
+        if (reqs.length > 1) {
+          suspects.push({
+            beneficiary_id: bId,
+            name: `${reqs[0].beneficiaries?.first_name} ${reqs[0].beneficiaries?.last_name}`,
+            count: reqs.length,
+            reason: 'Multiple requests from same beneficiary'
+          })
+        }
+      })
+    }
+    setDuplicateSuspects(suspects)
+
+    // Release Notifications
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: notifs } = await supabase.from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_read', false)
+        .eq('title', 'Ready for Release')
+        .order('created_at', { ascending: false })
+      setReleaseNotifications(notifs ?? [])
+    }
+
     setStats({
       totalBeneficiaries: totalBeneficiaries ?? 0,
       totalRequests: totalRequests ?? 0,
@@ -106,6 +143,11 @@ export default function AdminDashboard() {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [load])
+
+  const markNotificationRead = async (id: string) => {
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+    setReleaseNotifications(prev => prev.filter(n => n.id !== id))
+  }
 
   const cards = [
     { label: t('dashboard_registeredBeneficiaries'), value: stats?.totalBeneficiaries, icon: Users, gradient: 'from-blue-500 to-blue-600', href: '/beneficiaries' },
@@ -148,7 +190,7 @@ export default function AdminDashboard() {
             {pendingUsers.map(u => (
               <div key={u.id} className="px-6 py-4 flex items-center justify-between hover:bg-[var(--color-surface-hover)] transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                  <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
                     {u.full_name?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <div>
@@ -175,6 +217,93 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {duplicateSuspects.length > 0 && (
+        <div className="card border-red-200 dark:border-red-800/50 overflow-hidden" id="duplicate-suspects-section">
+          <div className="bg-red-50 dark:bg-red-900/20 px-6 py-4 border-b border-red-200 dark:border-red-800/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center text-red-600">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--color-text)]">Duplicate Suspects Detected</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">The following beneficiaries have submitted multiple requests.</p>
+              </div>
+            </div>
+          </div>
+          <div className="divide-y divide-[var(--color-border)] max-h-[250px] overflow-y-auto">
+            {duplicateSuspects.map(s => (
+              <div key={s.beneficiary_id} className="px-6 py-4 flex items-center justify-between hover:bg-[var(--color-surface-hover)] transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-linear-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                    {s.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text)]">{s.name}</p>
+                    <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
+                      <AlertCircle size={12} /> {s.count} requests detected
+                    </p>
+                  </div>
+                </div>
+                <Link 
+                  href={`/requests?search=${encodeURIComponent(s.name.split(' ')[0])}`} 
+                  className="btn btn-secondary py-1.5 px-4 text-xs shadow-sm"
+                >
+                  Review
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {releaseNotifications.length > 0 && (
+        <div className="card border-blue-200 dark:border-blue-800/50 overflow-hidden" id="release-notifications-section">
+          <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-4 border-b border-blue-200 dark:border-blue-800/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-600">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--color-text)]">Treasurer Notifications</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">Requests marked as Ready for Release.</p>
+              </div>
+            </div>
+          </div>
+          <div className="divide-y divide-[var(--color-border)] max-h-[250px] overflow-y-auto">
+            {releaseNotifications.map(n => (
+              <div key={n.id} className="px-6 py-4 flex items-center justify-between hover:bg-[var(--color-surface-hover)] transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                    {n.title?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text)]">{n.message}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)] flex items-center gap-1 mt-0.5">
+                      <Clock size={12} /> {format(new Date(n.created_at), 'MMM d, yyyy h:mm a')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => markNotificationRead(n.id)}
+                    className="btn bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] py-1.5 px-3 text-xs shadow-sm"
+                  >
+                    Mark as Read
+                  </button>
+                  {n.request_id && (
+                    <Link 
+                      href={`/requests/${n.request_id}`} 
+                      className="btn btn-primary py-1.5 px-4 text-xs shadow-sm"
+                    >
+                      Open Request
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {cards.map(({ label, value, icon: Icon, gradient, href }) => (
@@ -183,7 +312,7 @@ export default function AdminDashboard() {
             href={href}
             className="card p-5 flex items-center gap-4 hover:scale-[1.02] hover:shadow-xl transition-all duration-300 cursor-pointer group border-none ring-1 ring-[var(--color-border)] hover:ring-blue-500/50"
           >
-            <div className={`bg-gradient-to-br ${gradient} text-white p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
+            <div className={`bg-linear-to-br ${gradient} text-white p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
               <Icon size={22} />
             </div>
             <div>

@@ -25,6 +25,8 @@ export default function AssessmentForm({ requestId, beneficiaryData, onComplete 
   const [recommendation, setRecommendation] = useState('Recommend Approval')
   const [docStatus, setDocStatus] = useState('Verified')
   const [homeVisit, setHomeVisit] = useState(false)
+  const [amountApproved, setAmountApproved] = useState('')
+  const [error, setError] = useState('')
 
   const scoring = calculatePriority({
     monthlyIncome: beneficiaryData.monthly_income,
@@ -38,28 +40,55 @@ export default function AssessmentForm({ requestId, beneficiaryData, onComplete 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    
+    setError('')
+
     const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      setError('You must be logged in to submit an assessment.')
+      setSaving(false)
+      return
+    }
     
-    const { error } = await supabase.from('assessments').insert({
+    const enrichedFindings = `${findings}\n\n--- Assessment Details ---\nPriority: ${scoring.level} (${scoring.score} pts)\nUrgency: ${urgency}\nEligibility: ${scoring.isEligible ? 'Eligible' : 'Not Eligible'}\nDocuments: ${docStatus}`
+
+    const { error: assessErr } = await supabase.from('assessments').insert({
       request_id: requestId,
       interview_date: new Date().toISOString().split('T')[0],
-      findings,
+      findings: enrichedFindings,
       recommendation,
       home_visit: homeVisit,
-      assessed_by: user?.id,
-      eligibility_status: scoring.isEligible ? 'Eligible' : 'Not Eligible',
+      assessed_by: user.id,
       urgency_level: urgency,
-      priority_score: scoring.score,
       priority_level: scoring.level,
-      document_status: docStatus
+      priority_score: scoring.score,
+      eligibility_status: scoring.isEligible ? 'Eligible' : 'Not Eligible',
+      document_status: docStatus,
     })
 
-    if (!error) {
-      await supabase.from('requests').update({ status: 'Approved' }).eq('id', requestId)
-      onComplete()
+    if (assessErr) {
+      setError(`Assessment failed: ${assessErr.message}`)
+      setSaving(false)
+      return
     }
+
+    const updateData: any = { 
+      assessed_by: user.id,
+      status: recommendation === 'Recommend Approval' ? 'Approved' : 'Pending' 
+    }
+    if (recommendation === 'Recommend Approval' && amountApproved) {
+      updateData.amount_approved = Number(amountApproved)
+    }
+    
+    const { error: reqErr } = await supabase.from('requests').update(updateData).eq('id', requestId)
+    if (reqErr) {
+      setError(`Request update failed: ${reqErr.message}`)
+      setSaving(false)
+      return
+    }
+    
     setSaving(false)
+    onComplete()
   }
 
   return (
@@ -138,7 +167,7 @@ export default function AssessmentForm({ requestId, beneficiaryData, onComplete 
           />
         </div>
         <div>
-          <label className="form-label">Staff Recommendation</label>
+          <label className="form-label">Admin Recommendation</label>
           <select 
             value={recommendation} 
             onChange={(e) => setRecommendation(e.target.value)}
@@ -149,6 +178,23 @@ export default function AssessmentForm({ requestId, beneficiaryData, onComplete 
             <option value="Request Additional Information">Request Additional Information</option>
           </select>
         </div>
+
+        {recommendation === 'Recommend Approval' && (
+          <div>
+            <label className="form-label">Approved Amount (₱)</label>
+            <input 
+              type="number" 
+              required
+              min="1"
+              step="0.01"
+              value={amountApproved}
+              onChange={(e) => setAmountApproved(e.target.value)}
+              className="form-input text-sm"
+              placeholder="e.g. 5000"
+            />
+          </div>
+        )}
+
         <label className="flex items-center gap-3 cursor-pointer group">
           <input 
             type="checkbox" 
@@ -159,6 +205,12 @@ export default function AssessmentForm({ requestId, beneficiaryData, onComplete 
           <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Physical Home Visit Conducted</span>
         </label>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
+          {error}
+        </div>
+      )}
 
       <button
         type="submit"

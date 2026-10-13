@@ -1,29 +1,25 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Image } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Image, Platform } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { useTheme } from '../lib/ThemeContext'
 import { useLanguage } from '../lib/LanguageContext'
 import { Picker } from '@react-native-picker/picker'
 import * as ImagePicker from 'expo-image-picker'
-import * as FileSystem from 'expo-file-system'
+import * as FileSystem from 'expo-file-system/legacy'
 import { decode } from 'base64-arraybuffer'
 import { Feather } from '@expo/vector-icons'
 
-const ASSISTANCE_TYPES = ['Medical', 'Burial', 'Educational', 'Foods']
+const ASSISTANCE_TYPES = ['Medical', 'Burial']
 
 const TYPE_ICONS: Record<string, string> = {
-  Educational: 'book-open',
   Medical: 'activity',
-  Foods: 'coffee',
   Burial: 'heart',
 }
 
 
 
 const AMOUNT_RANGES: Record<string, string[]> = {
-  Educational: ['₱2,000 - ₱5,000', '₱5,001 - ₱10,000'],
   Medical: ['₱1,000 - ₱3,000', '₱3,001 - ₱5,000', '₱5,001 - ₱10,000'],
-  Foods: ['₱1,000 - ₱3,000', '₱3,001 - ₱5,000'],
   Burial: ['₱5,000 - ₱10,000', '₱10,001+']
 }
 
@@ -33,23 +29,15 @@ export default function RequestFormScreen({ navigation, route }: any) {
   const { t } = useLanguage()
 
   const TYPE_FIELDS: Record<string, { key: string; label: string; type: string; placeholder: string; required?: boolean }[]> = {
-    Educational: [
-      { key: 'school_name', label: t('newRequest_fields.school_name'), type: 'text', placeholder: t('newRequest_placeholders.school_name'), required: true },
-      { key: 'course_grade', label: t('newRequest_fields.course_grade'), type: 'text', placeholder: t('newRequest_placeholders.course_grade'), required: true },
-    ],
     Medical: [
-      { key: 'hospital_name', label: t('newRequest_fields.hospital_name'), type: 'text', placeholder: t('newRequest_placeholders.hospital_name'), required: true },
-      { key: 'diagnosis', label: t('newRequest_fields.diagnosis'), type: 'text', placeholder: t('newRequest_placeholders.diagnosis'), required: true },
-      { key: 'estimated_cost', label: t('newRequest_fields.estimated_cost'), type: 'number', placeholder: '0.00', required: true },
-    ],
-    Foods: [
-      { key: 'household_size', label: t('newRequest_fields.household_size'), type: 'number', placeholder: 'e.g. 5', required: true },
-      { key: 'monthly_income', label: t('newRequest_fields.monthly_income'), type: 'number', placeholder: '0.00', required: true },
+      { key: 'hospital_name', label: t('newRequest_fields.hospital_name' as any), type: 'text', placeholder: t('newRequest_placeholders.hospital_name' as any), required: true },
+      { key: 'diagnosis', label: t('newRequest_fields.diagnosis' as any), type: 'text', placeholder: t('newRequest_placeholders.diagnosis' as any), required: true },
+      { key: 'estimated_cost', label: t('newRequest_fields.estimated_cost' as any), type: 'number', placeholder: '0.00', required: true },
     ],
     Burial: [
-      { key: 'deceased_name', label: t('newRequest_fields.deceased_name'), type: 'text', placeholder: t('newRequest_placeholders.deceased_name'), required: true },
-      { key: 'relationship', label: t('newRequest_fields.relationship'), type: 'text', placeholder: t('newRequest_placeholders.relationship'), required: true },
-      { key: 'funeral_home', label: t('newRequest_fields.funeral_home'), type: 'text', placeholder: t('newRequest_placeholders.funeral_home'), required: true },
+      { key: 'deceased_name', label: t('newRequest_fields.deceased_name' as any), type: 'text', placeholder: t('newRequest_placeholders.deceased_name' as any), required: true },
+      { key: 'relationship', label: t('newRequest_fields.relationship' as any), type: 'text', placeholder: t('newRequest_placeholders.relationship' as any), required: true },
+      { key: 'funeral_home', label: t('newRequest_fields.funeral_home' as any), type: 'text', placeholder: t('newRequest_placeholders.funeral_home' as any), required: true },
     ],
   }
   const [step, setStep] = useState(1)
@@ -67,6 +55,12 @@ export default function RequestFormScreen({ navigation, route }: any) {
     sex: '', is_pwd: false, is_senior: false, is_4ps: false
   })
   const [saving, setSaving] = useState(false)
+  
+  // Duplicate Prevention States
+  const [isBlocked, setIsBlocked] = useState(false)
+  const [blockedMessage, setBlockedMessage] = useState('')
+  const [recentRequests, setRecentRequests] = useState<any[]>([])
+  const [restrictionDays, setRestrictionDays] = useState(30)
 
   const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }))
   const updatePersonal = (key: string, value: string) => setPersonalInfo(prev => ({ ...prev, [key]: value }))
@@ -84,18 +78,56 @@ export default function RequestFormScreen({ navigation, route }: any) {
         return
       }
 
-      const { data: b } = await supabase.from('beneficiaries').select('*').eq('created_by', user.id).single()
-      if (b) {
-        setMyBeneficiary(b)
-        update('beneficiary_id', b.id)
-        setPersonalInfo({
-          full_name: `${b.first_name} ${b.middle_name ? b.middle_name + ' ' : ''}${b.last_name}${b.suffix ? ' ' + b.suffix : ''}`,
-          address: b.address || '', contact_number: b.contact_number || '', email: '',
-          birthdate: b.birthdate || '', civil_status: b.civil_status || '',
-          occupation: b.occupation || '', monthly_income: b.monthly_income?.toString() || '',
-          household_size: b.family_size?.toString() || '', barangay: b.barangay || '',
-          sex: b.sex || '', is_pwd: b.is_pwd || false, is_senior: b.is_senior || false, is_4ps: b.is_4ps || false
-        })
+      const { data: b } = await supabase.from('beneficiaries').select('*').eq('created_by', user.id).maybeSingle()
+      if (!b) {
+        Alert.alert(
+          'Beneficiary Registration Required',
+          'You must complete your beneficiary registration before submitting an AICS request.',
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => navigation.goBack() },
+            {
+              text: 'Complete Registration',
+              onPress: () => navigation.replace('BeneficiaryForm', { beneficiary: null }),
+            },
+          ]
+        )
+        return
+      }
+
+      setMyBeneficiary(b)
+      update('beneficiary_id', b.id)
+      setPersonalInfo({
+        full_name: `${b.first_name} ${b.middle_name ? b.middle_name + ' ' : ''}${b.last_name}${b.suffix ? ' ' + b.suffix : ''}`,
+        address: b.address || '', contact_number: b.contact_number || '', email: '',
+        birthdate: b.birthdate || '', civil_status: b.civil_status || '',
+        occupation: b.occupation || '', monthly_income: b.monthly_income?.toString() || '',
+        household_size: b.family_size?.toString() || '', barangay: b.barangay || '',
+        sex: b.sex || '', is_pwd: b.is_pwd || false, is_senior: b.is_senior || false, is_4ps: b.is_4ps || false
+      })
+
+      // DUPLICATE PREVENTION CHECK
+      const { data: settings } = await supabase.from('system_settings').select('setting_value').eq('setting_key', 'duplicate_restriction_days').single()
+      const rDays = settings ? parseInt(settings.setting_value) : 30
+      setRestrictionDays(rDays)
+
+      const { data: requests } = await supabase.from('requests').select('*').eq('beneficiary_id', b.id)
+      if (requests) {
+        const activeReq = requests.find(r => r.status === 'Pending' || r.status === 'Approved')
+        if (activeReq) {
+          setIsBlocked(true)
+          setBlockedMessage('You already have an existing AICS request that is currently being processed. Multiple active requests are not allowed. Please wait for the status of your current application.')
+          
+          await supabase.from('system_logs').insert({
+            user_id: user.id,
+            action: 'BLOCKED_DUPLICATE_REQUEST',
+            details: { reason: 'Active request exists', beneficiary_id: b.id }
+          })
+        } else {
+          const cutoff = new Date()
+          cutoff.setDate(cutoff.getDate() - rDays)
+          const recent = requests.filter(r => new Date(r.created_at) >= cutoff)
+          setRecentRequests(recent)
+        }
       }
     }
     loadMyBeneficiary()
@@ -174,6 +206,13 @@ export default function RequestFormScreen({ navigation, route }: any) {
   }
 
   const submitRequest = async () => {
+    if (!form.beneficiary_id) {
+      Alert.alert(
+        'Beneficiary Registration Required',
+        'You must complete your beneficiary registration before submitting an AICS request.'
+      )
+      return
+    }
     if (!validIdFront || !validIdBack) return Alert.alert(t('error'), t('newRequest_frontRequired'))
     const missingReqs = requirements.filter(r => r.is_required && !preparedDocs[r.id])
     if (missingReqs.length > 0) return Alert.alert(t('error'), t('newRequest_allDocumentsRequired'))
@@ -193,7 +232,24 @@ export default function RequestFormScreen({ navigation, route }: any) {
         status: 'Pending',
       }).select().single()
 
-      if (error) throw error
+      if (error) {
+        // Parse Supabase trigger error messages
+        const msg: string = error.message || ''
+        if (msg.includes('DUPLICATE_ACTIVE')) {
+          Alert.alert(
+            'Request Already Active',
+            'You already have an existing AICS request that is currently being processed. Multiple active requests are not allowed. Please wait for your current request to be resolved.'
+          )
+        } else if (msg.includes('DUPLICATE_TYPE')) {
+          Alert.alert(
+            'Duplicate Request Blocked',
+            `You have already submitted a request for ${form.assistance_type} assistance within the restriction period. Please wait before submitting again.`
+          )
+        } else {
+          throw error
+        }
+        return
+      }
 
       // Upload ID photos
       await uploadIdPhoto(validIdFront, req.id, 'front', user.id)
@@ -245,17 +301,29 @@ export default function RequestFormScreen({ navigation, route }: any) {
         <View style={s.typeGrid}>
           {ASSISTANCE_TYPES.map(type => {
             const active = form.assistance_type === type
+            const isRestricted = recentRequests.some(r => r.assistance_type === type)
             return (
               <TouchableOpacity
                 key={type}
-                style={[s.typeBtn, active && s.typeBtnActive]}
-                onPress={() => update('assistance_type', type)}
-                activeOpacity={0.7}
+                style={[s.typeBtn, active && s.typeBtnActive, isRestricted && { borderColor: '#fecaca', backgroundColor: '#fef2f2' }]}
+                onPress={() => {
+                  if (isRestricted) {
+                    Alert.alert(t('error'), `You have already submitted a request for ${type} assistance within the last ${restrictionDays} days.`)
+                    supabase.from('system_logs').insert({
+                       action: 'BLOCKED_DUPLICATE_REQUEST',
+                       details: { reason: 'Restriction period', type, beneficiary_id: myBeneficiary?.id }
+                    })
+                  } else {
+                    update('assistance_type', type)
+                  }
+                }}
+                activeOpacity={isRestricted ? 1 : 0.7}
               >
-                <View style={[s.typeIconBg, active && s.typeIconBgActive]}>
-                  <Feather name={TYPE_ICONS[type] as any} size={24} color={active ? colors.text : colors.textSecondary} />
+                <View style={[s.typeIconBg, active && s.typeIconBgActive, isRestricted && { backgroundColor: '#fee2e2' }]}>
+                  <Feather name={TYPE_ICONS[type] as any} size={24} color={active ? colors.text : isRestricted ? '#ef4444' : colors.textSecondary} />
                 </View>
-                <Text style={[s.typeBtnText, active && s.typeBtnTextActive]}>{t(type.toLowerCase() as any)}</Text>
+                <Text style={[s.typeBtnText, active && s.typeBtnTextActive, isRestricted && { color: '#ef4444' }]}>{t(type.toLowerCase() as any)}</Text>
+                {isRestricted && <Text style={{fontSize: 9, color: '#ef4444', fontWeight: 'bold', marginTop: 4}}>RESTRICTED</Text>}
               </TouchableOpacity>
             )
           })}
@@ -294,7 +362,7 @@ export default function RequestFormScreen({ navigation, route }: any) {
             <Text style={s.infoValue}>{personalInfo.birthdate || '---'}</Text>
           </View>
           <View style={s.infoItem}>
-            <Text style={s.infoLabel}>{t('settings_sex')}</Text>
+            <Text style={s.infoLabel}>{t('settings_sex' as any)}</Text>
             <Text style={s.infoValue}>{personalInfo.sex ? t(personalInfo.sex.toLowerCase() as any) : '---'}</Text>
           </View>
           <View style={s.infoItem}>
@@ -314,15 +382,15 @@ export default function RequestFormScreen({ navigation, route }: any) {
             <Text style={s.infoValue}>{personalInfo.household_size || '---'}</Text>
           </View>
           <View style={s.infoItem}>
-            <Text style={s.infoLabel}>{t('settings_isPwd')}</Text>
+            <Text style={s.infoLabel}>{t('settings_isPwd' as any)}</Text>
             <Text style={s.infoValue}>{personalInfo.is_pwd ? t('yes') : t('no')}</Text>
           </View>
           <View style={s.infoItem}>
-            <Text style={s.infoLabel}>{t('settings_isSenior')}</Text>
+            <Text style={s.infoLabel}>{t('settings_isSenior' as any)}</Text>
             <Text style={s.infoValue}>{personalInfo.is_senior ? t('yes') : t('no')}</Text>
           </View>
           <View style={s.infoItem}>
-            <Text style={s.infoLabel}>{t('settings_is4ps')}</Text>
+            <Text style={s.infoLabel}>{t('settings_is4ps' as any)}</Text>
             <Text style={s.infoValue}>{personalInfo.is_4ps ? t('yes') : t('no')}</Text>
           </View>
         </View>
@@ -331,17 +399,19 @@ export default function RequestFormScreen({ navigation, route }: any) {
   )
 
   const renderStep2 = () => (
-    <ScrollView style={s.stepContent} contentContainerStyle={{ padding: 20 }}>
+    <ScrollView style={s.stepContent} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
       <Text style={s.stepTitle}>{t('newRequest_stepDetails')}</Text>
       
       <View style={s.field}>
         <Text style={s.label}>{t('newRequest_purpose')}</Text>
         <TextInput
-          style={[s.input, { height: 100, textAlignVertical: 'top' }]}
+          style={[s.input, { height: 100, textAlignVertical: 'top', color: colors.text }]}
           value={form.purpose}
           onChangeText={(v) => update('purpose', v)}
           placeholder={t('newRequest_purposePlaceholder')}
           placeholderTextColor={colors.textSecondary}
+          cursorColor={colors.primary}
+          selectionColor={colors.primary}
           multiline
         />
       </View>
@@ -355,9 +425,9 @@ export default function RequestFormScreen({ navigation, route }: any) {
             style={s.picker}
             dropdownIconColor={colors.textSecondary}
           >
-            <Picker.Item label={t('newRequest_selectAmount')} value="" color={colors.textSecondary} />
+            <Picker.Item label={t('newRequest_selectAmount')} value="" color={Platform.OS === 'android' ? '#64748b' : colors.textSecondary} />
             {(AMOUNT_RANGES[form.assistance_type] || []).map(r => 
-              <Picker.Item key={r} label={r} value={r} color={colors.text} />
+              <Picker.Item key={r} label={r} value={r} color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
             )}
           </Picker>
         </View>
@@ -367,11 +437,13 @@ export default function RequestFormScreen({ navigation, route }: any) {
         <View key={field.key} style={s.field}>
           <Text style={s.label}>{t(`newRequest_fields.${field.key}` as any)}</Text>
           <TextInput
-            style={s.input}
+            style={[s.input, { color: colors.text }]}
             value={extraFields[field.key] || ''}
             onChangeText={(v) => setExtraFields(prev => ({ ...prev, [field.key]: v }))}
             placeholder={t(`newRequest_placeholders.${field.key}` as any)}
             placeholderTextColor={colors.textSecondary}
+            cursorColor={colors.primary}
+            selectionColor={colors.primary}
             keyboardType={field.type === 'number' ? 'numeric' : 'default'}
           />
         </View>
@@ -380,11 +452,13 @@ export default function RequestFormScreen({ navigation, route }: any) {
       <View style={s.field}>
         <Text style={s.label}>{t('newRequest_remarks')}</Text>
         <TextInput
-          style={s.input}
+          style={[s.input, { color: colors.text }]}
           value={form.remarks}
           onChangeText={(v) => update('remarks', v)}
           placeholder={t('newRequest_remarksPlaceholder')}
           placeholderTextColor={colors.textSecondary}
+          cursorColor={colors.primary}
+          selectionColor={colors.primary}
         />
       </View>
     </ScrollView>
@@ -474,42 +548,115 @@ export default function RequestFormScreen({ navigation, route }: any) {
         <Text style={s.headerTitle}>{t('newRequest_title')}</Text>
       </View>
 
-      <View style={s.stepper}>
-        <TouchableOpacity style={[s.stepBtn, step === 1 && s.stepBtnActive]} onPress={() => setStep(1)}>
-          <Text style={[s.stepBtnText, step === 1 && s.stepBtnTextActive]}>{t('newRequest_step1Label') || 'Info'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.stepBtn, step === 2 && s.stepBtnActive]} onPress={() => step >= 2 && setStep(2)}>
-          <Text style={[s.stepBtnText, step === 2 && s.stepBtnTextActive]}>{t('newRequest_step2Label') || 'Details'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.stepBtn, step === 3 && s.stepBtnActive]} onPress={() => step >= 3 && setStep(3)}>
-          <Text style={[s.stepBtnText, step === 3 && s.stepBtnTextActive]}>{t('newRequest_step3Label') || 'Docs'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={{ flex: 1 }}>
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-      </View>
-
-      <View style={s.footer}>
-        {step > 1 && (
-          <TouchableOpacity style={s.navBtn} onPress={() => setStep(step - 1)}>
-            <Feather name="arrow-left" size={18} color={colors.textSecondary} />
-            <Text style={s.navBtnText}>{t('back')}</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity 
-          style={[s.navBtn, s.nextBtn, saving && { opacity: 0.7 }]} 
-          onPress={step === 3 ? submitRequest : handleNext}
-          disabled={saving}
+      {isBlocked ? (
+        <ScrollView
+          contentContainerStyle={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 }}
         >
-          <Text style={s.nextBtnText}>
-            {saving ? t('submitting') : (step === 3 ? t('newRequest_submit') : t('next'))}
+          {/* Blocked icon */}
+          <View style={{
+            width: 80, height: 80, borderRadius: 24,
+            backgroundColor: isDark ? 'rgba(239,68,68,0.12)' : '#fef2f2',
+            borderWidth: 1.5, borderColor: isDark ? 'rgba(239,68,68,0.3)' : '#fecaca',
+            alignItems: 'center', justifyContent: 'center', marginBottom: 20
+          }}>
+            <Feather name="alert-circle" size={40} color="#ef4444" />
+          </View>
+
+          <Text style={{ fontSize: 22, fontWeight: '800', color: '#ef4444', marginBottom: 8, textAlign: 'center' }}>
+            Request Blocked
           </Text>
-          {!saving && <Feather name="arrow-right" size={18} color="#fff" />}
-        </TouchableOpacity>
-      </View>
+          <Text style={{ fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 28 }}>
+            {blockedMessage}
+          </Text>
+
+          {/* Info card showing the blocking request */}
+          <View style={{
+            width: '100%', backgroundColor: colors.card,
+            borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border,
+            marginBottom: 20
+          }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+              Existing Active Request
+            </Text>
+            {recentRequests
+              .filter(r => r.status === 'Pending' || r.status === 'Approved')
+              .slice(0, 1)
+              .map((r: any) => (
+                <View key={r.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{r.assistance_type} Assistance</Text>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                      Filed {new Date(r.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <View style={{
+                    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+                    backgroundColor: r.status === 'Pending' ? '#fef3c7' : '#dbeafe'
+                  }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: r.status === 'Pending' ? '#92400e' : '#1e40af' }}>
+                      {r.status}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            }
+          </View>
+
+          <TouchableOpacity
+            style={[s.navBtn, s.nextBtn, { width: '100%', marginBottom: 10 }]}
+            onPress={() => navigation.navigate('Main' as never, { screen: 'Requests' } as never)}
+          >
+            <Feather name="file-text" size={16} color="#fff" />
+            <Text style={s.nextBtnText}>View My Requests</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.navBtn, { width: '100%' }]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={[s.navBtnText, { color: colors.text }]}>Go Back</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      ) : (
+        <>
+          <View style={s.stepper}>
+            <TouchableOpacity style={[s.stepBtn, step === 1 && s.stepBtnActive]} onPress={() => setStep(1)}>
+              <Text style={[s.stepBtnText, step === 1 && s.stepBtnTextActive]}>{t('newRequest_step1Label') || 'Info'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.stepBtn, step === 2 && s.stepBtnActive]} onPress={() => step >= 2 && setStep(2)}>
+              <Text style={[s.stepBtnText, step === 2 && s.stepBtnTextActive]}>{t('newRequest_step2Label') || 'Details'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.stepBtn, step === 3 && s.stepBtnActive]} onPress={() => step >= 3 && setStep(3)}>
+              <Text style={[s.stepBtnText, step === 3 && s.stepBtnTextActive]}>{t('newRequest_step3Label') || 'Docs'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
+          </View>
+
+          <View style={s.footer}>
+            {step > 1 && (
+              <TouchableOpacity style={s.navBtn} onPress={() => setStep(step - 1)}>
+                <Feather name="arrow-left" size={18} color={colors.textSecondary} />
+                <Text style={s.navBtnText}>{t('back')}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+              style={[s.navBtn, s.nextBtn, saving && { opacity: 0.7 }]} 
+              onPress={step === 3 ? submitRequest : handleNext}
+              disabled={saving}
+            >
+              <Text style={s.nextBtnText}>
+                {saving ? t('submitting') : (step === 3 ? t('newRequest_submit') : t('next'))}
+              </Text>
+              {!saving && <Feather name="arrow-right" size={18} color="#fff" />}
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </View>
   )
 }
@@ -559,7 +706,7 @@ const styles = (colors: any, isDark: boolean) => StyleSheet.create({
   idGrid: { flexDirection: 'row', gap: 12 },
   idItem: { flex: 1, gap: 8 },
   idLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textAlign: 'center' },
-  idPlaceholder: { height: 120, borderRadius: 12, borderWeight: 2, borderColor: colors.border, borderStyle: 'dashed', backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
+  idPlaceholder: { height: 120, borderRadius: 12, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed', backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
   idPlaceholderText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
   idImage: { width: '100%', height: '100%' },
   requirementsList: { gap: 12 },

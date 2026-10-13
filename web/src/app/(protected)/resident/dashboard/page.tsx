@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { FileText, PlusCircle, Clock, CheckCircle, HelpCircle, Users, Megaphone, Calendar, X, ChevronRight } from 'lucide-react'
+import { FileText, PlusCircle, Clock, CheckCircle, HelpCircle, Users, Megaphone, Calendar, X, ChevronRight, Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -14,26 +14,30 @@ export default function ResidentDashboard() {
   const [requests, setRequests] = useState<any[]>([])
   const [announcements, setAnnouncements] = useState<any[]>([])
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null)
-  const [hasBeneficiaryRecord, setHasBeneficiaryRecord] = useState(true)
+  const [hasBeneficiaryRecord, setHasBeneficiaryRecord] = useState<boolean | null>(null)
+  const [beneficiary, setBeneficiary] = useState<any>(null)
+  const [showRegModal, setShowRegModal] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const supabase = createClient()
 
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) return
 
       const [p, reqs, b, anns] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('requests').select('*').eq('encoded_by', user.id).order('created_at', { ascending: false }).limit(5),
-        supabase.from('beneficiaries').select('id').eq('created_by', user.id).maybeSingle(),
+        supabase.from('beneficiaries').select('*').eq('created_by', user.id).maybeSingle(),
         supabase.from('announcements').select('*').eq('is_published', true).order('created_at', { ascending: false }).limit(3)
       ])
 
       setProfile(p.data)
       setRequests(reqs.data ?? [])
       setHasBeneficiaryRecord(!!b.data)
+      setBeneficiary(b.data ?? null)
       setAnnouncements(anns.data ?? [])
       setLoading(false)
     }
@@ -49,7 +53,7 @@ export default function ResidentDashboard() {
               <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
             </div>
           ) : (
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-lg border-2 border-white dark:border-slate-800">
+            <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-lg border-2 border-white dark:border-slate-800">
               {profile?.full_name?.charAt(0)?.toUpperCase()}
             </div>
           )}
@@ -58,30 +62,73 @@ export default function ResidentDashboard() {
             <p className="text-[var(--color-text-secondary)] text-sm">{t('dashboard_residentSubtitle')}</p>
           </div>
         </div>
-        <Link href="/requests/new" className="btn btn-primary px-6 shadow-lg shadow-blue-500/20">
-          <PlusCircle size={18} /> {t('newRequest_title')}
-        </Link>
 
+        {/* New AICS Request Button — Gated by Beneficiary Registration */}
+        {hasBeneficiaryRecord ? (
+          <Link href="/requests/new" className="btn btn-primary px-6 shadow-lg shadow-blue-500/20 flex items-center gap-2">
+            <PlusCircle size={18} /> {t('newRequest_title')}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowRegModal(true)}
+            className="btn bg-blue-600/40 hover:bg-blue-600/60 text-white/80 cursor-pointer px-6 shadow-md flex items-center gap-2 border border-blue-400/25 transition-all"
+            title="Complete beneficiary registration first"
+          >
+            <Lock size={16} className="text-blue-200" />
+            <span>{t('newRequest_title')}</span>
+          </button>
+        )}
       </div>
 
+      {/* ── Registration Card ────────────────────────────────────── */}
       {!hasBeneficiaryRecord && !loading && (
-        <div className="card p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-none relative overflow-hidden">
-          <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20">
-              <Users size={32} />
+        <div className="bg-slate-900/90 dark:bg-[#0c1322] border border-slate-800/90 rounded-2xl p-6 sm:p-7 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 transition-all">
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-slate-800/90 border border-slate-700/60 flex items-center justify-center shrink-0 text-slate-300 shadow-inner">
+              <Users size={28} className="text-slate-300" />
             </div>
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-xl font-bold mb-2">{t('dashboard_completeRegistration')}</h2>
-              <p className="text-blue-100 text-sm leading-relaxed max-w-md">
-                {t('dashboard_completeRegistrationDesc')}
+            <div>
+              <h2 className="text-lg font-bold text-white mb-1">Complete Your Registration</h2>
+              <p className="text-slate-400 text-sm leading-relaxed max-w-xl">
+                Please complete your beneficiary registration to unlock AICS request capabilities.
               </p>
             </div>
-            <Link href="/beneficiaries/new" className="bg-white text-blue-700 px-8 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors shadow-lg">
-              {t('dashboard_startRegistration')}
-            </Link>
-
           </div>
+          <Link
+            href="/beneficiaries/new"
+            className="bg-white text-blue-600 hover:bg-slate-100 font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-md shrink-0 self-stretch sm:self-auto text-center"
+          >
+            Start Registration
+          </Link>
+        </div>
+      )}
+
+      {/* ── Verified Card (Replaces Registration Warning) ──────── */}
+      {hasBeneficiaryRecord && !loading && (
+        <div className="bg-emerald-950/20 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h3 className="font-bold text-white text-base">Beneficiary Registration Verified</h3>
+                <span className="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md">
+                  Verified
+                </span>
+              </div>
+              <p className="text-slate-400 text-xs mt-1">
+                Profile registered for <span className="text-slate-200 font-medium">{beneficiary?.first_name} {beneficiary?.last_name}</span> ({beneficiary?.barangay}) · Ready for Medical &amp; Burial assistance requests.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/requests/new"
+            className="btn btn-primary text-xs px-4 py-2 rounded-lg font-semibold shrink-0 flex items-center gap-1.5 shadow-md"
+          >
+            <PlusCircle size={14} /> New Request
+          </Link>
         </div>
       )}
 
@@ -102,7 +149,17 @@ export default function ResidentDashboard() {
                   <FileText size={24} className="text-slate-400" />
                 </div>
                 <p className="text-[var(--color-text-secondary)] text-sm">{t('dashboard_noRequests')}</p>
-                <Link href="/requests/new" className="text-blue-600 font-bold mt-4 inline-block">{t('dashboard_createFirst')}</Link>
+                {hasBeneficiaryRecord ? (
+                  <Link href="/requests/new" className="text-blue-600 font-bold mt-4 inline-block">{t('dashboard_createFirst')}</Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowRegModal(true)}
+                    className="text-blue-600 font-bold mt-4 inline-block hover:underline cursor-pointer"
+                  >
+                    {t('dashboard_createFirst')}
+                  </button>
+                )}
               </div>
 
             ) : (
@@ -160,7 +217,14 @@ export default function ResidentDashboard() {
                   <div className="flex gap-4">
                     {ann.image_url && (
                       <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 shadow-sm border border-[var(--color-border)]">
-                        <img src={ann.image_url} alt="" className="w-full h-full object-cover" />
+                        <img 
+                          src={ann.image_url} 
+                          alt="" 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
+                          }}
+                        />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -208,7 +272,14 @@ export default function ResidentDashboard() {
             <div className="p-0 overflow-y-auto">
               {selectedAnnouncement.image_url && (
                 <div className="w-full aspect-video border-b border-[var(--color-border)]">
-                  <img src={selectedAnnouncement.image_url} alt="" className="w-full h-full object-cover" />
+                  <img 
+                    src={selectedAnnouncement.image_url} 
+                    alt="" 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
+                    }}
+                  />
                 </div>
               )}
               <div className="p-8">
@@ -234,6 +305,50 @@ export default function ResidentDashboard() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Beneficiary Registration Required Modal */}
+      {showRegModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 animate-scale-in">
+            <div className="flex items-start justify-between gap-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={24} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRegModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">Beneficiary Registration Required</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                You must complete your beneficiary registration before submitting an AICS request.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 pt-2">
+              <Link
+                href="/beneficiaries/new"
+                className="btn btn-primary w-full py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 text-center"
+              >
+                Complete Registration
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowRegModal(false)}
+                className="w-full py-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 text-sm font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

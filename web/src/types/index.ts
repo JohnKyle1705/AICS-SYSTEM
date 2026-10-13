@@ -1,5 +1,5 @@
-export type Role = 'admin' | 'staff' | 'encoder' | 'resident'
-export type AssistanceType = 'Medical' | 'Burial' | 'Educational' | 'Foods'
+export type Role = 'admin' | 'resident' | 'treasurer'
+export type AssistanceType = 'Medical' | 'Burial'
 export type RequestStatus = 'Pending' | 'Approved' | 'Released' | 'Declined'
 export type NotificationType = 'pending' | 'incomplete' | 'followup' | 'info'
 
@@ -23,6 +23,7 @@ export interface Beneficiary {
   sex: 'Male' | 'Female'
   civil_status: 'Single' | 'Married' | 'Widowed' | 'Separated' | 'Annulled'
   barangay: string
+  purok?: string
   address: string
   contact_number?: string
   is_pwd: boolean
@@ -40,6 +41,7 @@ export interface Request {
   status: RequestStatus
   amount_requested?: number
   amount_approved?: number
+  release_status?: 'Pending Release' | 'Ready for Release' | 'Released'
   purpose: string
   remarks?: string
   encoded_by?: string

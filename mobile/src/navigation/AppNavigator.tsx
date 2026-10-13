@@ -12,7 +12,9 @@ import GlobalHeader from '../components/GlobalHeader'
 
 import LoginScreen from '../screens/LoginScreen'
 import RegisterScreen from '../screens/RegisterScreen'
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen'
 import DashboardScreen from '../screens/DashboardScreen'
+import TreasurerDashboardScreen from '../screens/TreasurerDashboardScreen'
 import BeneficiariesScreen from '../screens/BeneficiariesScreen'
 import BeneficiaryFormScreen from '../screens/BeneficiaryFormScreen'
 import RequestsScreen from '../screens/RequestsScreen'
@@ -28,6 +30,12 @@ import SettingsScreen from '../screens/SettingsScreen'
 import AboutScreen from '../screens/AboutScreen'
 import FeedbackReviewScreen from '../screens/FeedbackReviewScreen'
 import AnnouncementDetailScreen from '../screens/AnnouncementDetailScreen'
+import FundsDashboardScreen from '../screens/FundsDashboardScreen'
+import FundTransactionsScreen from '../screens/FundTransactionsScreen'
+import AssessmentsScreen from '../screens/AssessmentsScreen'
+import PayoutsScreen from '../screens/PayoutsScreen'
+import AnnouncementsManageScreen from '../screens/AnnouncementsManageScreen'
+import RequirementsScreen from '../screens/RequirementsScreen'
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -45,7 +53,7 @@ function TabNavigator() {
         tabBarInactiveTintColor: isDark ? '#94a3b8' : '#94a3b8',
         tabBarIcon: ({ color, size }) => {
           let iconName: any = 'circle'
-          if (route.name === 'Dashboard') iconName = 'home'
+          if (route.name === 'Dashboard' || route.name === 'TreasurerDashboard') iconName = 'home'
           else if (route.name === 'Beneficiaries') iconName = 'users'
           else if (route.name === 'Requests') iconName = 'file-text'
           else if (route.name === 'Notifications') iconName = 'bell'
@@ -67,14 +75,21 @@ function TabNavigator() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: -4 },
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen}
-        options={{ tabBarLabel: 'Home' }} />
-      {(profile?.role === 'staff' || profile?.role === 'admin') && (
+      {profile?.role === 'treasurer' ? (
+        <Tab.Screen name="TreasurerDashboard" component={TreasurerDashboardScreen}
+          options={{ tabBarLabel: 'Home' }} />
+      ) : (
+        <Tab.Screen name="Dashboard" component={DashboardScreen}
+          options={{ tabBarLabel: 'Home' }} />
+      )}
+      {(profile?.role === 'admin') && (
         <Tab.Screen name="Beneficiaries" component={BeneficiariesScreen}
           options={{ tabBarLabel: 'Beneficiaries' }} />
       )}
-      <Tab.Screen name="Requests" component={RequestsScreen}
-        options={{ tabBarLabel: 'Requests' }} />
+      {profile?.role !== 'treasurer' && (
+        <Tab.Screen name="Requests" component={RequestsScreen}
+          options={{ tabBarLabel: 'Requests' }} />
+      )}
       {profile?.role === 'admin' && (
         <Tab.Screen name="Users" component={UsersScreen}
           options={{ tabBarLabel: 'Users' }} />
@@ -133,6 +148,7 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           </>
         ) : (
           <>
@@ -147,10 +163,22 @@ export default function AppNavigator() {
               options={{ ...stackOptions, title: 'Announcement' }} />
             <Stack.Screen name="AssessmentForm" component={AssessmentFormScreen}
               options={{ ...stackOptions, title: 'Assessment' }} />
+            <Stack.Screen name="Assessments" component={AssessmentsScreen}
+              options={{ ...stackOptions, title: 'Assessments' }} />
             <Stack.Screen name="PayoutForm" component={PayoutFormScreen}
               options={{ ...stackOptions, title: 'Record Payout' }} />
+            <Stack.Screen name="Payouts" component={PayoutsScreen}
+              options={{ ...stackOptions, title: 'Payout Records' }} />
+            <Stack.Screen name="AnnouncementsManage" component={AnnouncementsManageScreen}
+              options={{ ...stackOptions, title: 'Announcements' }} />
+            <Stack.Screen name="Requirements" component={RequirementsScreen}
+              options={{ ...stackOptions, title: 'Requirements Setup' }} />
             <Stack.Screen name="Reports" component={ReportsScreen}
               options={{ ...stackOptions, title: 'System Reports' }} />
+            <Stack.Screen name="FundsDashboard" component={FundsDashboardScreen}
+              options={{ ...stackOptions, title: 'Fund Tracking' }} />
+            <Stack.Screen name="FundTransactions" component={FundTransactionsScreen}
+              options={{ ...stackOptions, title: 'Fund Ledger' }} />
             <Stack.Screen name="AuditLogs" component={AuditLogsScreen}
               options={{ ...stackOptions, title: 'Audit Logs' }} />
             <Stack.Screen name="Settings" component={SettingsScreen}

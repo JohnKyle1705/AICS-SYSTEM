@@ -16,15 +16,19 @@ export const metadata: Metadata = {
 
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import { LanguageProvider } from '@/lib/LanguageContext'
+import { AuthGuard } from '@/components/providers/AuthGuard'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className={inter.className}>
         <LanguageProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <AuthGuard>{children}</AuthGuard>
+          </ThemeProvider>
         </LanguageProvider>
       </body>
     </html>
   )
 }
+

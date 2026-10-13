@@ -24,7 +24,7 @@ ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own support tickets" 
 ON support_tickets FOR ALL USING (
   auth.uid() = user_id OR EXISTS (
-    SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff')
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
   )
 );
 
@@ -49,7 +49,7 @@ ALTER TABLE feedbacks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own feedback" 
 ON feedbacks FOR ALL USING (
   auth.uid() = user_id OR EXISTS (
-    SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff')
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
   )
 );
 

@@ -9,7 +9,7 @@ import { useTheme } from 'next-themes'
 import { useLanguage } from '@/lib/LanguageContext'
 import { Language } from '@/lib/i18n/translations'
 import {
-  LayoutDashboard, Users, FileText, ClipboardList,
+  LayoutDashboard, Users, FileText, ClipboardList, Wallet,
   DollarSign, BarChart2, Bell, UserCog, LogOut, Menu, X,
   ChevronRight, Sun, Moon, Settings, ScrollText, Pin, PinOff, Info, MessageSquare,
   Clock, CalendarDays, Megaphone
@@ -48,7 +48,7 @@ export default function Sidebar() {
   const supabase = createClient()
   const clock = useLiveClock()
 
-  useEffect(() => { 
+  useEffect(() => {
     setMounted(true)
     const pinned = localStorage.getItem('sidebar-pinned') === 'true'
     setIsPinned(pinned)
@@ -69,17 +69,33 @@ export default function Sidebar() {
   }
 
   useEffect(() => {
+    let channel: any
+
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      const user = session.user
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       setProfile(data)
       const { count } = await supabase.from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id).eq('is_read', false)
       setUnread(count ?? 0)
+
+      channel = supabase.channel(`sidebar-notifications-${Date.now()}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
+          setUnread(prev => prev + 1)
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+          if (payload.new.is_read && !payload.old.is_read) {
+            setUnread(prev => Math.max(0, prev - 1))
+          }
+        })
+        .subscribe()
     }
     load()
+    
+    return () => { if (channel) supabase.removeChannel(channel) }
   }, [])
 
   const handleLogout = async () => {
@@ -91,19 +107,18 @@ export default function Sidebar() {
     setTheme(theme === 'dark' ? 'light' : 'dark')
   }
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'fil' : 'en')
-  }
+
 
   // Role-based Menu Items
   const menuItems = {
     admin: [
       { href: '/admin/dashboard', label: t('nav_adminDashboard'), icon: LayoutDashboard },
-      { href: '/users', label: t('nav_staffManagement'), icon: UserCog },
+      { href: '/users', label: t('nav_userManagement'), icon: UserCog },
       { href: '/beneficiaries', label: t('nav_beneficiaries'), icon: Users },
       { href: '/requests', label: t('nav_allRequests'), icon: FileText },
       { href: '/assessments', label: t('nav_assessments'), icon: ClipboardList },
       { href: '/payouts', label: t('nav_payouts'), icon: DollarSign },
+      { href: '/admin/funds', label: 'Fund Tracking', icon: Wallet },
       { href: '/reports', label: t('nav_systemReports'), icon: BarChart2 },
       { href: '/logs', label: t('nav_auditLogs'), icon: ScrollText },
       { href: '/settings/requirements', label: t('nav_requirementsSetup'), icon: ClipboardList },
@@ -113,33 +128,18 @@ export default function Sidebar() {
       { href: '/feedbacks', label: t('nav_systemFeedback'), icon: MessageSquare },
       { href: '/settings', label: t('nav_settings'), icon: Settings },
     ],
-    staff: [
-      { href: '/staff/dashboard', label: t('nav_staffDashboard'), icon: LayoutDashboard },
-      { href: '/beneficiaries', label: t('nav_beneficiaries'), icon: Users },
-      { href: '/requests', label: t('nav_processRequests'), icon: FileText },
-      { href: '/assessments', label: t('nav_assessments'), icon: ClipboardList },
-      { href: '/payouts', label: t('nav_payouts'), icon: DollarSign },
-      { href: '/reports', label: t('nav_reports'), icon: BarChart2 },
-      { href: '/settings/requirements', label: t('nav_requirementsSetup'), icon: ClipboardList },
-      { href: '/notifications', label: t('nav_notifications'), icon: Bell },
-      { href: '/about', label: t('nav_aboutAICS'), icon: Info },
-      { href: '/feedbacks', label: t('nav_systemFeedback'), icon: MessageSquare },
-      { href: '/settings', label: t('nav_settings'), icon: Settings },
-    ],
-    encoder: [
-      { href: '/staff/dashboard', label: t('nav_encoderDashboard'), icon: LayoutDashboard },
-      { href: '/beneficiaries', label: t('nav_beneficiaries'), icon: Users },
-      { href: '/requests', label: t('nav_requests'), icon: FileText },
-      { href: '/notifications', label: t('nav_notifications'), icon: Bell },
-      { href: '/about', label: t('nav_aboutAICS'), icon: Info },
-      { href: '/settings', label: t('nav_settings'), icon: Settings },
-    ],
     resident: [
       { href: '/resident/dashboard', label: t('nav_myDashboard'), icon: LayoutDashboard },
       { href: '/requests', label: t('nav_myRequests'), icon: FileText },
       { href: '/notifications', label: t('nav_notifications'), icon: Bell },
       { href: '/about', label: t('nav_aboutAICS'), icon: Info },
       { href: '/settings', label: t('nav_accountSettings'), icon: Settings },
+    ],
+    treasurer: [
+      { href: '/treasurer', label: t('nav_treasurerDashboard'), icon: LayoutDashboard },
+      { href: '/notifications', label: t('nav_notifications'), icon: Bell },
+      { href: '/about', label: t('nav_aboutAICS'), icon: Info },
+      { href: '/settings', label: t('nav_settings'), icon: Settings },
     ]
   }
 
@@ -163,13 +163,7 @@ export default function Sidebar() {
           </div>
           {mounted && (
             <div className="flex items-center gap-1 mr-2">
-              <button
-                onClick={toggleLanguage}
-                className="h-9 px-2.5 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text)] text-xs font-bold"
-              >
-                <span>{language === 'en' ? '🇬🇧' : '🇵🇭'}</span>
-                <span>{language.toUpperCase()}</span>
-              </button>
+
               <button
                 onClick={toggleTheme}
                 className="w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text)]"
@@ -236,7 +230,7 @@ export default function Sidebar() {
                 )}
               </div>
             </div>
-            
+
             {mounted && (isPinned || isHovered) && (
               <div className="flex items-center gap-1">
                 <button
@@ -250,88 +244,81 @@ export default function Sidebar() {
             )}
           </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-1">
-          {filtered.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setOpen(false)}
-                title={(!isPinned && !isHovered) ? label : undefined}
-                className={`sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-1">
+            {filtered.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || pathname.startsWith(href + '/')
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setOpen(false)}
+                  title={(!isPinned && !isHovered) ? label : undefined}
+                  className={`sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200
                   ${active
-                    ? 'active bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]'
-                  } ${!isPinned && !isHovered ? 'justify-center lg:justify-start' : ''}`}
-                id={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <div className="flex-shrink-0 flex items-center justify-center w-[18px]">
-                  <Icon size={18} strokeWidth={active ? 2 : 1.5} />
-                </div>
-                <span className={`flex-1 whitespace-nowrap transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`}>{label}</span>
-                {(label === t('nav_notifications') || label === 'Notifications') && unread > 0 && (
-                  <span className={`bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 transition-all duration-200
+                      ? 'active bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                      : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]'
+                    } ${!isPinned && !isHovered ? 'justify-center lg:justify-start' : ''}`}
+                  id={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <div className="flex-shrink-0 flex items-center justify-center w-[18px]">
+                    <Icon size={18} strokeWidth={active ? 2 : 1.5} />
+                  </div>
+                  <span className={`flex-1 whitespace-nowrap transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`}>{label}</span>
+                  {(label === t('nav_notifications') || label === 'Notifications') && unread > 0 && (
+                    <span className={`bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 transition-all duration-200
                     ${isPinned || isHovered ? 'w-5 h-5 opacity-100 lg:opacity-100' : 'absolute right-2 top-2 w-2 h-2 opacity-100 lg:w-2 lg:h-2'}`}>
-                    <span className={`transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`}>
-                      {unread > 9 ? '9+' : unread}
+                      <span className={`transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`}>
+                        {unread > 9 ? '9+' : unread}
+                      </span>
                     </span>
-                  </span>
-                )}
-                {active && <ChevronRight size={14} className={`text-blue-400 transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`} />}
-              </Link>
-            )
-          })}
-        </nav>
+                  )}
+                  {active && <ChevronRight size={14} className={`text-blue-400 transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`} />}
+                </Link>
+              )
+            })}
+          </nav>
 
-        {/* User Info & Logout */}
-        <div className="p-4 border-t border-[var(--color-border)]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 bg-blue-500/10 rounded-lg flex flex-shrink-0 items-center justify-center text-blue-600 dark:text-blue-400 font-semibold text-sm border border-blue-400/10 overflow-hidden relative shadow-inner">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.full_name || 'Profile'} className="w-full h-full object-cover" />
-              ) : (
-                profile?.full_name?.charAt(0)?.toUpperCase() || '?'
+          {/* User Info & Logout */}
+          <div className="p-4 border-t border-[var(--color-border)]">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 bg-blue-500/10 rounded-lg flex flex-shrink-0 items-center justify-center text-blue-600 dark:text-blue-400 font-semibold text-sm border border-blue-400/10 overflow-hidden relative shadow-inner">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt={profile.full_name || 'Profile'} className="w-full h-full object-cover" />
+                ) : (
+                  profile?.full_name?.charAt(0)?.toUpperCase() || '?'
+                )}
+              </div>
+              <div className={`flex-1 min-w-0 transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`}>
+                <p className="text-sm font-medium truncate text-[var(--color-text)]">{profile?.full_name || 'Loading...'}</p>
+                <p className="text-[11px] text-[var(--color-text-secondary)] capitalize">{profile?.role}</p>
+              </div>
+            </div>
+            <div className={`flex items-center ${isPinned || isHovered ? 'justify-between' : 'justify-center'}`}>
+              <button
+                onClick={handleLogout}
+                title={(!isPinned && !isHovered) ? "Sign Out" : undefined}
+                className={`flex items-center gap-3 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 text-[13px] px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors`}
+                id="logout-button"
+              >
+                <LogOut size={16} className="flex-shrink-0" />
+                <span className={`whitespace-nowrap transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : 'hidden'}`}>{t('signOut')}</span>
+              </button>
+
+              {mounted && (isPinned || isHovered) && (
+                <div className="flex items-center gap-1">
+
+                  <button
+                    onClick={toggleTheme}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] transition-colors"
+                    title={t('toggleTheme')}
+                  >
+                    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                  </button>
+                </div>
               )}
             </div>
-            <div className={`flex-1 min-w-0 transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`}>
-              <p className="text-sm font-medium truncate text-[var(--color-text)]">{profile?.full_name || 'Loading...'}</p>
-              <p className="text-[11px] text-[var(--color-text-secondary)] capitalize">{profile?.role}</p>
-            </div>
           </div>
-          <div className={`flex items-center ${isPinned || isHovered ? 'justify-between' : 'justify-center'}`}>
-            <button
-              onClick={handleLogout}
-              title={(!isPinned && !isHovered) ? "Sign Out" : undefined}
-              className={`flex items-center gap-3 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 text-[13px] px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors`}
-              id="logout-button"
-            >
-              <LogOut size={16} className="flex-shrink-0" />
-              <span className={`whitespace-nowrap transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : 'hidden'}`}>{t('signOut')}</span>
-            </button>
-            
-            {mounted && (isPinned || isHovered) && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={toggleLanguage}
-                  className="h-8 px-2 flex items-center justify-center gap-1.5 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] transition-colors text-xs font-bold"
-                  title={t('language')}
-                >
-                  <span>{language === 'en' ? '🇬🇧' : '🇵🇭'}</span>
-                  <span>{language.toUpperCase()}</span>
-                </button>
-                <button
-                  onClick={toggleTheme}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] transition-colors"
-                  title={t('toggleTheme')}
-                >
-                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
         </div>
       </aside>
     </>

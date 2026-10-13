@@ -1,5 +1,5 @@
-export type Role = 'admin' | 'staff' | 'encoder' | 'resident'
-export type AssistanceType = 'Medical' | 'Burial' | 'Educational' | 'Foods'
+export type Role = 'admin' | 'resident' | 'treasurer'
+export type AssistanceType = 'Medical' | 'Burial'
 export type RequestStatus = 'Pending' | 'Approved' | 'Released' | 'Declined'
 
 export interface Profile {
@@ -37,6 +37,7 @@ export interface Request {
   status: RequestStatus
   amount_requested?: number
   amount_approved?: number
+  release_status?: 'Pending Release' | 'Ready for Release' | 'Released'
   purpose: string
   remarks?: string
   created_at: string
