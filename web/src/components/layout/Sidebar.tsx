@@ -159,7 +159,7 @@ export default function Sidebar() {
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>
           <div className="flex items-center gap-2 ml-3 flex-1">
-            <Image src="/logo.png" alt="AICS" width={24} height={24} className="object-contain" />
+            <Image src="/aics_logo.png" alt="AICS" width={24} height={24} className="object-contain" />
             <span className="font-semibold text-[var(--color-text)] text-sm">AICS System</span>
           </div>
           {mounted && (
