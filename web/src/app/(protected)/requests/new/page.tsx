@@ -7,7 +7,7 @@ import { ASSISTANCE_TYPES } from '@/lib/constants'
 import {
   Loader2, Check, X, FileText, AlertCircle, ChevronRight,
   ChevronLeft, GraduationCap, Stethoscope, UtensilsCrossed, Cross,
-  Camera, RotateCcw, User, CreditCard, Upload, ShieldAlert, MapPin, Phone
+  Camera, RotateCcw, User, CreditCard, Upload, ShieldAlert
 } from 'lucide-react'
 import Link from 'next/link'
 import { BARANGAYS } from '@/lib/constants'
@@ -609,24 +609,19 @@ export default function NewRequestPage() {
           <ShieldAlert size={36} />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">In-Person Registration Required</h2>
+          <h2 className="text-2xl font-bold text-white">Beneficiary Registration Required</h2>
           <p className="text-slate-300 text-sm leading-relaxed max-w-md mx-auto">
-            You must first be registered as a beneficiary at the <strong className="text-white">Daanbantayan MSWD Office</strong> before you can submit an AICS request. Please visit us in person with valid identification.
+            You must complete your beneficiary registration before submitting an AICS request.
           </p>
         </div>
-        <div className="bg-slate-800/60 rounded-xl p-4 text-left space-y-3 border border-slate-700/50">
-          <div className="flex items-start gap-3 text-sm text-slate-300">
-            <MapPin size={16} className="text-amber-400 mt-0.5 shrink-0" />
-            <span>Daanbantayan MSWD Office, Daanbantayan, Cebu</span>
-          </div>
-          <div className="flex items-start gap-3 text-sm text-slate-300">
-            <Phone size={16} className="text-amber-400 mt-0.5 shrink-0" />
-            <span>Contact the MSWD office for office hours and requirements</span>
-          </div>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <Link href="/beneficiaries/new" className="btn btn-primary px-7 py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 text-center">
+            Complete Registration
+          </Link>
+          <Link href="/resident/dashboard" className="px-6 py-3 rounded-xl text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 text-sm font-semibold transition-colors text-center border border-slate-700/50">
+            Back to Dashboard
+          </Link>
         </div>
-        <Link href="/resident/dashboard" className="px-6 py-3 rounded-xl text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 text-sm font-semibold transition-colors text-center border border-slate-700/50 inline-block">
-          Back to Dashboard
-        </Link>
       </div>
     )
   }

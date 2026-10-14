@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { FileText, PlusCircle, Clock, CheckCircle, HelpCircle, Users, Megaphone, Calendar, X, ChevronRight, Lock, AlertTriangle, CheckCircle2, MapPin, Phone } from 'lucide-react'
+import { FileText, PlusCircle, Clock, CheckCircle, HelpCircle, Users, Megaphone, Calendar, X, ChevronRight, Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -83,28 +83,24 @@ export default function ResidentDashboard() {
 
       {/* ── Registration Card ────────────────────────────────────── */}
       {!hasBeneficiaryRecord && !loading && (
-        <div className="bg-slate-900/90 dark:bg-[#0c1322] border border-amber-800/40 rounded-2xl p-6 sm:p-7 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 transition-all">
+        <div className="bg-slate-900/90 dark:bg-[#0c1322] border border-slate-800/90 rounded-2xl p-6 sm:p-7 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 transition-all">
           <div className="flex items-center gap-4 sm:gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 shadow-inner">
-              <Users size={28} />
+            <div className="w-14 h-14 rounded-2xl bg-slate-800/90 border border-slate-700/60 flex items-center justify-center shrink-0 text-slate-300 shadow-inner">
+              <Users size={28} className="text-slate-300" />
             </div>
-            <div className="space-y-2">
-              <h2 className="text-lg font-bold text-white">Beneficiary Registration Needed</h2>
+            <div>
+              <h2 className="text-lg font-bold text-white mb-1">Complete Your Registration</h2>
               <p className="text-slate-400 text-sm leading-relaxed max-w-xl">
-                To apply for AICS assistance, you must first be registered as a beneficiary at the MSWD office.
+                Please complete your beneficiary registration to unlock AICS request capabilities.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <MapPin size={12} className="text-amber-400 shrink-0" />
-                  <span>Daanbantayan MSWD Office, Daanbantayan, Cebu</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <Phone size={12} className="text-amber-400 shrink-0" />
-                  <span>Contact office for hours &amp; requirements</span>
-                </div>
-              </div>
             </div>
           </div>
+          <Link
+            href="/beneficiaries/new"
+            className="bg-white text-blue-600 hover:bg-slate-100 font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-md shrink-0 self-stretch sm:self-auto text-center"
+          >
+            Start Registration
+          </Link>
         </div>
       )}
 
