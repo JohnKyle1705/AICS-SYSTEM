@@ -169,6 +169,7 @@ const translations = {
     settings_selectBarangay: 'Select Barangay',
     settings_selectCivilStatus: 'Select Civil Status',
     settings_selectSex: 'Select Sex',
+    settings_personalDetails: 'Personal Details',
 
 
     // ── Settings — Requirements ───────────────────────────────
@@ -246,6 +247,7 @@ const translations = {
     ben_viewProfile: 'View Profile',
     ben_deleteConfirm: 'Delete Beneficiary',
     ben_deleteMsg: 'Are you sure you want to delete this beneficiary? This will also remove all associated requests.',
+    beneficiary_barangay: 'Barangay',
 
     // ── User Management ──────────────────────────────────────
     users_title: 'User Management',
@@ -354,8 +356,10 @@ const translations = {
     newRequest_contactPlaceholder: 'e.g. 09XX-XXX-XXXX',
     newRequest_emailPlaceholder: 'email@example.com',
     newRequest_personalInfoTitle: 'Personal Information',
-
-    // ── Reports Page ─────────────────────────────────────────
+    newRequest_idCapture: 'Valid ID Capture',
+    newRequest_idCaptureDesc: 'Please take a clear photo of your valid ID (National ID, Driver\'s License, Voter\'s ID, School ID). Both front and back sides are required.',
+    newRequest_selectType: 'Please select an assistance type.',
+    newRequest_amountRange: 'Requested Amount Range',
     reports_title: 'Reports & Analytics',
     reports_allIncluded: 'All statuses included',
     reports_declinedExcluded: 'Declined excluded',
