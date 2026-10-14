@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { AuthChangeEvent } from '@supabase/supabase-js'
 
 /**
  * AuthGuard listens for Supabase auth state changes on the client side.
@@ -14,7 +15,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const supabase = createClient()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event) => {
+      (event: AuthChangeEvent) => {
         if (event === 'TOKEN_REFRESHED') {
           // Token refreshed successfully — nothing to do
         }

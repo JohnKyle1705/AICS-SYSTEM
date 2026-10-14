@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import Link from 'next/link'
-import { Plus, DollarSign, Search, Filter, ArrowLeft, RefreshCw, CheckCircle2, HeartPulse, ShieldAlert } from 'lucide-react'
+import { Plus, Banknote, Search, Filter, ArrowLeft, RefreshCw, CheckCircle2, HeartPulse, ShieldAlert } from 'lucide-react'
 
 export default function PayoutsPage() {
   const [payouts, setPayouts] = useState<any[]>([])
@@ -149,7 +149,7 @@ export default function PayoutsPage() {
         <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-              <DollarSign size={18} className="text-emerald-600 dark:text-emerald-400" />
+              <Banknote size={18} className="text-emerald-600 dark:text-emerald-400" />
             </div>
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
               Total Released
@@ -271,7 +271,7 @@ export default function PayoutsPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-12">
-                    <DollarSign size={36} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+                    <Banknote size={36} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
                     <p className="text-slate-400 text-sm font-medium">No payout records found</p>
                     {search && (
                       <p className="text-slate-400 text-xs mt-1">Try clearing your search query</p>

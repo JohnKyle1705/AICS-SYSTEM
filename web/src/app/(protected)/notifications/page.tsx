@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js'
 import type { Notification } from '@/types'
 import { format } from 'date-fns'
 import { Bell, CheckCheck, AlertTriangle, Clock, Info, MessageSquare } from 'lucide-react'
@@ -50,8 +51,8 @@ export default function NotificationsPage() {
           schema: 'public', 
           table: 'notifications', 
           filter: `user_id=eq.${user.id}` 
-        }, (payload) => {
-          setNotifications(prev => [payload.new as Notification, ...prev])
+        }, (payload: RealtimePostgresInsertPayload<Record<string, unknown>>) => {
+          setNotifications(prev => [payload.new as unknown as Notification, ...prev])
         })
         .subscribe()
 

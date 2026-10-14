@@ -35,7 +35,7 @@ function PayoutForm() {
     supabase.from('requests')
       .select('id, assistance_type, encoded_by, amount_approved, beneficiaries(first_name, last_name)')
       .eq('status', 'Approved')
-      .then(({ data }) => setApprovedRequests(data ?? []))
+      .then(({ data }: { data: any[] | null }) => setApprovedRequests(data ?? []))
   }, [])
 
   const onSubmit = async (data: FormData) => {

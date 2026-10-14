@@ -79,7 +79,7 @@ export default function AdminDashboard() {
     const typeMap: Record<string, number> = {}
     const monthMap: Record<string, number> = {}
 
-    requests?.forEach((r) => {
+    requests?.forEach((r: { assistance_type: string; created_at: string }) => {
       typeMap[r.assistance_type] = (typeMap[r.assistance_type] || 0) + 1
       const month = new Date(r.created_at).toLocaleString('default', { month: 'short', year: '2-digit' })
       monthMap[month] = (monthMap[month] || 0) + 1

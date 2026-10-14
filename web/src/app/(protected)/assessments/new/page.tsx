@@ -34,7 +34,7 @@ function AssessmentForm() {
   useEffect(() => {
     if (!requestId) return
     supabase.from('requests').select('assistance_type, encoded_by, beneficiaries(first_name, last_name)')
-      .eq('id', requestId).single().then(({ data }) => setRequestInfo(data))
+      .eq('id', requestId).single().then(({ data }: { data: any }) => setRequestInfo(data))
   }, [requestId])
 
   const onSubmit = async (data: FormData) => {

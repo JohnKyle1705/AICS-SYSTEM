@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { AuthChangeEvent } from '@supabase/supabase-js'
 import { Lock, Loader2, CheckCircle2, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -20,7 +21,7 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     // Supabase parses the hash fragment from the reset email link and establishes a session
     const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
       if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true)
       }

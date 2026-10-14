@@ -15,7 +15,7 @@ export default function AssessmentsPage() {
     supabase.from('assessments')
       .select('*, requests(assistance_type, status, beneficiaries(first_name, last_name))')
       .order('created_at', { ascending: false })
-      .then(({ data }) => { setAssessments(data ?? []); setLoading(false) })
+      .then(({ data }: { data: any[] | null }) => { setAssessments(data ?? []); setLoading(false) })
   }, [])
 
   return (

@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import type { Profile } from '@/types'
 import { useTheme } from 'next-themes'
 import { useLanguage } from '@/lib/LanguageContext'
 import { Language } from '@/lib/i18n/translations'
 import {
   LayoutDashboard, Users, FileText, ClipboardList, Wallet,
-  DollarSign, BarChart2, Bell, UserCog, LogOut, Menu, X,
+  Banknote, BarChart2, Bell, UserCog, LogOut, Menu, X,
   ChevronRight, Sun, Moon, Settings, ScrollText, Pin, PinOff, Info, MessageSquare,
   Clock, CalendarDays, Megaphone
 } from 'lucide-react'
@@ -86,8 +87,8 @@ export default function Sidebar() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
           setUnread(prev => prev + 1)
         })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
-          if (payload.new.is_read && !payload.old.is_read) {
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload: RealtimePostgresChangesPayload<{ is_read: boolean }>) => {
+          if ((payload.new as { is_read: boolean }).is_read && !(payload.old as { is_read: boolean }).is_read) {
             setUnread(prev => Math.max(0, prev - 1))
           }
         })
@@ -117,7 +118,7 @@ export default function Sidebar() {
       { href: '/beneficiaries', label: t('nav_beneficiaries'), icon: Users },
       { href: '/requests', label: t('nav_allRequests'), icon: FileText },
       { href: '/assessments', label: t('nav_assessments'), icon: ClipboardList },
-      { href: '/payouts', label: t('nav_payouts'), icon: DollarSign },
+      { href: '/payouts', label: t('nav_payouts'), icon: Banknote },
       { href: '/admin/funds', label: 'Fund Tracking', icon: Wallet },
       { href: '/reports', label: t('nav_systemReports'), icon: BarChart2 },
       { href: '/logs', label: t('nav_auditLogs'), icon: ScrollText },
