@@ -158,11 +158,38 @@ export default function NewRequestPage() {
 
   const fileInputFrontRef = useRef<HTMLInputElement>(null)
   const fileInputBackRef = useRef<HTMLInputElement>(null)
+  const [isDraggingFront, setIsDraggingFront] = useState(false)
+  const [isDraggingBack, setIsDraggingBack] = useState(false)
+
+  const validateAndSetPhoto = (file: File, side: 'front' | 'back'): boolean => {
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    const ext = file.name.split('.').pop()?.toLowerCase() || ''
+    const validExts = ['jpg', 'jpeg', 'png', 'webp']
+    const isMimeValid = file.type ? validTypes.includes(file.type.toLowerCase()) : false
+    const isExtValid = validExts.includes(ext)
+
+    if (!isMimeValid && !isExtValid) {
+      setError('Invalid file type. Please upload a JPG, JPEG, PNG, or WEBP image.')
+      return false
+    }
+
+    // Validate file size (max 10 MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File too large. The maximum allowed size is 10 MB.')
+      return false
+    }
+
+    setError('')
+    if (side === 'front') setValidIdFront(file)
+    else setValidIdBack(file)
+    return true
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     if (e.target.files && e.target.files.length > 0) {
-      if (side === 'front') setValidIdFront(e.target.files[0])
-      else setValidIdBack(e.target.files[0])
+      validateAndSetPhoto(e.target.files[0], side)
+      e.target.value = ''
     }
   }
 
@@ -329,8 +356,16 @@ export default function NewRequestPage() {
       return
     }
 
-    if (!validIdFront || !validIdBack) {
-      setError(t('newRequest_frontRequired'))
+    if (!validIdFront && !validIdBack) {
+      setError('Both Front Side and Back Side photos of your Valid ID are required.')
+      return
+    }
+    if (!validIdFront) {
+      setError('Front Side photo of your Valid ID is required.')
+      return
+    }
+    if (!validIdBack) {
+      setError('Back Side photo of your Valid ID is required.')
       return
     }
 
@@ -373,17 +408,19 @@ export default function NewRequestPage() {
 
       // Upload ID photos
       const uploadFile = async (file: File, side: string) => {
-        const path = `requests/${req.id}/valid_id_${side}_${Date.now()}`
-        const { error: uploadErr } = await supabase.storage.from('documents').upload(path, file)
+        const ext = file.name.split('.').pop() || 'jpg'
+        const path = `requests/${req.id}/valid_id_${side}_${Date.now()}.${ext}`
+        const { error: uploadErr } = await supabase.storage.from('documents').upload(path, file, {
+          contentType: file.type || 'image/jpeg'
+        })
         if (uploadErr) throw uploadErr
         
         await supabase.from('request_documents').insert({
           request_id: req.id,
-          file_name: file.name,
+          file_name: `Valid ID (${side === 'front' ? 'Front' : 'Back'}) - ${file.name}`,
           file_path: path,
-          file_type: file.type,
-          uploaded_by: user.id,
-          document_type: `Valid ID (${side.charAt(0).toUpperCase() + side.slice(1)})`
+          file_type: file.type || 'image/jpeg',
+          uploaded_by: user.id
         })
       }
 
@@ -687,88 +724,214 @@ export default function NewRequestPage() {
         <p className="text-[var(--color-text-secondary)] text-sm mb-8">{t('newRequest_idCaptureDesc')}</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="space-y-4">
+          {/* ── Front Side ── */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">{t('newRequest_frontSide')}</label>
               {validIdFront && (
-                <span className="text-[10px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">{t('success')}</span>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+                  <Check size={10} /> {t('success')}
+                </span>
               )}
             </div>
-            
-            <div className={`relative aspect-[4/3] rounded-2xl border-2 overflow-hidden transition-all duration-300 ${
-              validIdFront ? 'border-emerald-500/30' : 'border-[var(--color-border)] border-dashed bg-slate-50/50'
-            }`}>
+
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                setIsDraggingFront(true)
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                setIsDraggingFront(false)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                setIsDraggingFront(false)
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  validateAndSetPhoto(e.dataTransfer.files[0], 'front')
+                }
+              }}
+              className={`relative aspect-[4/3] rounded-2xl border-2 overflow-hidden transition-all duration-300 ${
+                isDraggingFront
+                  ? 'border-blue-500 bg-blue-500/10 scale-[1.01]'
+                  : validIdFront
+                  ? 'border-emerald-500/30'
+                  : 'border-[var(--color-border)] border-dashed bg-slate-50/50 dark:bg-slate-800/30'
+              }`}
+            >
               {validIdFront ? (
-                <>
-                  <img src={URL.createObjectURL(validIdFront)} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <button onClick={() => setCameraOpen('front')} className="p-3 bg-white rounded-full text-blue-600 hover:scale-110 transition-transform shadow-xl">
-                      <Camera size={20} />
-                    </button>
-                    <button onClick={() => fileInputFrontRef.current?.click()} className="p-3 bg-white rounded-full text-blue-600 hover:scale-110 transition-transform shadow-xl">
-                      <Upload size={20} />
-                    </button>
-                  </div>
-                </>
+                <img src={URL.createObjectURL(validIdFront)} className="w-full h-full object-cover" alt="Valid ID Front" />
+              ) : isDraggingFront ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-blue-500/10">
+                  <Upload size={36} className="text-blue-500 animate-bounce mb-2" />
+                  <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Drop Front ID photo here</p>
+                </div>
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                  <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-4">
                     <Camera size={32} className="text-blue-400" />
                   </div>
                   <div className="flex flex-col gap-3 w-full max-w-[200px]">
-                    <button onClick={() => setCameraOpen('front')} className="btn btn-primary w-full py-2.5 shadow-lg shadow-blue-500/20">
-                      {t('newRequest_openCamera')}
+                    <button
+                      type="button"
+                      onClick={() => setCameraOpen('front')}
+                      className="btn btn-primary w-full py-2.5 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                    >
+                      <Camera size={16} /> {t('newRequest_openCamera')}
                     </button>
-                    <button onClick={() => fileInputFrontRef.current?.click()} className="btn btn-secondary w-full py-2.5">
-                      {t('newRequest_uploadImage')}
+                    <button
+                      type="button"
+                      onClick={() => fileInputFrontRef.current?.click()}
+                      className="btn btn-secondary w-full py-2.5 flex items-center justify-center gap-2"
+                    >
+                      <Upload size={16} /> {t('newRequest_uploadImage')}
                     </button>
                   </div>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-3">or drag and drop photo here</p>
                 </div>
               )}
             </div>
-            <input type="file" ref={fileInputFrontRef} onChange={(e) => handleFileUpload(e, 'front')} className="hidden" accept="image/*" />
+
+            {/* Always-visible action buttons when photo exists */}
+            {validIdFront && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    fileInputFrontRef.current?.click()
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400 transition-colors border border-blue-200 dark:border-blue-800"
+                >
+                  <RotateCcw size={13} /> Replace Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCameraOpen('front')}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400 transition-colors border border-blue-200 dark:border-blue-800"
+                >
+                  <Camera size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValidIdFront(null)}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 transition-colors border border-red-200 dark:border-red-800"
+                >
+                  <X size={13} /> Remove
+                </button>
+              </div>
+            )}
+
+            <input
+              type="file"
+              ref={fileInputFrontRef}
+              onChange={(e) => handleFileUpload(e, 'front')}
+              className="hidden"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            />
           </div>
 
-          <div className="space-y-4">
+          {/* ── Back Side ── */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">{t('newRequest_backSide')}</label>
               {validIdBack && (
-                <span className="text-[10px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">{t('success')}</span>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+                  <Check size={10} /> {t('success')}
+                </span>
               )}
             </div>
-            
-            <div className={`relative aspect-[4/3] rounded-2xl border-2 overflow-hidden transition-all duration-300 ${
-              validIdBack ? 'border-emerald-500/30' : 'border-[var(--color-border)] border-dashed bg-slate-50/50'
-            }`}>
+
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                setIsDraggingBack(true)
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                setIsDraggingBack(false)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                setIsDraggingBack(false)
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  validateAndSetPhoto(e.dataTransfer.files[0], 'back')
+                }
+              }}
+              className={`relative aspect-[4/3] rounded-2xl border-2 overflow-hidden transition-all duration-300 ${
+                isDraggingBack
+                  ? 'border-blue-500 bg-blue-500/10 scale-[1.01]'
+                  : validIdBack
+                  ? 'border-emerald-500/30'
+                  : 'border-[var(--color-border)] border-dashed bg-slate-50/50 dark:bg-slate-800/30'
+              }`}
+            >
               {validIdBack ? (
-                <>
-                  <img src={URL.createObjectURL(validIdBack)} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <button onClick={() => setCameraOpen('back')} className="p-3 bg-white rounded-full text-blue-600 hover:scale-110 transition-transform shadow-xl">
-                      <Camera size={20} />
-                    </button>
-                    <button onClick={() => fileInputBackRef.current?.click()} className="p-3 bg-white rounded-full text-blue-600 hover:scale-110 transition-transform shadow-xl">
-                      <Upload size={20} />
-                    </button>
-                  </div>
-                </>
+                <img src={URL.createObjectURL(validIdBack)} className="w-full h-full object-cover" alt="Valid ID Back" />
+              ) : isDraggingBack ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-blue-500/10">
+                  <Upload size={36} className="text-blue-500 animate-bounce mb-2" />
+                  <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Drop Back ID photo here</p>
+                </div>
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                  <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-4">
                     <Camera size={32} className="text-blue-400" />
                   </div>
                   <div className="flex flex-col gap-3 w-full max-w-[200px]">
-                    <button onClick={() => setCameraOpen('back')} className="btn btn-primary w-full py-2.5 shadow-lg shadow-blue-500/20">
-                      {t('newRequest_openCamera')}
+                    <button
+                      type="button"
+                      onClick={() => setCameraOpen('back')}
+                      className="btn btn-primary w-full py-2.5 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                    >
+                      <Camera size={16} /> {t('newRequest_openCamera')}
                     </button>
-                    <button onClick={() => fileInputBackRef.current?.click()} className="btn btn-secondary w-full py-2.5">
-                      {t('newRequest_uploadImage')}
+                    <button
+                      type="button"
+                      onClick={() => fileInputBackRef.current?.click()}
+                      className="btn btn-secondary w-full py-2.5 flex items-center justify-center gap-2"
+                    >
+                      <Upload size={16} /> {t('newRequest_uploadImage')}
                     </button>
                   </div>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-3">or drag and drop photo here</p>
                 </div>
               )}
             </div>
-            <input type="file" ref={fileInputBackRef} onChange={(e) => handleFileUpload(e, 'back')} className="hidden" accept="image/*" />
+
+            {/* Always-visible action buttons when photo exists */}
+            {validIdBack && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputBackRef.current?.click()}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400 transition-colors border border-blue-200 dark:border-blue-800"
+                >
+                  <RotateCcw size={13} /> Replace Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCameraOpen('back')}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400 transition-colors border border-blue-200 dark:border-blue-800"
+                >
+                  <Camera size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValidIdBack(null)}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 transition-colors border border-red-200 dark:border-red-800"
+                >
+                  <X size={13} /> Remove
+                </button>
+              </div>
+            )}
+
+            <input
+              type="file"
+              ref={fileInputBackRef}
+              onChange={(e) => handleFileUpload(e, 'back')}
+              className="hidden"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            />
           </div>
         </div>
       </div>

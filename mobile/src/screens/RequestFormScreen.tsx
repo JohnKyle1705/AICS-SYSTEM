@@ -220,6 +220,40 @@ export default function RequestFormScreen({ navigation, route }: any) {
     }
   }
 
+  const uploadFromGallery = async (side: 'front' | 'back') => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please allow access to your photo library to upload an image.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.85,
+      allowsEditing: true,
+      aspect: [4, 3],
+    })
+    if (!result.canceled && result.assets.length > 0) {
+      const asset = result.assets[0]
+      // Validate file type
+      const uri = asset.uri.toLowerCase()
+      const validExts = ['.jpg', '.jpeg', '.png', '.webp']
+      const hasValidExt = validExts.some(ext => uri.endsWith(ext))
+      const validMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      const hasValidMime = !asset.mimeType || validMimes.includes(asset.mimeType.toLowerCase())
+      if (!hasValidExt && !hasValidMime) {
+        Alert.alert('Invalid File Type', 'Please select a JPG, JPEG, PNG, or WEBP image.')
+        return
+      }
+      // Validate file size (max 10MB)
+      if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+        Alert.alert('File Too Large', 'The selected image exceeds the 10MB size limit. Please choose a smaller image.')
+        return
+      }
+      if (side === 'front') setValidIdFront(asset)
+      else setValidIdBack(asset)
+    }
+  }
+
   const validateStep2 = (): boolean => {
     const errs: Record<string, string> = {}
     if (!form.purpose) errs['purpose'] = 'Purpose is required.'
@@ -282,7 +316,18 @@ export default function RequestFormScreen({ navigation, route }: any) {
       )
       return
     }
-    if (!validIdFront || !validIdBack) return Alert.alert(t('error'), t('newRequest_frontRequired'))
+    if (!validIdFront && !validIdBack) {
+      Alert.alert(t('error'), 'Both Front Side and Back Side photos of your Valid ID are required.')
+      return
+    }
+    if (!validIdFront) {
+      Alert.alert(t('error'), t('newRequest_frontRequired'))
+      return
+    }
+    if (!validIdBack) {
+      Alert.alert(t('error'), t('newRequest_backRequired'))
+      return
+    }
     const missingReqs = requirements.filter(r => r.is_required && !preparedDocs[r.id])
     if (missingReqs.length > 0) return Alert.alert(t('error'), t('newRequest_allDocumentsRequired'))
 
@@ -587,42 +632,142 @@ export default function RequestFormScreen({ navigation, route }: any) {
       <Text style={s.stepTitle}>{t('newRequest_stepDocuments')}</Text>
 
       <View style={s.section}>
-        <Text style={s.sectionTitle}>{t('newRequest_idCapture')}</Text>
+        <Text style={s.sectionTitle}>
+          {t('newRequest_idCapture')} <Text style={{ color: '#ef4444' }}>*</Text>
+        </Text>
         <Text style={s.helperText}>{t('newRequest_idCaptureDesc')}</Text>
 
         <View style={s.idGrid}>
+          {/* ─── Front Side ─── */}
           <View style={s.idItem}>
             <Text style={s.idLabel}>{t('newRequest_frontSide')}</Text>
-            <TouchableOpacity 
-              style={[s.idPlaceholder, validIdFront && { padding: 0 }]} 
-              onPress={() => captureWithCamera('front')}
-            >
-              {validIdFront ? (
-                <Image source={{ uri: validIdFront.uri }} style={s.idImage} />
-              ) : (
-                <>
-                  <Feather name="camera" size={24} color={colors.textSecondary} />
-                  <Text style={s.idPlaceholderText}>{t('newRequest_openCamera')}</Text>
-                </>
-              )}
-            </TouchableOpacity>
+
+            {validIdFront ? (
+              <View style={s.idCard}>
+                <Image source={{ uri: validIdFront.uri }} style={s.idCardImage} resizeMode="cover" />
+                <View style={s.idBadge}>
+                  <Feather name="check" size={10} color="#fff" />
+                  <Text style={s.idBadgeText}>Front</Text>
+                </View>
+                <View style={s.idActionRow}>
+                  <TouchableOpacity
+                    style={s.idActionBtn}
+                    onPress={() => Alert.alert(
+                      'Replace Photo',
+                      'Choose an option:',
+                      [
+                        { text: 'Take Photo', onPress: () => captureWithCamera('front') },
+                        { text: 'Upload from Gallery', onPress: () => uploadFromGallery('front') },
+                        { text: 'Cancel', style: 'cancel' },
+                      ]
+                    )}
+                  >
+                    <Feather name="refresh-cw" size={12} color="#3b82f6" />
+                    <Text style={s.idActionText}>Replace</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.idActionBtn, s.idRemoveBtn]}
+                    onPress={() => Alert.alert(
+                      'Remove Photo',
+                      'Are you sure you want to remove the front ID photo?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Remove', style: 'destructive', onPress: () => setValidIdFront(null) },
+                      ]
+                    )}
+                  >
+                    <Feather name="trash-2" size={12} color="#ef4444" />
+                    <Text style={[s.idActionText, { color: '#ef4444' }]}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={s.idPlaceholder}>
+                <View style={s.idCameraIconWrap}>
+                  <Feather name="camera" size={26} color={colors.textSecondary} />
+                </View>
+                <TouchableOpacity
+                  style={s.idCameraBtn}
+                  onPress={() => captureWithCamera('front')}
+                >
+                  <Feather name="camera" size={12} color="#fff" />
+                  <Text style={s.idCameraBtnText}>{t('newRequest_openCamera')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.idUploadBtn}
+                  onPress={() => uploadFromGallery('front')}
+                >
+                  <Feather name="upload" size={12} color={colors.primary} />
+                  <Text style={[s.idUploadBtnText, { color: colors.primary }]}>{t('newRequest_uploadImage')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
+          {/* ─── Back Side ─── */}
           <View style={s.idItem}>
             <Text style={s.idLabel}>{t('newRequest_backSide')}</Text>
-            <TouchableOpacity 
-              style={[s.idPlaceholder, validIdBack && { padding: 0 }]} 
-              onPress={() => captureWithCamera('back')}
-            >
-              {validIdBack ? (
-                <Image source={{ uri: validIdBack.uri }} style={s.idImage} />
-              ) : (
-                <>
-                  <Feather name="camera" size={24} color={colors.textSecondary} />
-                  <Text style={s.idPlaceholderText}>{t('newRequest_openCamera')}</Text>
-                </>
-              )}
-            </TouchableOpacity>
+
+            {validIdBack ? (
+              <View style={s.idCard}>
+                <Image source={{ uri: validIdBack.uri }} style={s.idCardImage} resizeMode="cover" />
+                <View style={s.idBadge}>
+                  <Feather name="check" size={10} color="#fff" />
+                  <Text style={s.idBadgeText}>Back</Text>
+                </View>
+                <View style={s.idActionRow}>
+                  <TouchableOpacity
+                    style={s.idActionBtn}
+                    onPress={() => Alert.alert(
+                      'Replace Photo',
+                      'Choose an option:',
+                      [
+                        { text: 'Take Photo', onPress: () => captureWithCamera('back') },
+                        { text: 'Upload from Gallery', onPress: () => uploadFromGallery('back') },
+                        { text: 'Cancel', style: 'cancel' },
+                      ]
+                    )}
+                  >
+                    <Feather name="refresh-cw" size={12} color="#3b82f6" />
+                    <Text style={s.idActionText}>Replace</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.idActionBtn, s.idRemoveBtn]}
+                    onPress={() => Alert.alert(
+                      'Remove Photo',
+                      'Are you sure you want to remove the back ID photo?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Remove', style: 'destructive', onPress: () => setValidIdBack(null) },
+                      ]
+                    )}
+                  >
+                    <Feather name="trash-2" size={12} color="#ef4444" />
+                    <Text style={[s.idActionText, { color: '#ef4444' }]}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={s.idPlaceholder}>
+                <View style={s.idCameraIconWrap}>
+                  <Feather name="camera" size={26} color={colors.textSecondary} />
+                </View>
+                <TouchableOpacity
+                  style={s.idCameraBtn}
+                  onPress={() => captureWithCamera('back')}
+                >
+                  <Feather name="camera" size={12} color="#fff" />
+                  <Text style={s.idCameraBtnText}>{t('newRequest_openCamera')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.idUploadBtn}
+                  onPress={() => uploadFromGallery('back')}
+                >
+                  <Feather name="upload" size={12} color={colors.primary} />
+                  <Text style={[s.idUploadBtnText, { color: colors.primary }]}>{t('newRequest_uploadImage')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -821,12 +966,99 @@ const styles = (colors: any, isDark: boolean) => StyleSheet.create({
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 8 },
   helperText: { fontSize: 12, color: colors.textSecondary, marginBottom: 16, lineHeight: 18 },
+  // ── Valid ID 2-column styles (matches screenshot reference) ──
   idGrid: { flexDirection: 'row', gap: 12 },
   idItem: { flex: 1, gap: 8 },
-  idLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textAlign: 'center' },
-  idPlaceholder: { height: 120, borderRadius: 12, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed', backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
-  idPlaceholderText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
-  idImage: { width: '100%', height: '100%' },
+  idLabel: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, textAlign: 'center' },
+  idPlaceholder: {
+    minHeight: 175,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: isDark ? '#24344d' : colors.border,
+    borderStyle: 'dashed',
+    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.6)' : colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    gap: 8,
+  },
+  idCameraIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  idCameraBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+  },
+  idCameraBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  idUploadBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+  },
+  idUploadBtnText: { fontSize: 12, fontWeight: '700' },
+  // Preview Card
+  idCard: {
+    minHeight: 175,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#10b98160',
+    overflow: 'hidden',
+    backgroundColor: colors.card,
+    position: 'relative',
+    justifyContent: 'space-between',
+  },
+  idCardImage: { width: '100%', height: 130 },
+  idBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.95)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  idBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  idActionRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border },
+  idActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 9,
+    backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff',
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
+  },
+  idRemoveBtn: {
+    backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2',
+    borderRightWidth: 0,
+  },
+  idActionText: { fontSize: 11, fontWeight: '700', color: '#3b82f6' },
   requirementsList: { gap: 12 },
   reqItem: { padding: 16, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   reqMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
