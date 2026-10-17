@@ -34,8 +34,11 @@ function ForgotPasswordContent() {
     
     const supabase = createClient()
 
+    // Use the configured site URL (production) so the email link doesn't point to localhost.
+    // NEXT_PUBLIC_SITE_URL must be set to the Vercel deployment URL in production.
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-      redirectTo: `${window.location.origin}/auth/callback?type=recovery`
+      redirectTo: `${siteUrl}/auth/callback?type=recovery`
     })
 
     if (resetError) {
