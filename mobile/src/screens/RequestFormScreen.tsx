@@ -23,21 +23,71 @@ const AMOUNT_RANGES: Record<string, string[]> = {
   Burial: ['₱5,000 - ₱10,000', '₱10,001+']
 }
 
+const FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN = [
+  'St. Peter Funeral Home - Daanbantayan',
+  'St. Francis Memorial Funeral Homes - Daanbantayan',
+  'Llorente Funeral Chapel - Daanbantayan',
+  'San Jose Memorial Homes - Daanbantayan',
+  'Metro Funeral Home - Medellin',
+  'Obedencio Funeral Home - Medellin',
+  'St. Peter Funeral Home - Medellin',
+  'San Remigio Memorial Homes - San Remigio',
+  'St. Peter Funeral Home - Bogo City',
+  'Cosmopolitan Funeral Home - Bogo City',
+  'Reamillo Funeral Chapel - Bogo City',
+  'San Roque Funeral Chapel - Bogo City',
+  'Bogo Memorial Chapel - Bogo City',
+  'Other Funeral Home (Within Bogo to Daanbantayan Area)',
+]
+
+const BENEFICIARY_RELATIONSHIPS = [
+  'Spouse',
+  'Son',
+  'Daughter',
+  'Father',
+  'Mother',
+  'Brother',
+  'Sister',
+  'Grandfather',
+  'Grandmother',
+  'Grandson',
+  'Granddaughter',
+  'Uncle',
+  'Aunt',
+  'Nephew',
+  'Niece',
+  'Cousin',
+  'Father-in-law',
+  'Mother-in-law',
+  'Son-in-law',
+  'Daughter-in-law',
+  'Brother-in-law',
+  'Sister-in-law',
+  'Common-law Partner / Live-in Partner',
+  'Neighbor / Silingan (Authorized Representative)',
+  'Legal Guardian',
+  'Other Relative (Specify in remarks)',
+  'Other (Specify in remarks)',
+]
+
 export default function RequestFormScreen({ navigation, route }: any) {
   const initialType = route.params?.initialType || ''
   const { colors, isDark } = useTheme()
   const { t } = useLanguage()
 
-  const TYPE_FIELDS: Record<string, { key: string; label: string; type: string; placeholder: string; required?: boolean }[]> = {
+  const TYPE_FIELDS: Record<string, { key: string; label: string; type: string; placeholder: string; required?: boolean; options?: string[] }[]> = {
     Medical: [
       { key: 'hospital_name', label: t('newRequest_fields.hospital_name' as any), type: 'text', placeholder: t('newRequest_placeholders.hospital_name' as any), required: true },
       { key: 'diagnosis', label: t('newRequest_fields.diagnosis' as any), type: 'text', placeholder: t('newRequest_placeholders.diagnosis' as any), required: true },
       { key: 'estimated_cost', label: t('newRequest_fields.estimated_cost' as any), type: 'number', placeholder: '0.00', required: true },
     ],
     Burial: [
-      { key: 'deceased_name', label: t('newRequest_fields.deceased_name' as any), type: 'text', placeholder: t('newRequest_placeholders.deceased_name' as any), required: true },
-      { key: 'relationship', label: t('newRequest_fields.relationship' as any), type: 'text', placeholder: t('newRequest_placeholders.relationship' as any), required: true },
-      { key: 'funeral_home', label: t('newRequest_fields.funeral_home' as any), type: 'text', placeholder: t('newRequest_placeholders.funeral_home' as any), required: true },
+      { key: 'deceased_first_name', label: t('newRequest_fields.deceased_first_name' as any) || 'First Name of Deceased *', type: 'text', placeholder: t('newRequest_placeholders.deceased_first_name' as any) || 'e.g. Juan', required: true },
+      { key: 'deceased_middle_name', label: t('newRequest_fields.deceased_middle_name' as any) || 'Middle Name of Deceased', type: 'text', placeholder: t('newRequest_placeholders.deceased_middle_name' as any) || 'e.g. Santos (Optional)', required: false },
+      { key: 'deceased_last_name', label: t('newRequest_fields.deceased_last_name' as any) || 'Last Name of Deceased *', type: 'text', placeholder: t('newRequest_placeholders.deceased_last_name' as any) || 'e.g. Dela Cruz', required: true },
+      { key: 'deceased_suffix', label: t('newRequest_fields.deceased_suffix' as any) || 'Suffix (if any)', type: 'text', placeholder: t('newRequest_placeholders.deceased_suffix' as any) || 'e.g. Jr., Sr., III (Optional)', required: false },
+      { key: 'relationship', label: t('newRequest_fields.relationship' as any) || 'Relationship to Beneficiary *', type: 'select', placeholder: 'Select relationship', required: true, options: BENEFICIARY_RELATIONSHIPS },
+      { key: 'funeral_home', label: t('newRequest_fields.funeral_home' as any) || 'Funeral Home (Bogo to Daanbantayan) *', type: 'select', placeholder: 'Select funeral home', required: true, options: FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN },
     ],
   }
   const [step, setStep] = useState(1)
@@ -55,7 +105,8 @@ export default function RequestFormScreen({ navigation, route }: any) {
     sex: '', is_pwd: false, is_senior: false, is_4ps: false
   })
   const [saving, setSaving] = useState(false)
-  
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
   // Duplicate Prevention States
   const [isBlocked, setIsBlocked] = useState(false)
   const [blockedMessage, setBlockedMessage] = useState('')
@@ -64,6 +115,11 @@ export default function RequestFormScreen({ navigation, route }: any) {
 
   const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }))
   const updatePersonal = (key: string, value: string) => setPersonalInfo(prev => ({ ...prev, [key]: value }))
+
+  const setField = (key: string, value: string) => {
+    setExtraFields(prev => ({ ...prev, [key]: value }))
+    if (fieldErrors[key]) setFieldErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+  }
 
   useEffect(() => {
     const loadMyBeneficiary = async () => {
@@ -164,18 +220,31 @@ export default function RequestFormScreen({ navigation, route }: any) {
     }
   }
 
+  const validateStep2 = (): boolean => {
+    const errs: Record<string, string> = {}
+    if (!form.purpose) errs['purpose'] = 'Purpose is required.'
+    if (!form.amount_range) errs['amount_range'] = 'Please select an amount range.'
+    if (form.assistance_type === 'Burial') {
+      if (!extraFields['deceased_first_name']?.trim()) errs['deceased_first_name'] = 'First name of deceased is required.'
+      if (!extraFields['deceased_last_name']?.trim())  errs['deceased_last_name']  = 'Last name of deceased is required.'
+      if (!extraFields['relationship']?.trim())         errs['relationship']         = 'Relationship to beneficiary is required.'
+      if (!extraFields['funeral_home']?.trim())         errs['funeral_home']         = 'Please select a funeral home.'
+    } else if (form.assistance_type === 'Medical') {
+      if (!extraFields['hospital_name']?.trim())  errs['hospital_name']  = 'Hospital name is required.'
+      if (!extraFields['diagnosis']?.trim())      errs['diagnosis']      = 'Diagnosis is required.'
+      if (!extraFields['estimated_cost']?.trim()) errs['estimated_cost'] = 'Estimated cost is required.'
+    }
+    setFieldErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   const handleNext = () => {
     if (step === 1) {
       if (!form.assistance_type) return Alert.alert(t('error'), t('newRequest_selectType'))
       setStep(2)
     } else if (step === 2) {
-      if (!form.purpose) return Alert.alert(t('error'), t('newRequest_purpose'))
-      if (!form.amount_range) return Alert.alert(t('error'), t('newRequest_selectAmount'))
-      const fields = TYPE_FIELDS[form.assistance_type] || []
-      for (const f of fields) {
-        if (f.required && !extraFields[f.key]) {
-          return Alert.alert(t('error'), `${t(`newRequest_fields.${f.key}` as any)} ${t('required')}`)
-        }
+      if (!validateStep2()) {
+        return Alert.alert(t('error'), 'Please fix the highlighted fields before continuing.')
       }
       setStep(3)
     }
@@ -222,12 +291,24 @@ export default function RequestFormScreen({ navigation, route }: any) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      const deceasedFullName = form.assistance_type === 'Burial'
+        ? [extraFields.deceased_first_name, extraFields.deceased_middle_name, extraFields.deceased_last_name, extraFields.deceased_suffix]
+            .filter(Boolean)
+            .join(' ')
+            .trim()
+        : ''
+
       const { data: req, error } = await supabase.from('requests').insert({
         beneficiary_id: form.beneficiary_id,
         assistance_type: form.assistance_type,
         purpose: form.purpose,
         remarks: form.remarks || null,
-        extra_fields: { ...extraFields, amount_range: form.amount_range, personal_info: personalInfo },
+        extra_fields: { 
+          ...extraFields, 
+          ...(deceasedFullName ? { deceased_name: deceasedFullName } : {}),
+          amount_range: form.amount_range, 
+          personal_info: personalInfo 
+        },
         encoded_by: user.id,
         status: 'Pending',
       }).select().single()
@@ -435,17 +516,54 @@ export default function RequestFormScreen({ navigation, route }: any) {
 
       {TYPE_FIELDS[form.assistance_type]?.map((field) => (
         <View key={field.key} style={s.field}>
-          <Text style={s.label}>{t(`newRequest_fields.${field.key}` as any)}</Text>
-          <TextInput
-            style={[s.input, { color: colors.text }]}
-            value={extraFields[field.key] || ''}
-            onChangeText={(v) => setExtraFields(prev => ({ ...prev, [field.key]: v }))}
-            placeholder={t(`newRequest_placeholders.${field.key}` as any)}
-            placeholderTextColor={colors.textSecondary}
-            cursorColor={colors.primary}
-            selectionColor={colors.primary}
-            keyboardType={field.type === 'number' ? 'numeric' : 'default'}
-          />
+          <Text style={s.label}>{field.label}</Text>
+          {field.type === 'select' ? (
+            <View style={[
+              s.pickerWrap,
+              fieldErrors[field.key] ? { borderColor: '#ef4444' } : {}
+            ]}>
+              <Picker
+                selectedValue={extraFields[field.key] || ''}
+                onValueChange={(v) => setField(field.key, v as string)}
+                style={s.picker}
+                dropdownIconColor={colors.textSecondary}
+              >
+                <Picker.Item 
+                  label={`— Select ${field.label.replace(' *', '')} —`} 
+                  value="" 
+                  color={Platform.OS === 'android' ? '#64748b' : colors.textSecondary} 
+                />
+                {field.options?.map((opt) => (
+                  <Picker.Item 
+                    key={opt} 
+                    label={opt} 
+                    value={opt} 
+                    color={Platform.OS === 'android' ? '#0f172a' : colors.text} 
+                  />
+                ))}
+              </Picker>
+            </View>
+          ) : (
+            <TextInput
+              style={[
+                s.input,
+                { color: colors.text },
+                fieldErrors[field.key] ? { borderColor: '#ef4444', backgroundColor: '#fef2f2' } : {}
+              ]}
+              value={extraFields[field.key] || ''}
+              onChangeText={(v) => setField(field.key, v)}
+              placeholder={field.placeholder}
+              placeholderTextColor={colors.textSecondary}
+              cursorColor={colors.primary}
+              selectionColor={colors.primary}
+              keyboardType={field.type === 'number' ? 'numeric' : 'default'}
+            />
+          )}
+          {fieldErrors[field.key] ? (
+            <Text style={{ fontSize: 11, color: '#ef4444', marginTop: 4, fontWeight: '600' }}>
+              ⚠ {fieldErrors[field.key]}
+            </Text>
+          ) : null}
         </View>
       ))}
 

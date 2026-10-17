@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { validatePassword } from '@/lib/passwordValidation'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -85,6 +86,14 @@ export async function POST(request: Request) {
 
   if (!email || !password || !full_name || !role) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
+  }
+
+  const pwCheck = validatePassword(password)
+  if (!pwCheck.isValid) {
+    return NextResponse.json(
+      { error: `Password does not meet requirements: Still needed: ${pwCheck.firstUnmet?.label || 'All requirements'}` },
+      { status: 400 }
+    )
   }
 
   // Staff creation only — residents must sign up through the registration flow

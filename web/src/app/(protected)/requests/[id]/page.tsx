@@ -192,6 +192,42 @@ export default function RequestDetailPage() {
           <div><span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">{t('newRequest_amountRequested')}</span><span className="text-[var(--color-text)]">{request.amount_requested ? `₱${Number(request.amount_requested).toLocaleString()}` : '—'}</span></div>
           <div><span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">{t('requests_amount')}</span><span className="text-[var(--color-text)]">{request.amount_approved ? `₱${Number(request.amount_approved).toLocaleString()}` : '—'}</span></div>
           <div className="col-span-2 sm:col-span-3"><span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">{t('newRequest_purpose')}</span><p className="text-[var(--color-text)]">{request.purpose}</p></div>
+          {request.assistance_type === 'Burial' && request.extra_fields && (
+            <>
+              <div>
+                <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Name of Deceased</span>
+                <span className="font-semibold text-[var(--color-text)]">
+                  {request.extra_fields.deceased_name || 
+                    [request.extra_fields.deceased_first_name, request.extra_fields.deceased_middle_name, request.extra_fields.deceased_last_name, request.extra_fields.deceased_suffix].filter(Boolean).join(' ') || 
+                    '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Relationship to Beneficiary</span>
+                <span className="font-medium text-[var(--color-text)]">{request.extra_fields.relationship || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Funeral Home</span>
+                <span className="font-medium text-[var(--color-text)]">{request.extra_fields.funeral_home || '—'}</span>
+              </div>
+            </>
+          )}
+          {request.assistance_type === 'Medical' && request.extra_fields && (
+            <>
+              <div>
+                <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Hospital / Clinic</span>
+                <span className="font-semibold text-[var(--color-text)]">{request.extra_fields.hospital_name || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Diagnosis</span>
+                <span className="font-medium text-[var(--color-text)]">{request.extra_fields.diagnosis || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Estimated Cost</span>
+                <span className="font-medium text-[var(--color-text)]">{request.extra_fields.estimated_cost ? `₱${Number(request.extra_fields.estimated_cost).toLocaleString()}` : '—'}</span>
+              </div>
+            </>
+          )}
           {request.remarks && <div className="col-span-2 sm:col-span-3"><span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">{t('newRequest_remarks')}</span><p className="text-[var(--color-text)]">{request.remarks}</p></div>}
           <div><span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">{t('requests_date')}</span><span className="text-[var(--color-text)]">{format(new Date(request.created_at), 'MMM d, yyyy')}</span></div>
         </div>

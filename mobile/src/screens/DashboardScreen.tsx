@@ -169,14 +169,14 @@ export default function DashboardScreen({ navigation }: any) {
           table_name: 'profiles',
           record_id: userId,
         })
-      }
 
-      await supabase.from('notifications').insert({
-        user_id: userId,
-        title: 'Account Activated',
-        message: 'Your account has been approved and activated. You can now access all services.',
-        type: 'info',
-      })
+        await supabase.from('notifications').insert({
+          user_id: adminUser.id,
+          title: 'Activate Resident',
+          message: `You have successfully approved and activated ${userName || 'a resident'} account.`,
+          type: 'info',
+        })
+      }
 
       setPendingUsers(prev => prev.filter(u => u.id !== userId))
       Alert.alert('Activated', `${userName || 'User'} has been activated successfully!`)
@@ -192,7 +192,7 @@ export default function DashboardScreen({ navigation }: any) {
     { label: profile?.role === 'resident' ? t('dashboard_myRequests') : t('dashboard_totalRequests'), value: stats.total, color: isDark ? '#a78bfa' : '#7c3aed', bg: isDark ? 'rgba(45, 36, 66, 0.8)' : 'rgba(245, 243, 255, 0.9)', icon: 'file-text', screen: 'Requests', status: 'All' },
     { label: t('dashboard_pending'), value: stats.pending, color: isDark ? '#fbbf24' : '#d97706', bg: isDark ? 'rgba(61, 48, 20, 0.8)' : 'rgba(255, 251, 235, 0.9)', icon: 'clock', screen: 'Requests', status: 'Pending' },
     { label: t('dashboard_approved'), value: stats.approved, color: isDark ? '#60a5fa' : '#2563eb', bg: isDark ? 'rgba(30, 58, 95, 0.8)' : 'rgba(239, 246, 255, 0.9)', icon: 'check-circle', screen: 'Requests', status: 'Approved' },
-    { label: t('dashboard_released'), value: stats.released, color: isDark ? '#34d399' : '#059669', bg: isDark ? 'rgba(20, 61, 44, 0.8)' : 'rgba(236, 253, 245, 0.9)', icon: 'dollar-sign', screen: 'Requests', status: 'Released' },
+    { label: t('dashboard_released'), value: stats.released, color: isDark ? '#34d399' : '#059669', bg: isDark ? 'rgba(20, 61, 44, 0.8)' : 'rgba(236, 253, 245, 0.9)', icon: 'credit-card', screen: 'Requests', status: 'Released' },
     { label: t('dashboard_declined'), value: stats.declined, color: isDark ? '#f87171' : '#dc2626', bg: isDark ? 'rgba(69, 26, 26, 0.8)' : 'rgba(254, 242, 242, 0.9)', icon: 'alert-circle', screen: 'Requests', status: 'Declined' },
   ]
 
@@ -202,7 +202,7 @@ export default function DashboardScreen({ navigation }: any) {
     { title: 'Announce', icon: 'volume-2', screen: 'AnnouncementsManage', color: '#2563eb', bg: isDark ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff' },
     { title: 'Funds', icon: 'pie-chart', screen: 'FundsDashboard', color: '#16a34a', bg: isDark ? 'rgba(34, 197, 94, 0.2)' : '#f0fdf4' },
     { title: 'Assessments', icon: 'clipboard', screen: 'Assessments', color: '#0891b2', bg: isDark ? 'rgba(6, 182, 212, 0.2)' : '#ecfeff' },
-    { title: 'Payouts', icon: 'dollar-sign', screen: 'Payouts', color: '#059669', bg: isDark ? 'rgba(16, 185, 129, 0.2)' : '#ecfdf5' },
+    { title: 'Payouts', icon: 'credit-card', screen: 'Payouts', color: '#059669', bg: isDark ? 'rgba(16, 185, 129, 0.2)' : '#ecfdf5' },
     { title: 'Requirements', icon: 'check-square', screen: 'Requirements', color: '#e11d48', bg: isDark ? 'rgba(244, 63, 94, 0.2)' : '#fff1f2' },
     { title: 'Feedback', icon: 'message-square', screen: 'FeedbackReview', color: '#4f46e5', bg: isDark ? 'rgba(99, 102, 241, 0.2)' : '#eef2ff' },
   ]

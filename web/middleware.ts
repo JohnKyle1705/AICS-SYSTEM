@@ -31,15 +31,24 @@ export async function middleware(request: NextRequest) {
   if (authError) {
     request.cookies.getAll().forEach((cookie) => {
       if (cookie.name.startsWith('sb-')) {
-        supabaseResponse.cookies.delete(cookie.name)
+        supabaseResponse.cookies.set({
+          name: cookie.name,
+          value: '',
+          path: '/',
+          expires: new Date(0),
+          maxAge: 0,
+        })
       }
     })
   }
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')
-  const isPendingPage = request.nextUrl.pathname.startsWith('/pending')
-  const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
-  const isProtected = !isAuthPage && !isPendingPage && !isAuthCallback && request.nextUrl.pathname !== '/'
+  const pathname = request.nextUrl.pathname
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password')
+  const isResetPasswordPage = pathname.startsWith('/auth/reset-password')
+  const isPendingPage = pathname.startsWith('/pending')
+  const isAuthCallback = pathname.startsWith('/auth/callback')
+  const isPublicPage = isAuthPage || isResetPasswordPage || isPendingPage || isAuthCallback || pathname === '/'
+  const isProtected = !isPublicPage
 
   // Helper to redirect and preserve Supabase cookies (such as refreshed or deleted session tokens)
   const redirect = (path: string) => {
@@ -55,6 +64,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user) {
+    // If the user is resetting their password, always allow access to the reset page
+    if (isResetPasswordPage) {
+      return supabaseResponse
+    }
+
     let { data: p } = await supabase.from('profiles').select('is_active, role').eq('id', user.id).single()
     
     // If profile doesn't exist yet (e.g. email verification callback didn't create it),

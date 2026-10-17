@@ -1,11 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Mail, Lock, User, ArrowRight, Loader2, KeyRound, CheckCircle2, RefreshCw, Eye, EyeOff } from 'lucide-react'
+import {
+  Mail, Lock, User, ArrowRight, Loader2, KeyRound,
+  CheckCircle2, RefreshCw, Eye, EyeOff
+} from 'lucide-react'
 import Image from 'next/image'
+import {
+  validatePassword,
+  checkPasswordRequirements,
+  calculatePasswordStrength,
+  type RequirementItem
+} from '@/lib/passwordValidation'
 
 type Step = 'register' | 'verify' | 'success'
 
@@ -20,6 +29,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
 
   // Verification State
@@ -29,6 +39,7 @@ export default function RegisterPage() {
   // UI State
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmTouched, setConfirmTouched] = useState(false)
 
   useEffect(() => {
     let timer: NodeJS.Timeout
@@ -38,16 +49,50 @@ export default function RegisterPage() {
     return () => clearTimeout(timer)
   }, [cooldown])
 
+  // ── Derived password validation ───────────────────────────────────────────
+  const requirements = useMemo(() => checkPasswordRequirements(password), [password])
+  const strength = useMemo(() => calculatePasswordStrength(password), [password])
+  const allMet = useMemo(() => requirements.every(r => r.met), [requirements])
+  const firstUnmet = useMemo(() => requirements.find(r => !r.met) || null, [requirements])
+
+  // Split into 2 columns matching reference design:
+  // Col 1: length, lowercase, special
+  // Col 2: uppercase, number, no_spaces
+  const col1 = useMemo(() => [
+    requirements.find(r => r.id === 'length')!,
+    requirements.find(r => r.id === 'lowercase')!,
+    requirements.find(r => r.id === 'special')!,
+  ], [requirements])
+
+  const col2 = useMemo(() => [
+    requirements.find(r => r.id === 'uppercase')!,
+    requirements.find(r => r.id === 'number')!,
+    requirements.find(r => r.id === 'no_spaces')!,
+  ], [requirements])
+
+  const confirmMatch = password === confirmPassword
+  const confirmMismatch = confirmTouched && confirmPassword.length > 0 && !confirmMatch
+  const confirmMatched = confirmTouched && confirmPassword.length > 0 && confirmMatch
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    // Validate password thoroughly
+    const pwValidation = validatePassword(password)
+    if (!pwValidation.isValid) {
+      setError(`Password requirement not met: Still needed: ${pwValidation.firstUnmet?.label || '8+ characters'}`)
+      setLoading(false)
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match.')
       setLoading(false)
       return
     }
+
     if (!termsAccepted) {
       setError('You must agree to the Terms and Conditions.')
       setLoading(false)
@@ -57,8 +102,9 @@ export default function RegisterPage() {
     const supabase = createClient()
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
+    // Passwords are securely hashed by Supabase Auth with bcrypt work factor 10
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
       options: { data: { full_name: fullName } }
     })
@@ -101,7 +147,7 @@ export default function RegisterPage() {
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
     const { data, error: verifyError } = await supabase.auth.verifyOtp({
-      email,
+      email: email.trim(),
       token: otp,
       type: 'signup'
     })
@@ -127,7 +173,7 @@ export default function RegisterPage() {
     setError('')
     const supabase = createClient()
 
-    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email })
+    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim() })
     if (resendError) setError(resendError.message)
     else setCooldown(60)
     
@@ -195,62 +241,260 @@ export default function RegisterPage() {
                   <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">Join the AICS Management System</p>
                 </div>
 
-                <form onSubmit={handleRegister} className="space-y-5" id="register-form">
+                <form onSubmit={handleRegister} className="space-y-4" id="register-form">
                   {/* Name */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="form-label" htmlFor="register-firstname">First Name</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1" htmlFor="register-firstname">
+                        First Name
+                      </label>
                       <div className="relative">
                         <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input id="register-firstname" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="form-input pl-10" placeholder="Juan" autoComplete="given-name" />
+                        <input
+                          id="register-firstname"
+                          type="text"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                          className="form-input pl-10"
+                          placeholder="Juan"
+                          autoComplete="given-name"
+                        />
                       </div>
                     </div>
                     <div>
-                      <label className="form-label" htmlFor="register-lastname">Last Name</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1" htmlFor="register-lastname">
+                        Last Name
+                      </label>
                       <div className="relative">
                         <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input id="register-lastname" type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="form-input pl-10" placeholder="Dela Cruz" autoComplete="family-name" />
+                        <input
+                          id="register-lastname"
+                          type="text"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          required
+                          className="form-input pl-10"
+                          placeholder="Dela Cruz"
+                          autoComplete="family-name"
+                        />
                       </div>
                     </div>
                   </div>
 
                   {/* Email field */}
                   <div>
-                    <label className="form-label" htmlFor="register-email">Email Address</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1" htmlFor="register-email">
+                      Email Address
+                    </label>
                     <div className="relative">
                       <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input id="register-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="form-input pl-10" placeholder="name@example.com" autoComplete="off" />
+                      <input
+                        id="register-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="form-input pl-10"
+                        placeholder="name@example.com"
+                        autoComplete="off"
+                      />
                     </div>
                   </div>
 
-                  {/* Password */}
-                  <div>
-                    <label className="form-label" htmlFor="register-password">Password</label>
+                  {/* ── PASSWORD FIELD (Matches Reference Image) ── */}
+                  <div className="pt-1">
+                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1.5" htmlFor="register-password">
+                      Password
+                    </label>
                     <div className="relative">
-                      <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input id="register-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="form-input pl-10 pr-11" placeholder="••••••••" autoComplete="new-password" />
-                      <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 rounded" tabIndex={-1}>
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-700 dark:text-emerald-400">
+                        <Lock size={18} strokeWidth={2.2} />
+                      </div>
+                      <input
+                        id="register-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 pl-11 pr-11 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 shadow-xs"
+                        placeholder="Create a password"
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
+                        tabIndex={-1}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
+
+                    {/* Password Strength Indicator */}
+                    <div className="mt-2.5">
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
+                        <span>Password strength</span>
+                        <span className={`font-bold transition-colors ${strength.colorClass}`}>
+                          {strength.label}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        {[0, 1, 2, 3, 4].map(idx => (
+                          <div
+                            key={idx}
+                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                              idx < strength.score
+                                ? strength.score === 1
+                                  ? 'bg-red-500'
+                                  : strength.score <= 3
+                                  ? 'bg-amber-500'
+                                  : strength.score === 4
+                                  ? 'bg-blue-500'
+                                  : 'bg-emerald-500'
+                                : 'bg-slate-200 dark:bg-slate-700'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Requirements Grid (2 Columns) */}
+                    <div className="mt-3.5">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+                        Your password must include:
+                      </p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {/* Column 1 */}
+                        <div className="space-y-2">
+                          {col1.map(req => (
+                            <div key={req.id} className="flex items-center gap-2 text-xs">
+                              <span
+                                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200 ${
+                                  req.met
+                                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                                    : 'border-slate-400 dark:border-slate-500 bg-transparent'
+                                }`}
+                              >
+                                {req.met && (
+                                  <svg viewBox="0 0 10 8" fill="none" className="w-2.5 h-2.5">
+                                    <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                )}
+                              </span>
+                              <span className={`font-medium transition-colors ${req.met ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                                {req.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Column 2 */}
+                        <div className="space-y-2">
+                          {col2.map(req => (
+                            <div key={req.id} className="flex items-center gap-2 text-xs">
+                              <span
+                                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200 ${
+                                  req.met
+                                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                                    : 'border-slate-400 dark:border-slate-500 bg-transparent'
+                                }`}
+                              >
+                                {req.met && (
+                                  <svg viewBox="0 0 10 8" fill="none" className="w-2.5 h-2.5">
+                                    <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                )}
+                              </span>
+                              <span className={`font-medium transition-colors ${req.met ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                                {req.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Validation message */}
+                      <div className="mt-2.5">
+                        {allMet ? (
+                          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            All password requirements met.
+                          </p>
+                        ) : (
+                          <p className="text-xs font-bold text-red-600 dark:text-red-500">
+                            Still needed: {firstUnmet?.label || '8+ characters'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Confirm Password */}
-                  <div>
-                    <label className="form-label" htmlFor="confirm-password">Confirm Password</label>
+                  {/* ── CONFIRM PASSWORD FIELD ── */}
+                  <div className="pt-1">
+                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1.5" htmlFor="confirm-password">
+                      Confirm Password
+                    </label>
                     <div className="relative">
-                      <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input id="confirm-password" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} className="form-input pl-10" placeholder="••••••••" autoComplete="new-password" />
+                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-700 dark:text-emerald-400">
+                        <Lock size={18} strokeWidth={2.2} />
+                      </div>
+                      <input
+                        id="confirm-password"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value)
+                          setConfirmTouched(true)
+                        }}
+                        onBlur={() => setConfirmTouched(true)}
+                        required
+                        className={`w-full rounded-2xl border bg-white dark:bg-slate-900/60 pl-11 pr-11 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden transition-all duration-200 shadow-xs ${
+                          confirmMismatch
+                            ? 'border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-400/20'
+                            : confirmMatched
+                            ? 'border-emerald-500 dark:border-emerald-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                            : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                        }`}
+                        placeholder="Confirm your password"
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(v => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
+                        tabIndex={-1}
+                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                      >
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 ml-1">Must be at least 6 characters long</p>
+
+                    {/* Confirm password feedback */}
+                    {confirmMismatch && (
+                      <p className="text-xs font-semibold text-red-600 dark:text-red-500 mt-1.5 ml-1">
+                        Passwords do not match.
+                      </p>
+                    )}
+                    {confirmMatched && (
+                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1.5 ml-1">
+                        ✓ Passwords match.
+                      </p>
+                    )}
                   </div>
 
                   {/* Terms */}
-                  <div className="flex items-start gap-3 mt-4">
+                  <div className="flex items-start gap-3 pt-2">
                     <div className="flex items-center h-5 mt-0.5">
-                      <input id="terms" type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/5 cursor-pointer" />
+                      <input
+                        id="terms"
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/5 cursor-pointer"
+                      />
                     </div>
-                    <label htmlFor="terms" className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+                    <label htmlFor="terms" className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer leading-relaxed">
                       I have read and agree to the{' '}
                       <span className="text-blue-600 font-medium">Terms and Conditions</span> and{' '}
                       <span className="text-blue-600 font-medium">Privacy Policy</span> of the AICS Request Management System.
@@ -258,12 +502,17 @@ export default function RegisterPage() {
                   </div>
 
                   {error && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm px-4 py-3 rounded-lg">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-xs px-3.5 py-2.5 rounded-xl">
                       {error}
                     </div>
                   )}
 
-                  <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 mt-2" id="register-submit">
+                  <button
+                    type="submit"
+                    disabled={loading || !allMet || !confirmMatch || !termsAccepted}
+                    className="btn btn-primary w-full py-3 mt-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
+                    id="register-submit"
+                  >
                     {loading ? (
                       <><Loader2 size={18} className="animate-spin" /> Creating Account...</>
                     ) : (
@@ -272,7 +521,7 @@ export default function RegisterPage() {
                   </button>
                 </form>
 
-                <div className="mt-6 text-center text-sm text-slate-500">
+                <div className="mt-5 text-center text-sm text-slate-500">
                   Already have an account?{' '}
                   <Link href="/login" className="text-blue-600 font-semibold hover:underline">Sign in here</Link>
                 </div>

@@ -1,22 +1,30 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Mail, ShieldCheck, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
+import { Mail, ShieldCheck, ArrowRight, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
 type Step = 'request' | 'success'
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>('request')
 
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      setError(errorParam)
+    }
+  }, [searchParams])
 
   const handleRequest = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,8 +34,8 @@ export default function ForgotPasswordPage() {
     
     const supabase = createClient()
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: `${window.location.origin}/auth/callback?type=recovery`
     })
 
     if (resetError) {
@@ -155,5 +163,17 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-community bg-overlay">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    }>
+      <ForgotPasswordContent />
+    </Suspense>
   )
 }

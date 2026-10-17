@@ -1,8 +1,11 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-// Singleton — all components share one client to prevent navigator lock contention
-// when multiple concurrent supabase.auth.getUser() calls race each other.
+// Singleton — all components share one client.
+// An in-memory queue lock ensures concurrent auth requests (such as simultaneous
+// getUser calls or token refreshes during component mounting) run sequentially without
+// racing Supabase's Refresh Token Rotation, while avoiding deadlocks in React StrictMode/HMR.
 let _client: ReturnType<typeof createBrowserClient> | null = null
+let _lockQueue = Promise.resolve()
 
 export const createClient = () => {
   if (!_client) {
@@ -12,7 +15,17 @@ export const createClient = () => {
       {
         auth: {
           lock: async (_name, _acquireTimeout, fn) => {
-            return await fn()
+            const previous = _lockQueue
+            let release: () => void
+            _lockQueue = new Promise<void>((resolve) => {
+              release = resolve
+            })
+            await previous
+            try {
+              return await fn()
+            } finally {
+              release!()
+            }
           },
         },
       }

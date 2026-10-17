@@ -1,21 +1,24 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ASSISTANCE_TYPES } from '@/lib/constants'
+import { 
+  ASSISTANCE_TYPES, 
+  BARANGAYS, 
+  FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN, 
+  BENEFICIARY_RELATIONSHIPS 
+} from '@/lib/constants'
 import {
   Loader2, Check, X, FileText, AlertCircle, ChevronRight,
   ChevronLeft, GraduationCap, Stethoscope, UtensilsCrossed, Cross,
-  Camera, RotateCcw, User, CreditCard, Upload, ShieldAlert
+  Camera, RotateCcw, User, CreditCard, Upload, ShieldAlert, Search
 } from 'lucide-react'
 import Link from 'next/link'
-import { BARANGAYS } from '@/lib/constants'
 import CameraModal from '@/components/CameraModal'
 import { useLanguage } from '@/lib/LanguageContext'
 
 // ── Per-type field configurations ──────────────────────────────
-
 
 const TYPE_ICONS: Record<string, any> = {
   Medical: Stethoscope,
@@ -27,26 +30,110 @@ const AMOUNT_RANGES: Record<string, string[]> = {
   Burial: ['₱5,000 - ₱10,000', '₱10,001+']
 }
 
+// Burial name fields — outside component to prevent recreation on each render
+const BURIAL_NAME_FIELDS = [
+  { key: 'deceased_first_name',  label: 'First Name of Deceased',  placeholder: 'e.g. Juan',          required: true  },
+  { key: 'deceased_middle_name', label: 'Middle Name of Deceased', placeholder: 'e.g. Santos',        required: false },
+  { key: 'deceased_last_name',   label: 'Last Name of Deceased',   placeholder: 'e.g. Dela Cruz',     required: true  },
+  { key: 'deceased_suffix',      label: 'Suffix',                  placeholder: 'e.g. Jr., Sr., III', required: false },
+] as const
+
+const MEDICAL_FIELDS = [
+  { key: 'hospital_name',  label: 'Hospital / Clinic Name', type: 'text',   placeholder: 'e.g. Vicente Sotto Memorial Medical Center', required: true  },
+  { key: 'diagnosis',      label: 'Diagnosis',              type: 'text',   placeholder: 'e.g. Dengue Hemorrhagic Fever',              required: true  },
+  { key: 'estimated_cost', label: 'Estimated Cost (₱)',     type: 'number', placeholder: '0.00',                                       required: true  },
+] as const
+
+// ── Searchable combobox for funeral home ──────────────────────────────────
+function FuneralHomeCombobox({
+  value, onChange, hasError
+}: { value: string; onChange: (v: string) => void; hasError?: boolean }) {
+  const [query, setQuery] = useState('')
+  const [open,  setOpen]  = useState(false)
+  const containerRef      = useRef<HTMLDivElement>(null)
+
+  const filtered = useMemo(() =>
+    query.trim() === ''
+      ? FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN
+      : FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.filter(h =>
+          h.toLowerCase().includes(query.toLowerCase())
+        ),
+    [query]
+  )
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const select = (opt: string) => { onChange(opt); setQuery(''); setOpen(false) }
+  const clear  = () => { onChange(''); setQuery('') }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div
+        className={`form-input flex items-center gap-2 cursor-pointer bg-slate-50/50 hover:bg-white transition-all select-none${hasError ? ' border-red-400 ring-2 ring-red-100 bg-red-50/30' : ''}`}
+        onClick={() => { setOpen(v => !v); setTimeout(() => (containerRef.current?.querySelector('input') as HTMLInputElement)?.focus(), 50) }}
+      >
+        <Search size={14} className="text-slate-400 shrink-0" />
+        {value
+          ? <span className="truncate text-sm font-medium text-[var(--color-text)] flex-1">{value}</span>
+          : <span className="text-sm text-slate-400 flex-1">Search or select a funeral home…</span>
+        }
+        {value && (
+          <button type="button" onClick={e => { e.stopPropagation(); clear() }} className="text-slate-400 hover:text-slate-600 shrink-0">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-slate-100">
+            <input
+              autoFocus type="text" value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Type to filter…"
+              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+          <ul className="max-h-56 overflow-y-auto py-1">
+            {filtered.length === 0
+              ? <li className="px-4 py-3 text-sm text-slate-400 text-center">No funeral homes match your search.</li>
+              : filtered.map(opt => (
+                <li
+                  key={opt} onClick={() => select(opt)}
+                  className={`px-4 py-2.5 text-sm cursor-pointer transition-colors flex items-center gap-2 ${
+                    value === opt ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-[var(--color-text)] hover:bg-slate-50'
+                  }`}
+                >
+                  {value === opt ? <Check size={13} className="shrink-0 text-blue-600" /> : <span className="w-[13px] shrink-0" />}
+                  {opt}
+                </li>
+              ))
+            }
+          </ul>
+          {filtered.length > 0 && (
+            <p className="px-4 py-2 text-[10px] text-slate-400 border-t border-slate-100">
+              {filtered.length} of {FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.length} funeral homes · Bogo to Daanbantayan area only
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function NewRequestPage() {
   const router = useRouter()
   const supabase = createClient()
   const { t } = useLanguage()
-  
-  // ── Per-type field configurations ──────────────────────────────
-  const TYPE_FIELDS: Record<string, { key: string; label: string; type: string; placeholder: string; required?: boolean }[]> = {
-    Medical: [
-      { key: 'hospital_name', label: t('newRequest_fields.hospital_name'), type: 'text', placeholder: t('newRequest_placeholders.hospital_name'), required: true },
-      { key: 'diagnosis', label: t('newRequest_fields.diagnosis'), type: 'text', placeholder: t('newRequest_placeholders.diagnosis'), required: true },
-      { key: 'estimated_cost', label: t('newRequest_fields.estimated_cost'), type: 'number', placeholder: '0.00', required: true },
-    ],
-    Burial: [
-      { key: 'deceased_name', label: t('newRequest_fields.deceased_name'), type: 'text', placeholder: t('newRequest_placeholders.deceased_name'), required: true },
-      { key: 'relationship', label: t('newRequest_fields.relationship'), type: 'text', placeholder: t('newRequest_placeholders.relationship'), required: true },
-      { key: 'funeral_home', label: t('newRequest_fields.funeral_home'), type: 'text', placeholder: t('newRequest_placeholders.funeral_home'), required: true },
-    ],
-  }
+
 
   // ── State ────────────────────────────────────────────────────
+
   const [step, setStep] = useState(1)
   const [myBeneficiary, setMyBeneficiary] = useState<any>(null)
   const [requirements, setRequirements] = useState<any[]>([])
@@ -55,7 +142,9 @@ export default function NewRequestPage() {
   const [validIdBack, setValidIdBack] = useState<File | null>(null)
   const [cameraOpen, setCameraOpen] = useState<'front' | 'back' | null>(null)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [error,       setError]       = useState('')
+  /** Per-field inline validation errors */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   // Duplicate Prevention States
   const [isBlocked, setIsBlocked] = useState(false)
@@ -84,6 +173,14 @@ export default function NewRequestPage() {
   const [amountRange, setAmountRange] = useState('')
   const [remarks, setRemarks] = useState('')
   const [extraFields, setExtraFields] = useState<Record<string, string>>({})
+
+  /** Set an extra field and clear its inline error immediately */
+  const setField = (key: string, value: string) => {
+    setExtraFields(prev => ({ ...prev, [key]: value }))
+    if (fieldErrors[key]) setFieldErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+  }
+  const clearFieldError = (key: string) =>
+    setFieldErrors(prev => { const n = { ...prev }; delete n[key]; return n })
 
   // Personal info (auto-filled from beneficiary, editable)
   const [personalInfo, setPersonalInfo] = useState({
@@ -180,6 +277,7 @@ export default function NewRequestPage() {
         })
       setExtraFields({})
       setAmountRange('')
+      setFieldErrors({})
     }
   }, [assistanceType, supabase])
 
@@ -187,25 +285,36 @@ export default function NewRequestPage() {
     setPreparedDocs(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  // ── Navigation logic ─────────────────────────────────────────
+  // ── Per-field validation — collects ALL errors at once ────────
+  const validateStep2 = (): boolean => {
+    const errs: Record<string, string> = {}
+    if (!purpose || purpose.trim().length < 5)
+      errs['purpose'] = 'Please describe the reason for your request (at least 5 characters).'
+    if (!amountRange)
+      errs['amount_range'] = 'Please select an amount range.'
+    if (assistanceType === 'Burial') {
+      for (const f of BURIAL_NAME_FIELDS) {
+        if (f.required && !extraFields[f.key]?.trim()) errs[f.key] = `${f.label} is required.`
+      }
+      if (!extraFields['relationship']?.trim()) errs['relationship'] = 'Relationship to Beneficiary is required.'
+      if (!extraFields['funeral_home']?.trim()) errs['funeral_home'] = 'Please select a funeral home.'
+    } else if (assistanceType === 'Medical') {
+      for (const f of MEDICAL_FIELDS) {
+        if (f.required && !extraFields[f.key]?.trim()) errs[f.key] = `${f.label} is required.`
+      }
+    }
+    setFieldErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  // ── Navigation logic ──────────────────────────────────────────
   const nextStep = () => {
     if (step === 1) {
       if (!assistanceType) { setError(t('newRequest_selectType')); return }
-      setStep(2)
-      setError('')
+      setStep(2); setError('')
     } else if (step === 2) {
-      if (!purpose || purpose.length < 5) { setError(t('newRequest_reasonRequired')); return }
-      if (!amountRange) { setError(t('newRequest_selectAmountRange')); return }
-      
-      const fields = TYPE_FIELDS[assistanceType] || []
-      for (const f of fields) {
-        if (f.required && !extraFields[f.key]) {
-          setError(`${f.label} ${t('required').toLowerCase()}`)
-          return
-        }
-      }
-      setStep(3)
-      setError('')
+      if (!validateStep2()) { setError('Please fix the highlighted fields before continuing.'); return }
+      setStep(3); setError('')
     }
   }
 
@@ -238,12 +347,24 @@ export default function NewRequestPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      const deceasedFullName = assistanceType === 'Burial'
+        ? [extraFields.deceased_first_name, extraFields.deceased_middle_name, extraFields.deceased_last_name, extraFields.deceased_suffix]
+            .filter(Boolean)
+            .join(' ')
+            .trim()
+        : ''
+
       const { data: req, error: reqErr } = await supabase.from('requests').insert({
         beneficiary_id: beneficiaryId,
         assistance_type: assistanceType,
         purpose,
         remarks: remarks || null,
-        extra_fields: { ...extraFields, amount_range: amountRange, personal_info: personalInfo },
+        extra_fields: { 
+          ...extraFields, 
+          ...(deceasedFullName ? { deceased_name: deceasedFullName } : {}),
+          amount_range: amountRange, 
+          personal_info: personalInfo 
+        },
         encoded_by: user.id,
         status: 'Pending',
       }).select().single()
@@ -292,6 +413,18 @@ export default function NewRequestPage() {
       <p className="font-bold text-[var(--color-text)]">{value || '—'}</p>
     </div>
   )
+
+  /** Inline field error message */
+  const FieldError = ({ name }: { name: string }) =>
+    fieldErrors[name] ? (
+      <p className="flex items-center gap-1 text-xs font-semibold text-red-500 mt-1">
+        <AlertCircle size={11} />{fieldErrors[name]}
+      </p>
+    ) : null
+
+  /** Returns class string with red border when field has an error */
+  const fc = (name: string, base = 'form-input bg-slate-50/50 dark:bg-slate-800/50 focus:bg-[var(--color-surface)] transition-all') =>
+    `${base}${fieldErrors[name] ? ' border-red-400 ring-2 ring-red-100 dark:ring-red-900/40 bg-red-50/30 dark:bg-red-900/20' : ''}`
 
   const renderStep1 = () => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -387,14 +520,15 @@ export default function NewRequestPage() {
         </h2>
 
         <div className="space-y-8">
-          <div className="space-y-2">
+          <div className="space-y-1">
             <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">{t('newRequest_purpose')}</label>
             <textarea
               value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              className="form-input min-h-[120px] bg-slate-50/50 focus:bg-white transition-all text-lg"
+              onChange={(e) => { setPurpose(e.target.value); clearFieldError('purpose') }}
+              className={fc('purpose', 'form-input min-h-[120px] bg-slate-50/50 dark:bg-slate-800/50 focus:bg-[var(--color-surface)] transition-all text-lg')}
               placeholder={t('newRequest_purposePlaceholder')}
             />
+            <FieldError name="purpose" />
           </div>
 
           <div className="space-y-2">
@@ -403,10 +537,12 @@ export default function NewRequestPage() {
               {(AMOUNT_RANGES[assistanceType] || []).map(range => (
                 <button
                   key={range}
-                  onClick={() => setAmountRange(range)}
+                  onClick={() => { setAmountRange(range); clearFieldError('amount_range') }}
                   className={`p-4 rounded-xl border-2 text-sm font-bold transition-all ${
-                    amountRange === range 
-                    ? 'border-blue-500 bg-blue-500/5 text-blue-600 ring-4 ring-blue-500/10' 
+                    amountRange === range
+                    ? 'border-blue-500 bg-blue-500/5 text-blue-600 ring-4 ring-blue-500/10'
+                    : fieldErrors['amount_range']
+                    ? 'border-red-300 hover:border-blue-300'
                     : 'border-[var(--color-border)] hover:border-blue-300'
                   }`}
                 >
@@ -414,29 +550,123 @@ export default function NewRequestPage() {
                 </button>
               ))}
             </div>
+            <FieldError name="amount_range" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-[var(--color-border)]">
-            {TYPE_FIELDS[assistanceType]?.map(field => (
-              <div key={field.key} className="space-y-2">
-                <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">{field.label}</label>
-                <input
-                  type={field.type}
-                  value={extraFields[field.key] || ''}
-                  onChange={(e) => setExtraFields(prev => ({ ...prev, [field.key]: e.target.value }))}
-                  className="form-input bg-slate-50/50 focus:bg-white transition-all"
-                  placeholder={field.placeholder}
-                />
+          {/* ── BURIAL section ───────────────────────────────────────── */}
+          {assistanceType === 'Burial' && (
+            <div className="pt-8 border-t border-[var(--color-border)] space-y-6">
+              <div>
+                <h3 className="text-base font-bold text-[var(--color-text)] flex items-center gap-2">
+                  <Cross size={15} className="text-slate-500" />
+                  Deceased Person's Information
+                </h3>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                  Fill in the complete name of the deceased.
+                  Fields marked <span className="text-red-500 font-bold">*</span> are required.
+                </p>
               </div>
-            ))}
-          </div>
 
-          <div className="space-y-2 pt-4">
+              {/* Name fields — 2×2 grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {BURIAL_NAME_FIELDS.map(f => (
+                  <div key={f.key} className="space-y-1">
+                    <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">
+                      {f.label}{f.required && <span className="text-red-500 ml-0.5">*</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={extraFields[f.key] || ''}
+                      onChange={e => setField(f.key, e.target.value)}
+                      className={fc(f.key)}
+                      placeholder={f.placeholder}
+                    />
+                    <FieldError name={f.key} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2">
+                <h3 className="text-base font-bold text-[var(--color-text)] flex items-center gap-2">
+                  <FileText size={15} className="text-slate-500" />
+                  Funeral Arrangements
+                </h3>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                  Only verified funeral homes within the Bogo to Daanbantayan area are listed.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Relationship */}
+                <div className="space-y-1">
+                  <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">
+                    Relationship to Beneficiary<span className="text-red-500 ml-0.5">*</span>
+                  </label>
+                  <select
+                    value={extraFields['relationship'] || ''}
+                    onChange={e => setField('relationship', e.target.value)}
+                    className={fc('relationship')}
+                  >
+                    <option value="">— Select Relationship —</option>
+                    {BENEFICIARY_RELATIONSHIPS.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                  <FieldError name="relationship" />
+                </div>
+
+                {/* Funeral home — searchable combobox */}
+                <div className="space-y-1">
+                  <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">
+                    Funeral Home (Bogo – Daanbantayan)<span className="text-red-500 ml-0.5">*</span>
+                  </label>
+                  <FuneralHomeCombobox
+                    value={extraFields['funeral_home'] || ''}
+                    onChange={v => setField('funeral_home', v)}
+                    hasError={!!fieldErrors['funeral_home']}
+                  />
+                  <FieldError name="funeral_home" />
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.length} verified homes. Not listed? Select "Other Funeral Home (Within Bogo to Daanbantayan Area)".
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── MEDICAL section ─────────────────────────────────────── */}
+          {assistanceType === 'Medical' && (
+            <div className="pt-8 border-t border-[var(--color-border)] space-y-4">
+              <div>
+                <h3 className="text-base font-bold text-[var(--color-text)]">Medical Assistance Details</h3>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Hospital and medical diagnostic details.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {MEDICAL_FIELDS.map(f => (
+                  <div key={f.key} className="space-y-1">
+                    <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">
+                      {f.label}{f.required && <span className="text-red-500 ml-0.5">*</span>}
+                    </label>
+                    <input
+                      type={f.type}
+                      value={extraFields[f.key] || ''}
+                      onChange={e => setField(f.key, e.target.value)}
+                      className={fc(f.key)}
+                      placeholder={f.placeholder}
+                    />
+                    <FieldError name={f.key} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2 pt-6 border-t border-[var(--color-border)]">
             <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">{t('newRequest_remarks')}</label>
             <input
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              className="form-input bg-slate-50/50 focus:bg-white transition-all"
+              className="form-input bg-slate-50/50 dark:bg-slate-800/50 focus:bg-[var(--color-surface)] transition-all"
               placeholder={t('newRequest_remarksPlaceholder')}
             />
           </div>

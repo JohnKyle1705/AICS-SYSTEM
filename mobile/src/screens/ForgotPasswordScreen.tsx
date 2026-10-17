@@ -23,11 +23,12 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   }
 
   const handleRequest = async () => {
-    if (!email) return Alert.alert('Error', 'Please enter your email address')
+    const cleanEmail = email.trim().toLowerCase()
+    if (!cleanEmail) return Alert.alert('Error', 'Please enter your email address')
 
     setLoading(true)
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail)
     if (error) {
       Alert.alert('Failed', error.message)
     } else {

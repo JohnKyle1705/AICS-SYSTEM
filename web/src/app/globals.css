@@ -277,6 +277,14 @@ body {
 .dark .badge-declined { color: #fca5a5; }
 
 /* ── Form Inputs ────────────────────────────────── */
+input, textarea, select {
+  color: var(--color-text);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
 @layer components {
   .form-input {
     width: 100%;
@@ -284,7 +292,7 @@ body {
     border-radius: 12px;
     padding: 12px 16px;
     font-size: 0.9375rem;
-    color: var(--color-text);
+    color: var(--color-text) !important;
     background: var(--color-surface-hover);
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     outline: none;
@@ -295,6 +303,7 @@ body {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), inset 0 2px 4px rgba(0,0,0,0.01);
     background: var(--color-surface);
+    color: var(--color-text) !important;
   }
 
   .form-input::placeholder {

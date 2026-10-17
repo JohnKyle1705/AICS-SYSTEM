@@ -198,6 +198,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [savedEmails, setSavedEmails] = useState<string[]>([])
@@ -220,6 +221,25 @@ export default function LoginPage() {
     }
     // Check if terms were previously accepted
     setTermsAccepted(getTermsAccepted())
+
+    // Check URL parameters for messages/errors (e.g. from password reset)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const msg = params.get('message')
+      const err = params.get('error')
+      if (msg === 'password_updated') {
+        setSuccessMessage('Password changed successfully! You can now sign in with your new password.')
+      } else if (msg) {
+        setSuccessMessage(msg)
+      }
+      if (err) {
+        if (err === 'verification_failed') {
+          setError('Verification failed or link expired. Please try again.')
+        } else {
+          setError(decodeURIComponent(err))
+        }
+      }
+    }
   }, [])
 
   const handleTermsCheckbox = (checked: boolean) => {
@@ -271,6 +291,16 @@ export default function LoginPage() {
           localStorage.setItem('aics_saved_emails', JSON.stringify(newSaved))
           setSavedEmails(newSaved)
         }
+        // Audit log the successful login
+        try {
+          await supabase.from('system_logs').insert({
+            user_id: user.id,
+            action: 'LOGIN',
+            table_name: 'auth',
+            details: { event: 'Successful login', email: user.email },
+          })
+        } catch { /* don't block login if logging fails */ }
+
         // Redirect to dashboard
         router.push('/dashboard')
         router.refresh()
@@ -498,6 +528,14 @@ export default function LoginPage() {
                   </span>
                 </label>
               </div>
+
+              {/* Success Message */}
+              {successMessage && (
+                <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-100 text-sm px-4 py-3 rounded-lg backdrop-blur-sm flex items-center gap-2.5">
+                  <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                  <p className="font-medium">{successMessage}</p>
+                </div>
+              )}
 
               {/* Error Message */}
               {error && (

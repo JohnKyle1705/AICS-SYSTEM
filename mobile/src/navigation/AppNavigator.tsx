@@ -36,6 +36,7 @@ import AssessmentsScreen from '../screens/AssessmentsScreen'
 import PayoutsScreen from '../screens/PayoutsScreen'
 import AnnouncementsManageScreen from '../screens/AnnouncementsManageScreen'
 import RequirementsScreen from '../screens/RequirementsScreen'
+import PendingScreen from '../screens/PendingScreen'
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -111,7 +112,7 @@ function MainLayout() {
 }
 
 export default function AppNavigator() {
-  const { session, loading } = useAuth()
+  const { session, profile, loading } = useAuth()
   const { theme, colors, isDark } = useTheme()
 
   if (loading) {
@@ -150,6 +151,8 @@ export default function AppNavigator() {
             <Stack.Screen name="Register" component={RegisterScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           </>
+        ) : profile?.is_active === false ? (
+          <Stack.Screen name="Pending" component={PendingScreen} />
         ) : (
           <>
             <Stack.Screen name="Main" component={MainLayout} />

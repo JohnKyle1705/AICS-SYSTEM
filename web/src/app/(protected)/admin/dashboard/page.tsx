@@ -44,13 +44,15 @@ export default function AdminDashboard() {
       })
     }
 
-    // Notify the user
-    await supabase.from('notifications').insert({
-      user_id: userId,
-      title: t('users_activateConfirm'),
-      message: t('users_activateMsg'),
-      type: 'info'
-    })
+    // Notify the admin that the activation was performed
+    if (adminUser) {
+      await supabase.from('notifications').insert({
+        user_id: adminUser.id,
+        title: 'Activate Resident',
+        message: 'You have successfully approved and activated a resident account.',
+        type: 'info',
+      })
+    }
 
 
     setPendingUsers(prev => prev.filter(u => u.id !== userId))

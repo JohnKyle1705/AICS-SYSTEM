@@ -183,7 +183,7 @@ export default function PayoutsScreen({ navigation }: any) {
       <View style={s.summaryBanner}>
         <View style={s.summaryTopRow}>
           <View style={s.summaryIconBox}>
-            <Feather name="dollar-sign" size={24} color="#10b981" />
+            <Text style={{ fontSize: 22, fontWeight: '800', color: '#10b981', lineHeight: 28 }}>₱</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.summaryLabel}>Total Released</Text>

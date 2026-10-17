@@ -260,16 +260,16 @@ export default function UsersPage() {
         table_name: 'profiles',
         record_id: id,
       })
-    }
 
-    // Notify resident if activated
-    if (isResident && newState) {
-      await supabase.from('notifications').insert({
-        user_id: id,
-        title: 'Account Activated',
-        message: 'Your account has been approved and activated. You can now access the AICS system.',
-        type: 'info',
-      })
+      // Notify admin on resident activation
+      if (isResident && newState) {
+        await supabase.from('notifications').insert({
+          user_id: admin.id,
+          title: 'Activate Resident',
+          message: 'You have successfully approved and activated a resident account.',
+          type: 'info',
+        })
+      }
     }
   }
 

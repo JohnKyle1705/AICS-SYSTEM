@@ -256,6 +256,25 @@ export default function RequestDetailScreen({ route, navigation }: any) {
         <Info label="Amount Approved" value={request.amount_approved ? `₱${Number(request.amount_approved).toLocaleString()}` : '—'} />
         <Info label="Release Status" value={request.release_status || 'Pending'} />
         <Info label="Purpose" value={request.purpose} />
+        {request.assistance_type === 'Burial' && request.extra_fields && (
+          <>
+            <Info 
+              label="Name of Deceased" 
+              value={request.extra_fields.deceased_name || 
+                [request.extra_fields.deceased_first_name, request.extra_fields.deceased_middle_name, request.extra_fields.deceased_last_name, request.extra_fields.deceased_suffix].filter(Boolean).join(' ') || 
+                '—'} 
+            />
+            <Info label="Relationship" value={request.extra_fields.relationship || '—'} />
+            <Info label="Funeral Home" value={request.extra_fields.funeral_home || '—'} />
+          </>
+        )}
+        {request.assistance_type === 'Medical' && request.extra_fields && (
+          <>
+            <Info label="Hospital / Clinic" value={request.extra_fields.hospital_name || '—'} />
+            <Info label="Diagnosis" value={request.extra_fields.diagnosis || '—'} />
+            <Info label="Estimated Cost" value={request.extra_fields.estimated_cost ? `₱${Number(request.extra_fields.estimated_cost).toLocaleString()}` : '—'} />
+          </>
+        )}
         {request.remarks ? <Info label="Remarks" value={request.remarks} /> : null}
         <Info label="Date Filed" value={format(new Date(request.created_at), 'MMM d, yyyy • h:mm a')} />
       </View>

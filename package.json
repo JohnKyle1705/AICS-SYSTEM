@@ -1,5 +1,8 @@
 {
-  "dependencies": {
-    "expo": "^57.0.22"
+  "private": true,
+  "name": "aics-system-root",
+  "scripts": {
+    "mobile": "npm start --prefix mobile",
+    "web": "npm run dev --prefix web"
   }
 }

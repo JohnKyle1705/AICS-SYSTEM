@@ -100,6 +100,17 @@ export default function Sidebar() {
   }, [])
 
   const handleLogout = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('system_logs').insert({
+          user_id: user.id,
+          action: 'LOGOUT',
+          table_name: 'auth',
+          details: { event: 'User signed out' },
+        })
+      }
+    } catch { /* don't block logout if logging fails */ }
     await supabase.auth.signOut()
     router.push('/login')
   }
