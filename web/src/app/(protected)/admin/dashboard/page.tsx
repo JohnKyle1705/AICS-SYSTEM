@@ -151,8 +151,8 @@ export default function AdminDashboard() {
       }, 500)
     }
 
-    const existing = supabase.getChannels().filter(c => c.topic.includes('admin-dashboard'))
-    existing.forEach(c => supabase.removeChannel(c))
+    const existing = supabase.getChannels().filter((c: any) => c.topic.includes('admin-dashboard'))
+    existing.forEach((c: any) => supabase.removeChannel(c))
 
     const channel = supabase.channel(`admin-dashboard-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, debouncedLoad)

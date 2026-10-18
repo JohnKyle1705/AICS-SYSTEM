@@ -96,8 +96,8 @@ function RequestsContent() {
       timer = setTimeout(() => { load() }, 500)
     }
 
-    const existing = supabase.getChannels().filter(c => c.topic.includes('requests_page_realtime'))
-    existing.forEach(c => supabase.removeChannel(c))
+    const existing = supabase.getChannels().filter((c: any) => c.topic.includes('requests_page_realtime'))
+    existing.forEach((c: any) => supabase.removeChannel(c))
 
     const channel = supabase
       .channel(`requests_page_realtime-${Date.now()}`)
