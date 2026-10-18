@@ -10,7 +10,69 @@ This document specifies the complete, role-exclusive operational flowcharts and 
 
 ---
 
-## 🗺️ 1. Master Administrator System Architecture Flow
+## 🎨 Visual Flowchart Access & Formats
+
+This documentation is available in three presentation formats:
+1. **Interactive Vector Graphic**: Open **[FLOW CHART.html](file:///c:/Users/John%20Kyle/Desktop/AICS-System/FLOW%20CHART.html)** in any browser for interactive zoom, vector rendering, and single-click printing or PDF export.
+2. **Standard Vector Image**: Direct SVG file **[FLOW_CHART_ADMIN.svg](file:///c:/Users/John%20Kyle/Desktop/AICS-System/FLOW_CHART_ADMIN.svg)** with ANSI symbols, drop shadows, and clean orthogonal routing arrows.
+3. **Microsoft Word Document**: Official **[FLOW CHART.docx](file:///c:/Users/John%20Kyle/Desktop/AICS-System/FLOW%20CHART.docx)** matching municipal publication standards.
+
+---
+
+## 🔷 1. Flowchart of Administrator Process (ANSI/ISO Standard Symbols)
+
+The diagram below reflects the exact standard flowchart logic formatted with **Oval Terminators** (Start/Stop), **Parallelograms** (Input/Output), **Diamonds** (Decisions), and **Rectangles** (Processes):
+
+```mermaid
+flowchart TD
+    %% Node Styling Definitions
+    classDef terminator fill:#ea580c,stroke:#c2410c,stroke-width:2.5px,color:#ffffff,font-weight:bold;
+    classDef io fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#431407,font-weight:600;
+    classDef decision fill:#fed7aa,stroke:#c2410c,stroke-width:2px,color:#431407,font-weight:700;
+    classDef process fill:#fff7ed,stroke:#fb923c,stroke-width:2px,color:#431407,font-weight:600;
+    classDef stopDecline fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#ffffff,font-weight:bold;
+
+    Start([Start]):::terminator
+    Start --> InCred[/Input Admin Credentials & Agree to Terms/]:::io
+    InCred --> DecAuth{Is Account Active & Role == Admin?}:::decision
+
+    %% Authentication Branching
+    DecAuth -- No --> OutDeny[/Display Error: Access Denied/]:::stopDecline
+    OutDeny --> StopAuth([Stop]):::stopDecline
+
+    DecAuth -- Yes --> OutDash[/Display Admin Dashboard & Notification Feeds/]:::io
+    OutDash --> InReq[/Receive New AICS Assistance Request Medical / Burial/]:::io
+    InReq --> ProcBen[Verify Beneficiary Profile, Barangay Pajo Residency & Household]:::process
+    ProcBen --> DecDocs{Are Uploaded Documents Complete & Valid?}:::decision
+
+    %% Document Branching
+    DecDocs -- No --> FlagDocs[Flag Missing Documents & Notify Resident to Resubmit]:::process
+    FlagDocs -. Re-upload .-> InReq
+
+    DecDocs -- Yes --> ProcAssess[Conduct Social Case Assessment, Record Findings & Recommend Amount]:::process
+    ProcAssess --> DecFund{Is Municipal Fund Balance Sufficient?}:::decision
+
+    %% Fund Branching
+    DecFund -- No --> AlertFund[Display Low Balance Warning & Allocate Municipal Funds]:::process
+    AlertFund -. Deposited .-> DecFund
+
+    DecFund -- Yes --> DecApprove{Admin Evaluation Decision: Approve or Decline?}:::decision
+
+    %% Decline Branch
+    DecApprove -- Decline --> ProcDecline[Record Written Justification & Set Status = 'Declined']:::process
+    ProcDecline --> OutDeclineNotif[/Send Rejection Notice to Resident with Remarks/]:::io
+    OutDeclineNotif --> StopDecline([Stop]):::stopDecline
+
+    %% Approve Branch
+    DecApprove -- Approve --> ProcApprove[Set amount_approved & Update Status = 'Approved']:::process
+    ProcApprove --> ProcRoute[Route Request to Municipal Treasurer & Insert Audit Log in system_logs]:::process
+    ProcRoute --> OutNotif[/Send Real-time Notifications to Resident Approved & Treasurers Ready/]:::io
+    OutNotif --> Stop([Stop]):::terminator
+```
+
+---
+
+## 🗺️ 2. Master Administrator System Architecture Flow
 
 The following master flowchart depicts the end-to-end lifecycle and modules managed exclusively or primarily by the Administrator.
 
