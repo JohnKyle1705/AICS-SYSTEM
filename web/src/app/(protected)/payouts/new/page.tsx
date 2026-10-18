@@ -52,7 +52,7 @@ function PayoutForm() {
       setLoadingRequests(true)
       const { data, error: qErr } = await supabase
         .from('requests')
-        .select('id, tracking_code, assistance_type, encoded_by, amount_approved, amount_requested, purpose, status, created_at, beneficiaries(first_name, last_name, barangay)')
+        .select('id, assistance_type, encoded_by, amount_approved, amount_requested, purpose, status, created_at, beneficiaries(first_name, last_name, barangay)')
         .in('status', ['Approved', 'Pending'])
         .order('created_at', { ascending: false })
 
@@ -285,11 +285,9 @@ function PayoutForm() {
                 <span className="font-semibold text-[var(--color-text)] text-sm">
                   {selectedRequest.assistance_type} Assistance
                 </span>
-                {selectedRequest.tracking_code && (
-                  <span className="text-blue-500 block text-[11px] font-mono">
-                    #{selectedRequest.tracking_code}
-                  </span>
-                )}
+                <span className="text-blue-500 block text-[11px] font-mono">
+                  #{selectedRequest.id.slice(0, 8).toUpperCase()}
+                </span>
               </div>
 
               {selectedRequest.amount_approved && (

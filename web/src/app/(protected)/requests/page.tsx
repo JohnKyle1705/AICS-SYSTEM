@@ -28,7 +28,7 @@ function RequestsContent() {
     const q = search.toLowerCase()
     return rawRequests.filter((r: any) =>
       `${r.beneficiaries?.first_name || ''} ${r.beneficiaries?.last_name || ''}`.toLowerCase().includes(q) ||
-      (r.tracking_code && r.tracking_code.toLowerCase().includes(q))
+      (r.id && r.id.toLowerCase().includes(q))
     )
   }, [rawRequests, search])
 
