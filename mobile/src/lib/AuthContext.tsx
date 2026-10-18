@@ -42,7 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.warn('Session retrieval error:', error.message)
         await clearStaleSession()
-        await supabase.auth.signOut()
+        await Promise.race([
+          supabase.auth.signOut({ scope: 'local' }),
+          new Promise((resolve) => setTimeout(resolve, 1000)),
+        ]).catch(() => {})
+        setProfile(null)
         setSession(null)
         setLoading(false)
         return
@@ -50,13 +54,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       if (session) loadProfile(session.user.id)
       else setLoading(false)
+    }).catch(async (e) => {
+      console.warn('getSession rejected:', e)
+      await clearStaleSession()
+      setProfile(null)
+      setSession(null)
+      setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event as string) === 'TOKEN_REFRESH_FAILED') {
         console.warn('Token refresh failed. Signing out.')
         await clearStaleSession()
-        await supabase.auth.signOut()
+        await Promise.race([
+          supabase.auth.signOut({ scope: 'local' }),
+          new Promise((resolve) => setTimeout(resolve, 1000)),
+        ]).catch(() => {})
+        setProfile(null)
+        setSession(null)
+        setLoading(false)
         return
       }
       setSession(session)
@@ -68,29 +84,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const loadProfile = async (userId: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    setProfile(data || null)
-    setLoading(false)
+    try {
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      setProfile(data || null)
+    } catch (e) {
+      console.warn('Failed to load profile:', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const refreshProfile = async () => {
-    const currentSession = session || (await supabase.auth.getSession()).data.session
-    if (!currentSession?.user) return null
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', currentSession.user.id)
-      .single()
-    if (data) {
-      setProfile(data)
+    try {
+      const currentSession = session || (await supabase.auth.getSession()).data.session
+      if (!currentSession?.user) return null
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentSession.user.id)
+        .single()
+      if (data) {
+        setProfile(data)
+      }
+      return data || null
+    } catch {
+      return null
     }
-    return data || null
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setProfile(null)
-    setSession(null)
+    try {
+      // Immediately reset local state so React Navigation instantly navigates to Login
+      setProfile(null)
+      setSession(null)
+      setLoading(false)
+
+      // Purge cached storage keys
+      await clearStaleSession()
+
+      // Inform Supabase client with a 1.5s timeout so network failures never freeze the app
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ])
+    } catch (err) {
+      console.warn('Mobile signOut error:', err)
+    } finally {
+      setProfile(null)
+      setSession(null)
+      setLoading(false)
+    }
   }
 
   return (

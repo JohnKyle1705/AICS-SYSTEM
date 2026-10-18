@@ -163,7 +163,14 @@ export default function ForgotPasswordScreen({ navigation }: any) {
     }
 
     // 3. Sign out of recovery session
-    await supabase.auth.signOut()
+    try {
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ])
+    } catch {
+      // ignore
+    }
 
     setLoading(false)
     setStep('success')

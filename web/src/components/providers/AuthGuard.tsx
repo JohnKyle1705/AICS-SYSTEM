@@ -26,6 +26,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       ) {
         // Clean up stale session automatically without triggering dev overlay
         clearAllSupabaseAuth()
+        fetch('/api/auth/signout', { method: 'POST' }).catch(() => {})
         const pathname = window.location.pathname
         const isPublic =
           pathname.startsWith('/login') ||
@@ -33,7 +34,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           pathname.startsWith('/forgot-password') ||
           pathname.startsWith('/auth')
         if (!isPublic && pathname !== '/') {
-          window.location.href = '/login'
+          window.location.href = '/login?logout=true'
         }
         return
       }
@@ -49,6 +50,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         // ignore
       }
       clearAllSupabaseAuth()
+      try {
+        await fetch('/api/auth/signout', { method: 'POST' })
+      } catch {
+        // ignore
+      }
       const pathname = window.location.pathname
       const isPublic =
         pathname.startsWith('/login') ||
@@ -57,7 +63,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         pathname.startsWith('/auth')
 
       if (!isPublic && pathname !== '/') {
-        window.location.href = '/login'
+        window.location.href = '/login?logout=true'
       }
     }
 

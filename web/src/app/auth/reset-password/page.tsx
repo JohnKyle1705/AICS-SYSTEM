@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, clearAllSupabaseAuth } from '@/lib/supabase/client'
 import type { AuthChangeEvent } from '@supabase/supabase-js'
 import {
   Lock,
@@ -148,7 +148,16 @@ function ResetPasswordContent() {
       // Non-blocking
     }
 
-    await supabase.auth.signOut()
+    try {
+      clearAllSupabaseAuth()
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ])
+      await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {})
+    } catch {
+      // Non-blocking
+    }
 
     setSuccess(true)
     setLoading(false)

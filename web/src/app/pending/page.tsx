@@ -18,7 +18,12 @@ export default function PendingPage() {
       // ignore
     }
     clearAllSupabaseAuth()
-    window.location.href = '/login'
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' })
+    } catch {
+      // ignore
+    }
+    window.location.href = '/login?logout=true'
   }
 
   const handleCheckStatus = async () => {

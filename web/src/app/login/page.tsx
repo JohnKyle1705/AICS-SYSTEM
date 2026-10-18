@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, clearAllSupabaseAuth } from '@/lib/supabase/client'
 import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, CheckCircle2, X, Shield, FileText, ScrollText } from 'lucide-react'
 import Image from 'next/image'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -272,7 +272,9 @@ export default function LoginPage() {
         // Check if the user has verified their email
         const user = data.user
         if (user && !user.email_confirmed_at) {
-          await supabase.auth.signOut()
+          clearAllSupabaseAuth()
+          await supabase.auth.signOut({ scope: 'local' })
+          fetch('/api/auth/signout', { method: 'POST' }).catch(() => {})
           setError('Please verify your email first. Check your inbox for the verification link.')
           setLoading(false)
           return

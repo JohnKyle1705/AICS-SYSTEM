@@ -155,24 +155,32 @@ export default function Sidebar() {
   }, [])
 
   const handleLogout = async () => {
+    // 1. Audit log signout in background without blocking navigation
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await supabase.from('system_logs').insert({
+        supabase.from('system_logs').insert({
           user_id: user.id,
           action: 'LOGOUT',
           table_name: 'auth',
           details: { event: 'User signed out' },
-        })
+        }).then(() => {}).catch(() => {})
       }
-    } catch { /* don't block logout if logging fails */ }
+    } catch { /* ignore */ }
+
+    // 2. Client-side sign out and storage purge
     try {
       await supabase.auth.signOut({ scope: 'local' })
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
     clearAllSupabaseAuth()
-    window.location.href = '/login'
+
+    // 3. Purge httpOnly cache & server-side cookies
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' })
+    } catch { /* ignore */ }
+
+    // 4. Clean navigation to login
+    window.location.href = '/login?logout=true'
   }
 
   const toggleTheme = () => {

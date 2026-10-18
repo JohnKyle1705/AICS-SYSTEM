@@ -45,6 +45,12 @@ export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const pathname = request.nextUrl.pathname
+
+  // Pass API routes directly through without auth redirection
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse
+  }
+
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password')
   const isResetPasswordPage = pathname.startsWith('/auth/reset-password')
   const isPendingPage = pathname.startsWith('/pending')
@@ -52,17 +58,8 @@ export async function proxy(request: NextRequest) {
   const isPublicPage = isAuthPage || isResetPasswordPage || isPendingPage || isAuthCallback || pathname === '/'
   const isProtected = !isPublicPage
 
-  // Check if any Supabase auth cookies exist at all
   const allCookies = request.cookies.getAll()
-  const hasAuthTokenCookie = allCookies.some((c) => c.name.startsWith('sb-') && c.value && c.name.includes('-auth-token'))
-
-  // Fast-path: If user has no auth cookie at all
-  if (!hasAuthTokenCookie) {
-    if (isProtected) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-    return supabaseResponse
-  }
+  const hostname = request.nextUrl.hostname
 
   // Helper to completely purge any Supabase auth cookies + our auth cache cookie
   const clearAuthCookies = (res: NextResponse) => {
@@ -74,10 +71,63 @@ export async function proxy(request: NextRequest) {
           path: '/',
           expires: new Date(0),
           maxAge: 0,
+          httpOnly: true,
+          sameSite: 'lax',
         })
         res.cookies.delete(cookie.name)
+
+        if (hostname && hostname !== 'localhost') {
+          res.cookies.set({
+            name: cookie.name,
+            value: '',
+            path: '/',
+            domain: hostname,
+            expires: new Date(0),
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: 'lax',
+          })
+          res.cookies.set({
+            name: cookie.name,
+            value: '',
+            path: '/',
+            domain: `.${hostname}`,
+            expires: new Date(0),
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: 'lax',
+          })
+        }
       }
     })
+  }
+
+  // Explicit logout flag in URL: immediately purge cookies and stay on login page
+  if (request.nextUrl.searchParams.has('logout')) {
+    clearAuthCookies(supabaseResponse)
+    return supabaseResponse
+  }
+
+  // Check if any genuine Supabase auth token cookies exist
+  const hasAuthTokenCookie = allCookies.some((c) =>
+    c.name.startsWith('sb-') &&
+    c.name.includes('-auth-token') &&
+    c.value &&
+    c.value !== '""' &&
+    c.value !== '[]' &&
+    c.value !== 'base64-W10=' &&
+    c.value.trim() !== ''
+  )
+
+  // Fast-path: If user has no auth cookie at all
+  if (!hasAuthTokenCookie) {
+    clearAuthCookies(supabaseResponse)
+    if (isProtected) {
+      const redirectResponse = NextResponse.redirect(new URL('/login', request.url))
+      clearAuthCookies(redirectResponse)
+      return redirectResponse
+    }
+    return supabaseResponse
   }
 
   // Helper to redirect and preserve Supabase cookies
