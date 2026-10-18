@@ -49,6 +49,28 @@
       margin-top: 4px;
       font-weight: 500;
     }
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+    .tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      color: #64748b;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      transition: all 0.2s ease;
+    }
+    .tab.active {
+      background: #ea580c;
+      color: #ffffff;
+      border-color: #ea580c;
+    }
     .btn-group {
       display: flex;
       gap: 10px;
@@ -118,6 +140,12 @@
 <body>
 
   <div class="header-bar">
+    <div style="width: 100%;">
+      <div class="nav-tabs">
+        <a href="FLOW CHART.html" class="tab active">Administrator Flowchart</a>
+        <a href="FLOW CHART - TREASURER.html" class="tab">Treasurer Flowchart</a>
+      </div>
+    </div>
     <div class="header-titles">
       <h1>📊 Flowchart of Administrator Process</h1>
       <p>Assistance to Individuals in Crisis Situations (AICS) — Municipality of Daanbantayan, Cebu</p>
