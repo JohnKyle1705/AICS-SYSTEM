@@ -41,7 +41,7 @@ async function verifyCacheCookie(value: string | undefined): Promise<{ userId: s
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const pathname = request.nextUrl.pathname
@@ -221,6 +221,9 @@ export async function middleware(request: NextRequest) {
 
   return supabaseResponse
 }
+
+export const middleware = proxy
+export default proxy
 
 export const config = {
   matcher: [
