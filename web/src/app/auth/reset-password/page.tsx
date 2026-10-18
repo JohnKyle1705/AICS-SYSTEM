@@ -154,7 +154,9 @@ function ResetPasswordContent() {
         supabase.auth.signOut({ scope: 'local' }),
         new Promise((resolve) => setTimeout(resolve, 1500)),
       ])
-      await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {})
+      // keepalive survives navigation; sendBeacon is the ultimate fallback
+      const sent = navigator.sendBeacon?.('/api/auth/signout')
+      if (!sent) fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
     } catch {
       // Non-blocking
     }

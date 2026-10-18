@@ -17,9 +17,12 @@ export default function PendingPage() {
     } catch {
       // ignore
     }
-    clearAllSupabaseAuth()
+    // Use keepalive:true so the request survives navigation without ECONNRESET.
     try {
-      await fetch('/api/auth/signout', { method: 'POST' })
+      const sent = navigator.sendBeacon?.('/api/auth/signout')
+      if (!sent) {
+        fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
+      }
     } catch {
       // ignore
     }

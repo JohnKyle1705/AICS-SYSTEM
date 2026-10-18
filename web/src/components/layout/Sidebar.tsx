@@ -174,12 +174,17 @@ export default function Sidebar() {
     } catch { /* ignore */ }
     clearAllSupabaseAuth()
 
-    // 3. Purge httpOnly cache & server-side cookies
+    // 3. Purge httpOnly cache & server-side cookies.
+    // Use keepalive:true so the request survives the upcoming page navigation
+    // without causing ECONNRESET. sendBeacon is the ultimate fallback.
     try {
-      await fetch('/api/auth/signout', { method: 'POST' })
+      const sent = navigator.sendBeacon?.('/api/auth/signout')
+      if (!sent) {
+        fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
+      }
     } catch { /* ignore */ }
 
-    // 4. Clean navigation to login
+    // 4. Clean navigation to login (fires after fetch is handed off)
     window.location.href = '/login?logout=true'
   }
 
