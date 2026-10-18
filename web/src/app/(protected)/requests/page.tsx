@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -14,7 +14,7 @@ function RequestsContent() {
   const searchParams = useSearchParams()
   const initialStatus = searchParams.get('status') || ''
 
-  const [requests, setRequests] = useState<Request[]>([])
+  const [rawRequests, setRawRequests] = useState<Request[]>([])
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [status, setStatus] = useState(initialStatus === 'All' ? '' : initialStatus)
   const [type, setType] = useState(searchParams.get('type') || '')
@@ -22,6 +22,15 @@ function RequestsContent() {
   const [profile, setProfile] = useState<any>(null)
   const supabase = createClient()
   const { t } = useLanguage()
+
+  const requests = useMemo(() => {
+    if (!search.trim()) return rawRequests
+    const q = search.toLowerCase()
+    return rawRequests.filter((r: any) =>
+      `${r.beneficiaries?.first_name || ''} ${r.beneficiaries?.last_name || ''}`.toLowerCase().includes(q) ||
+      (r.tracking_code && r.tracking_code.toLowerCase().includes(q))
+    )
+  }, [rawRequests, search])
 
   // Sync state if URL query params change (e.g. from System Reports cards)
   useEffect(() => {
@@ -54,15 +63,14 @@ function RequestsContent() {
   const load = useCallback(async () => {
     if (!profile) return // Wait for profile to load
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
 
     let query = supabase.from('requests')
       .select('*, beneficiaries(first_name, last_name, barangay)')
       .order('created_at', { ascending: false })
 
     // Residents can ONLY see their own requests
-    if (profile.role === 'resident' && user) {
-      query = query.eq('encoded_by', user.id)
+    if (profile.role === 'resident') {
+      query = query.eq('encoded_by', profile.id)
     }
 
     if (status) {
@@ -74,26 +82,27 @@ function RequestsContent() {
     }
     if (type) query = query.eq('assistance_type', type)
     const { data } = await query
-    const filtered = search
-      ? (data ?? []).filter((r: any) =>
-          `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name}`.toLowerCase().includes(search.toLowerCase()))
-      : (data ?? [])
-    setRequests(filtered)
+    setRawRequests(data ?? [])
     setLoading(false)
-  }, [search, status, type, profile])
+  }, [status, type, profile])
 
   useEffect(() => { load() }, [load])
 
   // Real-time synchronization when requests change
   useEffect(() => {
+    let timer: NodeJS.Timeout | null = null
+    const debouncedLoad = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => { load() }, 500)
+    }
+
     const channel = supabase
       .channel('requests_page_realtime_sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
-        load()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, debouncedLoad)
       .subscribe()
 
     return () => {
+      if (timer) clearTimeout(timer)
       supabase.removeChannel(channel)
     }
   }, [load])
@@ -109,7 +118,7 @@ function RequestsContent() {
       return
     }
     
-    setRequests(prev => prev.filter(r => r.id !== id))
+    setRawRequests(prev => prev.filter(r => r.id !== id))
     alert(t('requests_deleteSuccess') || 'Request deleted successfully.')
     setLoading(false)
   }

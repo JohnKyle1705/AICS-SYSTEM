@@ -55,7 +55,7 @@ export default function DashboardRouter() {
     }
 
     routeUser()
-  }, [router, supabase])
+  }, [router])
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">

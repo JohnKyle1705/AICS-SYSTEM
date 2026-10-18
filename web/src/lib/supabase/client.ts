@@ -30,7 +30,7 @@ export const clearAllSupabaseAuth = () => {
 
     cookies.forEach((cookie) => {
       const name = cookie.split('=')[0].trim()
-      if (name.startsWith('sb-')) {
+      if (name.startsWith('sb-') || name === 'aics-auth-cache') {
         domains.forEach((domain) => {
           const domainStr = domain ? `; domain=${domain}` : ''
           document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0${domainStr}`

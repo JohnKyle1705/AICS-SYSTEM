@@ -87,8 +87,12 @@ export default function AdminDashboard() {
       monthMap[month] = (monthMap[month] || 0) + 1
     })
 
-    // Duplicate Detection Logic
-    const { data: allReqs } = await supabase.from('requests').select('*, beneficiaries(first_name, last_name)')
+    // Duplicate Detection Logic (lean query: only fetch ID and beneficiary relation)
+    const { data: allReqs } = await supabase
+      .from('requests')
+      .select('id, beneficiary_id, beneficiaries(first_name, last_name)')
+      .order('created_at', { ascending: false })
+      .limit(300)
     const suspects: any[] = []
     if (allReqs) {
       const bIdGroups = allReqs.reduce((acc: any, r: any) => {
@@ -101,7 +105,7 @@ export default function AdminDashboard() {
         if (reqs.length > 1) {
           suspects.push({
             beneficiary_id: bId,
-            name: `${reqs[0].beneficiaries?.first_name} ${reqs[0].beneficiaries?.last_name}`,
+            name: `${reqs[0].beneficiaries?.first_name || ''} ${reqs[0].beneficiaries?.last_name || ''}`.trim() || 'Beneficiary',
             count: reqs.length,
             reason: 'Multiple requests from same beneficiary'
           })
@@ -139,11 +143,23 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     load()
-    const channel = supabase.channel('admin-dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => load())
+    let debounceTimer: NodeJS.Timeout | null = null
+    const debouncedLoad = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        load()
+      }, 500)
+    }
+
+    const channel = supabase.channel('admin-dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, debouncedLoad)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadPendingUsers())
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      supabase.removeChannel(channel)
+    }
   }, [load])
 
   const markNotificationRead = async (id: string) => {

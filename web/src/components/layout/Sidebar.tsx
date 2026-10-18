@@ -17,22 +17,59 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 
-function useLiveClock() {
+function MobileClockStrip() {
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => {
     setNow(new Date())
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
-  return now
+
+  if (!now) return null
+
+  const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+
+  return (
+    <div className="flex items-center justify-center gap-4 px-4 pb-2">
+      <span className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-text-secondary)]">
+        <CalendarDays size={11} className="opacity-70" />
+        {dateStr}
+      </span>
+      <span className="w-px h-3 bg-[var(--color-border)]" />
+      <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] tabular-nums">
+        <Clock size={11} className="opacity-70" />
+        {timeStr}
+      </span>
+    </div>
+  )
 }
 
-function formatDate(d: Date) {
-  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
+function SidebarBrandClock() {
+  const [now, setNow] = useState<Date | null>(null)
+  useEffect(() => {
+    setNow(new Date())
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
 
-function formatTime(d: Date) {
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+  if (!now) return null
+
+  const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+
+  return (
+    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+      <span className="flex items-center gap-1 text-[10px] text-[var(--color-text-secondary)] tabular-nums">
+        <CalendarDays size={9} className="opacity-60" />
+        {dateStr}
+      </span>
+      <span className="flex items-center gap-1 text-[10px] font-semibold text-[var(--color-text-secondary)] tabular-nums">
+        <Clock size={9} className="opacity-60" />
+        {timeStr}
+      </span>
+    </div>
+  )
 }
 
 export default function Sidebar() {
@@ -47,7 +84,6 @@ export default function Sidebar() {
   const [isHovered, setIsHovered] = useState(false)
   const [unread, setUnread] = useState(0)
   const supabase = createClient()
-  const clock = useLiveClock()
 
   useEffect(() => {
     setMounted(true)
@@ -98,7 +134,7 @@ export default function Sidebar() {
         .eq('user_id', user.id).eq('is_read', false)
       setUnread(count ?? 0)
 
-      channel = supabase.channel(`sidebar-notifications-${Date.now()}`)
+      channel = supabase.channel(`sidebar-notifications-${user.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
           setUnread(prev => prev + 1)
         })
@@ -216,19 +252,7 @@ export default function Sidebar() {
           )}
         </div>
         {/* Date & Time strip — mobile */}
-        {clock && (
-          <div className="flex items-center justify-center gap-4 px-4 pb-2">
-            <span className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-text-secondary)]">
-              <CalendarDays size={11} className="opacity-70" />
-              {formatDate(clock)}
-            </span>
-            <span className="w-px h-3 bg-[var(--color-border)]" />
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] tabular-nums">
-              <Clock size={11} className="opacity-70" />
-              {formatTime(clock)}
-            </span>
-          </div>
-        )}
+        <MobileClockStrip />
       </div>
 
       {/* Overlay */}
@@ -258,18 +282,7 @@ export default function Sidebar() {
               <div className={`flex-1 transition-opacity duration-200 lg:opacity-0 ${isPinned || isHovered ? 'lg:opacity-100' : ''}`}>
                 <h1 className="font-bold text-[15px] leading-tight text-[var(--color-text)] whitespace-nowrap">AICS System</h1>
                 <p className="text-[var(--color-text-secondary)] text-[11px] mt-0.5 whitespace-nowrap">Daanbantayan MSWD</p>
-                {clock && (
-                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                    <span className="flex items-center gap-1 text-[10px] text-[var(--color-text-secondary)] tabular-nums">
-                      <CalendarDays size={9} className="opacity-60" />
-                      {formatDate(clock)}
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-[var(--color-text-secondary)] tabular-nums">
-                      <Clock size={9} className="opacity-60" />
-                      {formatTime(clock)}
-                    </span>
-                  </div>
-                )}
+                <SidebarBrandClock />
               </div>
             </div>
 
