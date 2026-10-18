@@ -134,7 +134,11 @@ export default function Sidebar() {
         .eq('user_id', user.id).eq('is_read', false)
       setUnread(count ?? 0)
 
-      channel = supabase.channel(`sidebar-notifications-${user.id}`)
+      // Purge any lingering channels for this user to avoid subscribing to an already-active channel
+      const existing = supabase.getChannels().filter(c => c.topic.includes(`sidebar-notifications-${user.id}`))
+      existing.forEach(c => supabase.removeChannel(c))
+
+      channel = supabase.channel(`sidebar-notifications-${user.id}-${Date.now()}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
           setUnread(prev => prev + 1)
         })
