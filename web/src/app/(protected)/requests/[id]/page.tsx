@@ -282,7 +282,7 @@ export default function RequestDetailPage() {
             </div>
             <div className="space-y-4">
               <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_docStatus')}</span><span className="font-bold text-[var(--color-text)]">{assessment.document_status}</span></div>
-              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_findings')}</span><p className="text-[var(--color-text)] leading-relaxed italic">"{assessment.findings}"</p></div>
+              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_findings')}</span><p className="text-[var(--color-text)] leading-relaxed italic">&ldquo;{assessment.findings}&rdquo;</p></div>
               <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_recommendation')}</span><p className="font-bold text-blue-600">{assessment.recommendation}</p></div>
             </div>
 
@@ -319,30 +319,29 @@ export default function RequestDetailPage() {
       {(profile?.role === 'admin') && (
         <div className="card p-6">
           <h2 className="font-semibold text-[var(--color-text)] mb-4 text-[15px]">{t('actions')}</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
             {REQUEST_STATUSES.filter(s => s !== request.status).map(s => (
               <button key={s} onClick={() => updateStatus(s)} disabled={updating}
-                className={`btn text-sm disabled:opacity-50
+                className={`btn text-sm w-full sm:w-auto disabled:opacity-50
                   ${s === 'Approved' ? 'btn-primary' : s === 'Released' ? 'btn-success' : s === 'Declined' ? 'btn-danger' : 'btn-secondary'}`}>
                 {t('markAs')} {s}
               </button>
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-4 mt-4">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 mt-4">
             {!assessment && !isAssessing && (
               <button onClick={() => setIsAssessing(true)}
-                className="text-sm text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors text-center w-full sm:w-auto">
                 + {t('assessment_start')}
               </button>
             )}
             {request.status === 'Approved' && !payout && (
               <button onClick={() => router.push(`/payouts/new?request_id=${id}`)}
-                className="text-sm text-emerald-600 hover:text-emerald-800 font-medium hover:underline">
+                className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 font-semibold bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2.5 rounded-xl hover:bg-emerald-100 transition-colors text-center w-full sm:w-auto">
                 + {t('payout_record')}
               </button>
             )}
-
           </div>
         </div>
       )}

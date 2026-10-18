@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, clearAllSupabaseAuth } from '@/lib/supabase/client'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import type { Profile } from '@/types'
 import { useTheme } from 'next-themes'
@@ -54,6 +54,21 @@ export default function Sidebar() {
     const pinned = localStorage.getItem('sidebar-pinned') === 'true'
     setIsPinned(pinned)
   }, [])
+
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
 
   useEffect(() => {
     if (isPinned) {
@@ -111,8 +126,13 @@ export default function Sidebar() {
         })
       }
     } catch { /* don't block logout if logging fails */ }
-    await supabase.auth.signOut()
-    router.push('/login')
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch {
+      // ignore
+    }
+    clearAllSupabaseAuth()
+    window.location.href = '/login'
   }
 
   const toggleTheme = () => {
@@ -174,11 +194,21 @@ export default function Sidebar() {
             <span className="font-semibold text-[var(--color-text)] text-sm">AICS System</span>
           </div>
           {mounted && (
-            <div className="flex items-center gap-1 mr-2">
-
+            <div className="flex items-center gap-1.5 mr-2">
+              <Link
+                href="/notifications"
+                className="relative w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text)] hover:text-blue-500 transition-colors"
+                title="Notifications"
+              >
+                <Bell size={18} />
+                {unread > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-[var(--sidebar-bg)] animate-pulse" />
+                )}
+              </Link>
               <button
                 onClick={toggleTheme}
-                className="w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text)]"
+                className="w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text)] hover:text-blue-500 transition-colors"
+                title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
@@ -213,9 +243,9 @@ export default function Sidebar() {
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`sidebar fixed top-0 left-0 h-full flex flex-col z-40 transition-all duration-300 ease-out overflow-hidden
-          ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 bg-[var(--sidebar-bg)] border-r border-[var(--color-border)] backdrop-blur-xl
-          w-[260px] lg:w-[80px] ${isPinned || isHovered ? 'lg:w-[260px] lg:shadow-2xl' : ''}`}
+        className={`sidebar fixed top-0 left-0 h-full h-[100dvh] flex flex-col z-40 transition-all duration-300 ease-out overflow-hidden
+          ${open ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} lg:translate-x-0 bg-[var(--sidebar-bg)] border-r border-[var(--color-border)] backdrop-blur-xl
+          w-[280px] sm:w-[260px] lg:w-[80px] ${isPinned || isHovered ? 'lg:w-[260px] lg:shadow-2xl' : ''}`}
         id="main-sidebar"
       >
         <div className="w-[260px] flex flex-col h-full">

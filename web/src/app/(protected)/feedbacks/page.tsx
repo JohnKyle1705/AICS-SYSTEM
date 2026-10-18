@@ -84,7 +84,7 @@ export default function FeedbacksPage() {
         </button>
       </div>
 
-      <div className="flex border-b border-[var(--color-border)] mb-6">
+      <div className="flex border-b border-[var(--color-border)] mb-6 overflow-x-auto no-scrollbar">
         {[
           { id: 'feedbacks', icon: Heart, label: 'User Feedback', count: feedbacks.length },
           { id: 'tickets', icon: MessageSquare, label: 'Support Tickets', count: tickets.length }
@@ -92,7 +92,7 @@ export default function FeedbacksPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as TabType)}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors relative ${
+            className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium whitespace-nowrap transition-colors relative ${
               activeTab === tab.id 
                 ? 'text-blue-600 dark:text-blue-400' 
                 : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
@@ -137,7 +137,7 @@ export default function FeedbacksPage() {
                 </div>
                 {f.comments ? (
                   <p className="text-sm text-[var(--color-text)] bg-[var(--color-background)] p-4 rounded-xl border border-[var(--color-border)]">
-                    "{f.comments}"
+                    &ldquo;{f.comments}&rdquo;
                   </p>
                 ) : (
                   <p className="text-sm text-[var(--color-text-secondary)] italic">No comments provided.</p>
@@ -176,14 +176,14 @@ export default function FeedbacksPage() {
                 
                 <p className="text-sm text-[var(--color-text)] mb-4 whitespace-pre-wrap">{t.message}</p>
                 
-                <div className="flex items-center justify-between mt-2 pt-4 border-t border-[var(--color-border)]">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-2 pt-4 border-t border-[var(--color-border)]">
                   <span className="text-xs font-medium text-[var(--color-text-secondary)]">Update Status:</span>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     {['Open', 'In Progress', 'Resolved', 'Closed'].map(status => (
                       <button
                         key={status}
                         onClick={() => updateTicketStatus(t.id, status)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        className={`flex-1 sm:flex-none text-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                           t.status === status 
                             ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' 
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Megaphone, Plus, Trash2, Edit, Calendar, Info, Loader2, X, Image as ImageIcon, Upload } from 'lucide-react'
 import { format } from 'date-fns'
@@ -12,6 +13,7 @@ export default function AdminAnnouncements() {
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [form, setForm] = useState({
     title: '',
     content: '',
@@ -20,6 +22,21 @@ export default function AdminAnnouncements() {
   })
 
   const supabase = createClient()
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supabase
+      .from('announcements')
+      .select('*')
+      .order('created_at', { ascending: false })
+    setAnnouncements(data ?? [])
+    setLoading(false)
+  }, [supabase])
+
+  useEffect(() => {
+    setMounted(true)
+    load()
+  }, [load])
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -48,20 +65,6 @@ export default function AdminAnnouncements() {
       setUploadingImage(false)
     }
   }
-
-  const load = async () => {
-    setLoading(true)
-    const { data } = await supabase
-      .from('announcements')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setAnnouncements(data ?? [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,9 +130,169 @@ export default function AdminAnnouncements() {
     setEditingId(null)
   }
 
+  const modalElement = modalOpen ? (
+    <div 
+      className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 backdrop-blur-sm p-3 sm:p-4 animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setModalOpen(false)
+      }}
+    >
+      <div className="min-h-full flex items-center justify-center py-4 sm:py-6">
+        <div 
+          className="card w-full max-w-xl shadow-2xl p-0 overflow-hidden max-h-[calc(100dvh-2rem)] flex flex-col my-auto border border-[var(--color-border)] bg-[var(--color-surface)]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header - Fixed/Sticky at top of modal */}
+          <div className="px-5 sm:px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)] shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                <Megaphone size={16} />
+              </div>
+              <h2 className="font-bold text-base sm:text-lg text-[var(--color-text)]">
+                {editingId ? 'Edit Announcement' : 'New Announcement'}
+              </h2>
+            </div>
+            <button 
+              type="button"
+              onClick={() => setModalOpen(false)} 
+              className="p-1.5 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-secondary)]"
+              aria-label="Close modal"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          {/* Scrollable Form Body */}
+          <form id="announcement-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+            {/* TITLE FIELD - Prominently placed at the top */}
+            <div className="space-y-1.5">
+              <label htmlFor="announcement-title" className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider flex items-center gap-1">
+                Title <span className="text-rose-500">*</span>
+              </label>
+              <input 
+                id="announcement-title"
+                required
+                autoFocus
+                type="text"
+                className="input w-full font-semibold"
+                placeholder="What's this announcement about?"
+                value={form.title}
+                onChange={e => setForm({...form, title: e.target.value})}
+              />
+            </div>
+
+            {/* CONTENT FIELD */}
+            <div className="space-y-1.5">
+              <label htmlFor="announcement-content" className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider flex items-center gap-1">
+                Content <span className="text-rose-500">*</span>
+              </label>
+              <textarea 
+                id="announcement-content"
+                required
+                rows={4}
+                className="input resize-none py-3 text-sm leading-relaxed"
+                placeholder="Write the full announcement details here..."
+                value={form.content}
+                onChange={e => setForm({...form, content: e.target.value})}
+              />
+            </div>
+
+            {/* ANNOUNCEMENT IMAGE (OPTIONAL) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">
+                Announcement Image (Optional)
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                <div className="relative flex-1">
+                  <ImageIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]" />
+                  <input 
+                    type="url"
+                    className="input pl-10 text-xs sm:text-sm w-full"
+                    placeholder="https://example.com/image.jpg"
+                    value={form.image_url}
+                    onChange={e => setForm({...form, image_url: e.target.value})}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--color-text-secondary)] font-medium hidden sm:inline">OR</span>
+                  <label className="btn bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 cursor-pointer px-4 py-2.5 flex items-center justify-center gap-2 transition-colors flex-1 sm:flex-initial">
+                    {uploadingImage ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Upload size={16} />}
+                    <span className="text-xs sm:text-sm font-bold">{uploadingImage ? 'Uploading...' : 'Upload'}</span>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      className="hidden" 
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Image Preview */}
+              {form.image_url && (
+                <div className="mt-2 relative rounded-xl overflow-hidden border border-[var(--color-border)] max-h-36 bg-slate-900/40">
+                  <img 
+                    src={form.image_url} 
+                    alt="Preview" 
+                    className="w-full h-36 object-cover" 
+                    onError={(e) => {
+                      (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, image_url: '' })}
+                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-lg transition-colors"
+                    title="Remove image"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* PUBLISH STATUS */}
+            <div className="flex items-center gap-3 py-1">
+              <input 
+                type="checkbox" 
+                id="published"
+                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                checked={form.is_published}
+                onChange={e => setForm({...form, is_published: e.target.checked})}
+              />
+              <label htmlFor="published" className="text-sm font-medium text-[var(--color-text)] cursor-pointer">
+                Publish immediately
+              </label>
+            </div>
+          </form>
+
+          {/* Sticky Footer */}
+          <div className="px-5 sm:px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface)] flex gap-3 shrink-0">
+            <button 
+              type="button" 
+              onClick={() => setModalOpen(false)}
+              className="btn btn-ghost flex-1 py-2.5 font-bold text-sm"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              form="announcement-form"
+              disabled={saving || uploadingImage}
+              className="btn btn-primary flex-1 py-2.5 font-bold text-sm shadow-lg shadow-blue-500/20"
+            >
+              {saving ? <><Loader2 size={16} className="animate-spin mr-1" /> Saving...</> : editingId ? 'Update' : 'Post Announcement'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-600 border border-indigo-500/20">
             <Megaphone size={20} />
@@ -141,7 +304,7 @@ export default function AdminAnnouncements() {
         </div>
         <button 
           onClick={() => { resetForm(); setModalOpen(true) }}
-          className="btn btn-primary px-5 py-2.5 shadow-lg shadow-blue-500/20"
+          className="btn btn-primary px-5 py-2.5 shadow-lg shadow-blue-500/20 w-full sm:w-auto flex items-center justify-center gap-2"
         >
           <Plus size={18} /> New Announcement
         </button>
@@ -168,10 +331,10 @@ export default function AdminAnnouncements() {
         ) : (
           announcements.map(ann => (
             <div key={ann.id} className="card p-5 group hover:border-indigo-300 transition-all">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex gap-5">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 w-full sm:w-auto flex-1 min-w-0">
                   {ann.image_url && (
-                    <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-[var(--color-border)] shadow-sm">
+                    <div className="w-full sm:w-24 h-40 sm:h-24 rounded-xl overflow-hidden shrink-0 border border-[var(--color-border)] shadow-sm">
                       <img 
                         src={ann.image_url} 
                         alt="" 
@@ -182,12 +345,12 @@ export default function AdminAnnouncements() {
                       />
                     </div>
                   )}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {!ann.is_published && (
                         <span className="badge bg-slate-100 text-slate-600 text-[10px] py-0.5 px-2">Draft</span>
                       )}
-                      <h3 className="font-bold text-lg text-[var(--color-text)]">{ann.title}</h3>
+                      <h3 className="font-bold text-base sm:text-lg text-[var(--color-text)] break-words">{ann.title}</h3>
                     </div>
                     <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2 max-w-2xl">{ann.content}</p>
                     <div className="flex items-center gap-4 pt-1">
@@ -198,7 +361,7 @@ export default function AdminAnnouncements() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-2 self-end sm:self-start opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   <button 
                     onClick={() => openEdit(ann)}
                     className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -220,100 +383,9 @@ export default function AdminAnnouncements() {
         )}
       </div>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="card w-full max-w-xl shadow-2xl p-0 overflow-hidden">
-            <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)]">
-              <h2 className="font-bold text-lg text-[var(--color-text)]">
-                {editingId ? 'Edit Announcement' : 'New Announcement'}
-              </h2>
-              <button onClick={() => setModalOpen(false)} className="p-1 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-secondary)]">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">Title</label>
-                <input 
-                  required
-                  className="input"
-                  placeholder="What's this announcement about?"
-                  value={form.title}
-                  onChange={e => setForm({...form, title: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">Content</label>
-                <textarea 
-                  required
-                  rows={6}
-                  className="input resize-none py-3"
-                  placeholder="Write the full announcement details here..."
-                  value={form.content}
-                  onChange={e => setForm({...form, content: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">Announcement Image (Optional)</label>
-                <div className="flex gap-2 items-center">
-                  <div className="relative flex-1">
-                    <ImageIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]" />
-                    <input 
-                      className="input pl-10"
-                      placeholder="https://example.com/image.jpg"
-                      value={form.image_url}
-                      onChange={e => setForm({...form, image_url: e.target.value})}
-                    />
-                  </div>
-                  <span className="text-xs text-[var(--color-text-secondary)] font-medium">OR</span>
-                  <label className="btn bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 cursor-pointer px-4 flex items-center gap-2 transition-colors">
-                    {uploadingImage ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Upload size={16} />}
-                    <span className="text-sm font-bold">Upload</span>
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      className="hidden" 
-                      onChange={handleImageUpload}
-                      disabled={uploadingImage}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 py-2">
-                <input 
-                  type="checkbox" 
-                  id="published"
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                  checked={form.is_published}
-                  onChange={e => setForm({...form, is_published: e.target.checked})}
-                />
-                <label htmlFor="published" className="text-sm font-medium text-[var(--color-text)]">Publish immediately</label>
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setModalOpen(false)}
-                  className="btn btn-ghost flex-1 py-3 font-bold"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={saving}
-                  className="btn btn-primary flex-1 py-3 font-bold shadow-lg shadow-blue-500/20"
-                >
-                  {saving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : editingId ? 'Update' : 'Post Announcement'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Render modal directly in document.body to ensure it renders above mobile headers and is never clipped */}
+      {mounted && modalElement && createPortal(modalElement, document.body)}
     </div>
   )
 }
+

@@ -75,7 +75,7 @@ export default function RequirementsSettingsPage() {
               className="form-input"
             />
           </div>
-          <button type="submit" disabled={saving || !newReq.name.trim()} className="btn btn-primary whitespace-nowrap">
+          <button type="submit" disabled={saving || !newReq.name.trim()} className="btn btn-primary whitespace-nowrap w-full sm:w-auto">
             {saving ? <Loader2 size={18} className="animate-spin" /> : <><Plus size={18} /> Add Requirement</>}
           </button>
         </form>

@@ -21,6 +21,22 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Helper to completely purge any Supabase auth cookies
+  const clearAuthCookies = (res: NextResponse) => {
+    request.cookies.getAll().forEach((cookie) => {
+      if (cookie.name.startsWith('sb-')) {
+        res.cookies.set({
+          name: cookie.name,
+          value: '',
+          path: '/',
+          expires: new Date(0),
+          maxAge: 0,
+        })
+        res.cookies.delete(cookie.name)
+      }
+    })
+  }
+
   // Attempt to get the user — if the refresh token is invalid/stale,
   // getUser() returns an error and user is null. We catch & handle it
   // so stale cookies get cleared instead of causing client-side crashes.
@@ -29,17 +45,7 @@ export async function middleware(request: NextRequest) {
   // If there's an auth error (e.g. invalid refresh token), actively clear
   // all Supabase auth cookies so the browser doesn't keep retrying.
   if (authError) {
-    request.cookies.getAll().forEach((cookie) => {
-      if (cookie.name.startsWith('sb-')) {
-        supabaseResponse.cookies.set({
-          name: cookie.name,
-          value: '',
-          path: '/',
-          expires: new Date(0),
-          maxAge: 0,
-        })
-      }
-    })
+    clearAuthCookies(supabaseResponse)
   }
 
   const pathname = request.nextUrl.pathname
@@ -54,8 +60,11 @@ export async function middleware(request: NextRequest) {
   const redirect = (path: string) => {
     const redirectResponse = NextResponse.redirect(new URL(path, request.url))
     supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie)
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
     })
+    if (authError) {
+      clearAuthCookies(redirectResponse)
+    }
     return redirectResponse
   }
 

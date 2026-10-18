@@ -242,9 +242,9 @@ export default function BeneficiaryForm({ beneficiaryId }: Props) {
 
       {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>}
 
-      <div className="flex justify-end gap-3">
-        <button type="button" onClick={() => router.back()} className="btn btn-secondary px-8">{t('cancel')}</button>
-        <button type="submit" disabled={saving} className="btn btn-primary px-8">
+      <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
+        <button type="button" onClick={() => router.back()} className="btn btn-secondary px-8 w-full sm:w-auto">{t('cancel')}</button>
+        <button type="submit" disabled={saving} className="btn btn-primary px-8 w-full sm:w-auto">
           {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
           {saving ? t('saving') : t('save')}
         </button>

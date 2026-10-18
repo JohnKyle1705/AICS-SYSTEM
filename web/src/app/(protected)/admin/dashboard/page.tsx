@@ -162,14 +162,15 @@ export default function AdminDashboard() {
 
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 border border-blue-500/20">
-          <ShieldCheck size={28} />
+    <div className="space-y-5 sm:space-y-6 animate-fade-in">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-500 border border-blue-500/20 shrink-0">
+          <ShieldCheck size={22} className="sm:hidden" />
+          <ShieldCheck size={28} className="hidden sm:block" />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)]">{t('users_title')}</h1>
-          <p className="text-[var(--color-text-secondary)] text-sm">{t('users_tabPending')}</p>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-[var(--color-text)] truncate">{t('nav_adminDashboard')}</h1>
+          <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm">Overview of requests, beneficiaries, and system activities</p>
         </div>
       </div>
 
@@ -190,20 +191,20 @@ export default function AdminDashboard() {
           </div>
           <div className="divide-y divide-[var(--color-border)]">
             {pendingUsers.map(u => (
-              <div key={u.id} className="px-6 py-4 flex items-center justify-between hover:bg-[var(--color-surface-hover)] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+              <div key={u.id} className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[var(--color-surface-hover)] transition-colors">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0">
                     {u.full_name?.charAt(0)?.toUpperCase() || '?'}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{u.full_name}</p>
-                    <p className="text-xs text-[var(--color-text-secondary)] capitalize">{u.role} • Registered {format(new Date(u.created_at), 'MMM d, yyyy h:mm a')}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-text)] truncate">{u.full_name}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)] capitalize truncate">{u.role} • Registered {format(new Date(u.created_at), 'MMM d, yyyy h:mm a')}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => activateUser(u.id)}
                   disabled={activatingId === u.id}
-                  className="btn bg-emerald-600 hover:bg-emerald-700 text-white border-none py-2 px-5 text-xs font-bold shadow-lg shadow-emerald-500/20"
+                  className="btn bg-emerald-600 hover:bg-emerald-700 text-white border-none py-2 px-5 text-xs font-bold shadow-lg shadow-emerald-500/20 self-end sm:self-auto shrink-0"
                   id={`activate-user-${u.id}`}
                 >
                   {activatingId === u.id ? (
@@ -234,21 +235,21 @@ export default function AdminDashboard() {
           </div>
           <div className="divide-y divide-[var(--color-border)] max-h-[250px] overflow-y-auto">
             {duplicateSuspects.map(s => (
-              <div key={s.beneficiary_id} className="px-6 py-4 flex items-center justify-between hover:bg-[var(--color-surface-hover)] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-linear-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+              <div key={s.beneficiary_id} className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[var(--color-surface-hover)] transition-colors">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="w-10 h-10 bg-linear-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0">
                     {s.name?.charAt(0)?.toUpperCase() || '?'}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{s.name}</p>
-                    <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
-                      <AlertCircle size={12} /> {s.count} requests detected
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-text)] truncate">{s.name}</p>
+                    <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5 truncate">
+                      <AlertCircle size={12} className="shrink-0" /> {s.count} requests detected
                     </p>
                   </div>
                 </div>
                 <Link 
                   href={`/requests?search=${encodeURIComponent(s.name.split(' ')[0])}`} 
-                  className="btn btn-secondary py-1.5 px-4 text-xs shadow-sm"
+                  className="btn btn-secondary py-1.5 px-4 text-xs shadow-sm self-end sm:self-auto shrink-0"
                 >
                   Review
                 </Link>
@@ -260,9 +261,9 @@ export default function AdminDashboard() {
 
       {releaseNotifications.length > 0 && (
         <div className="card border-blue-200 dark:border-blue-800/50 overflow-hidden" id="release-notifications-section">
-          <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-4 border-b border-blue-200 dark:border-blue-800/50 flex items-center justify-between">
+          <div className="bg-blue-50 dark:bg-blue-900/20 px-4 sm:px-6 py-4 border-b border-blue-200 dark:border-blue-800/50 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
                 <ShieldCheck size={20} />
               </div>
               <div>
@@ -273,19 +274,19 @@ export default function AdminDashboard() {
           </div>
           <div className="divide-y divide-[var(--color-border)] max-h-[250px] overflow-y-auto">
             {releaseNotifications.map(n => (
-              <div key={n.id} className="px-6 py-4 flex items-center justify-between hover:bg-[var(--color-surface-hover)] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+              <div key={n.id} className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[var(--color-surface-hover)] transition-colors">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0">
                     {n.title?.charAt(0)?.toUpperCase() || '?'}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{n.message}</p>
-                    <p className="text-xs text-[var(--color-text-secondary)] flex items-center gap-1 mt-0.5">
-                      <Clock size={12} /> {format(new Date(n.created_at), 'MMM d, yyyy h:mm a')}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-text)] truncate">{n.message}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)] flex items-center gap-1 mt-0.5 truncate">
+                      <Clock size={12} className="shrink-0" /> {format(new Date(n.created_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                   <button 
                     onClick={() => markNotificationRead(n.id)}
                     className="btn bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] py-1.5 px-3 text-xs shadow-sm"
@@ -307,31 +308,32 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
         {cards.map(({ label, value, icon: Icon, gradient, href }) => (
           <Link 
             key={label} 
             href={href}
-            className="card p-5 flex items-center gap-4 hover:scale-[1.02] hover:shadow-xl transition-all duration-300 cursor-pointer group border-none ring-1 ring-[var(--color-border)] hover:ring-blue-500/50"
+            className="card p-4 sm:p-5 flex items-center gap-3 sm:gap-4 hover:scale-[1.02] hover:shadow-xl transition-all duration-300 cursor-pointer group border-none ring-1 ring-[var(--color-border)] hover:ring-blue-500/50"
           >
-            <div className={`bg-linear-to-br ${gradient} text-white p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
-              <Icon size={22} />
+            <div className={`bg-linear-to-br ${gradient} text-white p-2.5 sm:p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform shrink-0`}>
+              <Icon size={20} className="sm:hidden" />
+              <Icon size={22} className="hidden sm:block" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--color-text)]">{loading ? '...' : value}</p>
-              <p className="text-xs text-[var(--color-text-secondary)] font-medium uppercase tracking-wider">{label}</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold text-[var(--color-text)]">{loading ? '...' : value}</p>
+              <p className="text-[10px] sm:text-xs text-[var(--color-text-secondary)] font-medium uppercase tracking-wider leading-tight">{label}</p>
             </div>
           </Link>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-6">
-          <h2 className="font-semibold text-[var(--color-text)] mb-6 text-[15px]">{t('dashboard_assistanceBreakdown')}</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="card p-4 sm:p-6">
+          <h2 className="font-semibold text-[var(--color-text)] mb-4 sm:mb-6 text-[14px] sm:text-[15px]">{t('dashboard_assistanceBreakdown')}</h2>
 
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={stats?.byType ?? []} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} label>
+              <Pie data={stats?.byType ?? []} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} innerRadius={35} label>
                 {stats?.byType.map((entry: any) => (
                   <Cell key={entry.name} fill={ASSISTANCE_COLORS[entry.name] ?? '#94a3b8'} />
                 ))}
@@ -342,15 +344,15 @@ export default function AdminDashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="card p-6">
-          <h2 className="font-semibold text-[var(--color-text)] mb-6 text-[15px]">{t('reports_trend')}</h2>
+        <div className="card p-4 sm:p-6">
+          <h2 className="font-semibold text-[var(--color-text)] mb-4 sm:mb-6 text-[14px] sm:text-[15px]">{t('reports_trend')}</h2>
 
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={stats?.monthly ?? []}>
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ borderRadius: 10, border: 'none', backgroundColor: '#18182b', color: '#fff' }} />
-              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
+              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={24} />
             </BarChart>
           </ResponsiveContainer>
         </div>

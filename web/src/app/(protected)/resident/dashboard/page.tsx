@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { FileText, PlusCircle, Clock, CheckCircle, HelpCircle, Users, Megaphone, Calendar, X, ChevronRight, Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -18,8 +19,13 @@ export default function ResidentDashboard() {
   const [beneficiary, setBeneficiary] = useState<any>(null)
   const [showRegModal, setShowRegModal] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
   const supabase = createClient()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -65,14 +71,14 @@ export default function ResidentDashboard() {
 
         {/* New AICS Request Button — Gated by Beneficiary Registration */}
         {hasBeneficiaryRecord ? (
-          <Link href="/requests/new" className="btn btn-primary px-6 shadow-lg shadow-blue-500/20 flex items-center gap-2">
+          <Link href="/requests/new" className="btn btn-primary px-6 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 w-full sm:w-auto">
             <PlusCircle size={18} /> {t('newRequest_title')}
           </Link>
         ) : (
           <button
             type="button"
             onClick={() => setShowRegModal(true)}
-            className="btn bg-blue-600/40 hover:bg-blue-600/60 text-white/80 cursor-pointer px-6 shadow-md flex items-center gap-2 border border-blue-400/25 transition-all"
+            className="btn bg-blue-600/40 hover:bg-blue-600/60 text-white/80 cursor-pointer px-6 shadow-md flex items-center justify-center gap-2 border border-blue-400/25 transition-all w-full sm:w-auto"
             title="Complete beneficiary registration first"
           >
             <Lock size={16} className="text-blue-200" />
@@ -255,102 +261,126 @@ export default function ResidentDashboard() {
       </div>
 
       {/* Announcement Detail Modal */}
-      {selectedAnnouncement && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="card w-full max-w-2xl shadow-2xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)] sticky top-0 z-10">
-              <div className="flex items-center gap-3">
-                <Megaphone size={18} className="text-indigo-500" />
-                <h2 className="font-bold text-lg text-[var(--color-text)]">{t('dashboard_systemUpdate')}</h2>
+      {mounted && selectedAnnouncement && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 backdrop-blur-sm p-3 sm:p-4 animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedAnnouncement(null)
+          }}
+        >
+          <div className="min-h-full flex items-center justify-center py-4 sm:py-6">
+            <div 
+              className="card w-full max-w-2xl shadow-2xl p-0 overflow-hidden max-h-[calc(100dvh-2rem)] flex flex-col my-auto border border-[var(--color-border)] bg-[var(--color-surface)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)] shrink-0">
+                <div className="flex items-center gap-3">
+                  <Megaphone size={18} className="text-indigo-500" />
+                  <h2 className="font-bold text-lg text-[var(--color-text)]">{t('dashboard_systemUpdate')}</h2>
+                </div>
+                <button 
+                  onClick={() => setSelectedAnnouncement(null)} 
+                  className="p-1 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-secondary)]"
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <button onClick={() => setSelectedAnnouncement(null)} className="p-1 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-secondary)]">
-                <X size={20} />
-              </button>
-
-            </div>
-            
-            <div className="p-0 overflow-y-auto">
-              {selectedAnnouncement.image_url && (
-                <div className="w-full aspect-video border-b border-[var(--color-border)]">
-                  <img 
-                    src={selectedAnnouncement.image_url} 
-                    alt="" 
-                    className="w-full h-full object-cover" 
-                    onError={(e) => {
-                      (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
-                    }}
-                  />
-                </div>
-              )}
-              <div className="p-8">
-                <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-3">
-                  <Calendar size={14} />
-                  {format(new Date(selectedAnnouncement.created_at), 'MMMM d, yyyy • h:mm a')}
-                </div>
-                <h1 className="text-2xl font-black text-[var(--color-text)] mb-6 leading-tight">{selectedAnnouncement.title}</h1>
-                <div className="prose prose-slate dark:prose-invert max-w-none">
-                  {selectedAnnouncement.content.split('\n').map((para: string, i: number) => (
-                    <p key={i} className="text-[var(--color-text-secondary)] leading-relaxed text-[15px] mb-4 last:mb-0">{para}</p>
-                  ))}
+              
+              <div className="flex-1 overflow-y-auto">
+                {selectedAnnouncement.image_url && (
+                  <div className="w-full aspect-video border-b border-[var(--color-border)]">
+                    <img 
+                      src={selectedAnnouncement.image_url} 
+                      alt="" 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="p-6 sm:p-8">
+                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-3">
+                    <Calendar size={14} />
+                    {format(new Date(selectedAnnouncement.created_at), 'MMMM d, yyyy • h:mm a')}
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-black text-[var(--color-text)] mb-4 leading-tight">{selectedAnnouncement.title}</h1>
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
+                    {selectedAnnouncement.content.split('\n').map((para: string, i: number) => (
+                      <p key={i} className="text-[var(--color-text-secondary)] leading-relaxed text-[15px] mb-4 last:mb-0">{para}</p>
+                    ))}
+                  </div>
                 </div>
               </div>
+              
+              <div className="px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface)] flex justify-end shrink-0">
+                <button 
+                  onClick={() => setSelectedAnnouncement(null)}
+                  className="btn bg-slate-100 dark:bg-slate-800 text-[var(--color-text)] px-8 py-2.5 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                >
+                  {t('close')}
+                </button>
+              </div>
             </div>
-            
-            <div className="px-8 py-6 border-t border-[var(--color-border)] bg-[var(--color-surface)] flex justify-end">
-              <button 
-                onClick={() => setSelectedAnnouncement(null)}
-                className="btn bg-slate-100 dark:bg-slate-800 text-[var(--color-text)] px-8 py-2.5 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
-              >
-                {t('close')}
-              </button>
-            </div>
-
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Beneficiary Registration Required Modal */}
-      {showRegModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 animate-scale-in">
-            <div className="flex items-start justify-between gap-3">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-                <AlertTriangle size={24} />
+      {mounted && showRegModal && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] overflow-y-auto bg-black/75 backdrop-blur-sm p-4 animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowRegModal(false)
+          }}
+        >
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div 
+              className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 animate-scale-in my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={24} />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRegModal(false)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowRegModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-white">Beneficiary Registration Required</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                You must complete your beneficiary registration before submitting an AICS request.
-              </p>
-            </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white">Beneficiary Registration Required</h3>
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  You must complete your beneficiary registration before submitting an AICS request.
+                </p>
+              </div>
 
-            <div className="flex flex-col gap-2.5 pt-2">
-              <Link
-                href="/beneficiaries/new"
-                className="btn btn-primary w-full py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 text-center"
-              >
-                Complete Registration
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowRegModal(false)}
-                className="w-full py-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 text-sm font-medium transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
+              <div className="flex flex-col gap-2.5 pt-2">
+                <Link
+                  href="/beneficiaries/new"
+                  className="btn btn-primary w-full py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 text-center"
+                >
+                  Complete Registration
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowRegModal(false)}
+                  className="w-full py-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 text-sm font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

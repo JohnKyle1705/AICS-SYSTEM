@@ -115,38 +115,121 @@ function RequestsContent() {
   }
 
   return (
-    <div className="space-y-5" id="requests-page">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)]">
+    <div className="space-y-4 sm:space-y-5" id="requests-page">
+      <div className="flex items-start sm:items-center justify-between flex-wrap gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-[var(--color-text)] truncate">
             {profile?.role === 'resident' ? t('requests_title_resident') : t('requests_title_admin')}
           </h1>
-          <p className="text-[var(--color-text-secondary)] text-sm mt-0.5">{requests.length} {t('nav_requests').toLowerCase()}</p>
+          <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm mt-0.5">{requests.length} {t('nav_requests').toLowerCase()}</p>
         </div>
         {profile?.role === 'resident' && (
-          <Link href="/requests/new" className="btn btn-primary" id="new-request-btn">
+          <Link href="/requests/new" className="btn btn-primary text-sm" id="new-request-btn">
             <Plus size={16} /> {t('requests_newRequest')}
           </Link>
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="relative flex-1 min-w-0">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('requests_searchPlaceholder')} className="form-input pl-10" id="request-search" />
+            placeholder={t('requests_searchPlaceholder')} className="form-input pl-10 w-full" id="request-search" />
         </div>
-        <select value={type} onChange={(e) => setType(e.target.value)} className="form-input w-auto min-w-[150px]">
-          <option value="">{t('requests_allTypes')}</option>
-          {ASSISTANCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="form-input w-auto min-w-[150px]">
-          <option value="">{t('requests_allStatuses')}</option>
-          {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="flex gap-2">
+          <select value={type} onChange={(e) => setType(e.target.value)} className="form-input flex-1 sm:flex-none sm:min-w-[150px]">
+            <option value="">{t('requests_allTypes')}</option>
+            {ASSISTANCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="form-input flex-1 sm:flex-none sm:min-w-[150px]">
+            <option value="">{t('requests_allStatuses')}</option>
+            {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
       </div>
 
-      <div className="card overflow-hidden">
+      {/* Mobile Card List View (visible on < md) */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card p-4 space-y-3">
+              <div className="skeleton h-5 w-3/4 rounded-lg" />
+              <div className="skeleton h-4 w-1/2 rounded-lg" />
+              <div className="skeleton h-8 w-full rounded-lg" />
+            </div>
+          ))
+        ) : requests.length === 0 ? (
+          <div className="card p-8 text-center">
+            <FileText size={36} className="mx-auto mb-3 text-slate-300" />
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t('requests_noRequestsFound')}</p>
+          </div>
+        ) : (
+          requests.map((r: any) => (
+            <div key={r.id} className="card p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-[var(--color-text)] text-sm truncate">
+                    {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
+                  </h3>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    {format(new Date(r.created_at), 'MMM d, yyyy')}
+                  </p>
+                </div>
+                <span className={`badge ${STATUS_COLORS[r.status]} shrink-0 text-[10px]`}>
+                  {r.status}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="badge bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                  {r.assistance_type}
+                </span>
+                <span className="text-[var(--color-text-secondary)]">·</span>
+                <span className="font-semibold text-[var(--color-text)]">
+                  {(r.status === 'Approved' || r.status === 'Released') && r.amount_approved ? (
+                    <span className="text-emerald-600 dark:text-emerald-400">₱{Number(r.amount_approved).toLocaleString()}</span>
+                  ) : r.amount_requested ? (
+                    `₱${Number(r.amount_requested).toLocaleString()}`
+                  ) : (
+                    '—'
+                  )}
+                </span>
+              </div>
+
+              <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
+                {r.purpose}
+              </p>
+
+              {r.status === 'Declined' && r.remarks && (
+                <p className="text-xs text-red-500 italic bg-red-50/50 dark:bg-red-900/20 p-2 rounded-lg">
+                  Reason: {r.remarks}
+                </p>
+              )}
+
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
+                <Link
+                  href={`/requests/${r.id}`}
+                  className="btn btn-primary py-2 px-4 text-xs font-semibold"
+                >
+                  {t('view')} {t('details')}
+                </Link>
+                {(profile?.role === 'admin' || profile?.role === 'resident') && (
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                    title={t('delete')}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Data Table (hidden on < md) */}
+      <div className="hidden md:block card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table" id="requests-table">
             <thead>

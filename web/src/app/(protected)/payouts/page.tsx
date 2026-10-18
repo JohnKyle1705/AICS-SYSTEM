@@ -248,8 +248,8 @@ export default function PayoutsPage() {
         </div>
       </div>
 
-      {/* ── Table Card ─────────────────────────────── */}
-      <div className="card overflow-hidden">
+      {/* ── Desktop Table Card ─────────────────────── */}
+      <div className="card overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="data-table" id="payouts-table">
             <thead>
@@ -328,6 +328,78 @@ export default function PayoutsPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ── Mobile Card List ─────────────────────────── */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card p-4 space-y-2">
+              <div className="skeleton h-4 w-1/2" />
+              <div className="skeleton h-6 w-1/3" />
+            </div>
+          ))
+        ) : filtered.length === 0 ? (
+          <div className="card p-8 text-center">
+            <Banknote size={36} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+            <p className="text-slate-400 text-sm font-medium">No payout records found</p>
+          </div>
+        ) : (
+          filtered.map((p: any) => {
+            const ben = p.requests?.beneficiaries
+            const benName = ben ? `${ben.last_name}, ${ben.first_name}` : 'Unknown Beneficiary'
+            const reqType = p.requests?.assistance_type || 'General'
+            const dateStr = p.release_date ? format(new Date(p.release_date), 'MMM d, yyyy') : '—'
+
+            return (
+              <div key={p.id} className="card p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-bold text-sm text-[var(--color-text)]">{benName}</h3>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                      {ben?.barangay ? `Brgy. ${ben.barangay}` : 'Barangay not specified'}
+                    </p>
+                  </div>
+                  <span className={`badge ${
+                    reqType === 'Medical'
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                      : 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                  }`}>
+                    {reqType}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 p-3 rounded-xl">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-300 block">Amount Released</span>
+                    <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                      ₱{Number(p.amount_released).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-[var(--color-text-secondary)] block">Date Released</span>
+                    <span className="text-xs font-semibold text-[var(--color-text)]">{dateStr}</span>
+                  </div>
+                </div>
+
+                {p.acknowledgment_notes && (
+                  <p className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-background)] p-2.5 rounded-lg italic">
+                    &ldquo;{p.acknowledgment_notes}&rdquo;
+                  </p>
+                )}
+
+                {p.request_id && (
+                  <Link
+                    href={`/requests/${p.request_id}`}
+                    className="btn btn-secondary w-full text-center text-xs py-2 block font-semibold"
+                  >
+                    View Request Details
+                  </Link>
+                )}
+              </div>
+            )
+          })
+        )}
       </div>
     </div>
   )

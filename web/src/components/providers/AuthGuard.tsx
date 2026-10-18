@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, clearAllSupabaseAuth } from '@/lib/supabase/client'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 /**
@@ -12,28 +12,43 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const supabase = createClient()
-
-    const clearAuthCookiesAndStorage = () => {
-      if (typeof document !== 'undefined') {
-        document.cookie.split(';').forEach((cookie) => {
-          const name = cookie.split('=')[0].trim()
-          if (name.startsWith('sb-')) {
-            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
-          }
-        })
+    // Intercept console.error for stale refresh token errors so they don't crash
+    // or pop up as development error overlays during routine session expiry / cleanup.
+    const originalConsoleError = console.error
+    console.error = (...args: any[]) => {
+      const msg = args
+        .map((a) => (typeof a === 'string' ? a : a?.message || a?.toString?.() || ''))
+        .join(' ')
+      if (
+        msg.includes('Invalid Refresh Token') ||
+        msg.includes('Refresh Token Not Found') ||
+        msg.includes('refresh_token_not_found')
+      ) {
+        // Clean up stale session automatically without triggering dev overlay
+        clearAllSupabaseAuth()
+        const pathname = window.location.pathname
+        const isPublic =
+          pathname.startsWith('/login') ||
+          pathname.startsWith('/register') ||
+          pathname.startsWith('/forgot-password') ||
+          pathname.startsWith('/auth')
+        if (!isPublic && pathname !== '/') {
+          window.location.href = '/login'
+        }
+        return
       }
-      if (typeof window !== 'undefined' && window.localStorage) {
-        Object.keys(window.localStorage).forEach((key) => {
-          if (key.startsWith('sb-')) {
-            window.localStorage.removeItem(key)
-          }
-        })
-      }
+      originalConsoleError.apply(console, args)
     }
 
-    const handleAuthFailure = () => {
-      clearAuthCookiesAndStorage()
+    const supabase = createClient()
+
+    const handleAuthFailure = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' })
+      } catch {
+        // ignore
+      }
+      clearAllSupabaseAuth()
       const pathname = window.location.pathname
       const isPublic =
         pathname.startsWith('/login') ||
@@ -48,7 +63,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     // Proactively verify session on initial mount to catch stale refresh tokens immediately
     supabase.auth.getSession().then((res: { data: { session: Session | null }; error: any }) => {
-      if (res.error && (res.error.message?.includes('Refresh Token') || res.error.status === 400)) {
+      if (
+        res.error &&
+        (res.error.message?.includes('Refresh Token') ||
+          res.error.message?.includes('refresh_token_not_found') ||
+          res.error.status === 400)
+      ) {
         handleAuthFailure()
       }
     }).catch(() => {
@@ -67,9 +87,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     )
 
     return () => {
+      console.error = originalConsoleError
       subscription.unsubscribe()
     }
   }, [])
 
   return <>{children}</>
 }
+

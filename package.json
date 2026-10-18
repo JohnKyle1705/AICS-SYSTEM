@@ -2,6 +2,9 @@
   "private": true,
   "name": "aics-system-root",
   "scripts": {
+    "build": "npm run build --prefix web",
+    "start": "npm run start --prefix web",
+    "dev": "npm run dev --prefix web",
     "mobile": "npm start --prefix mobile",
     "web": "npm run dev --prefix web"
   }

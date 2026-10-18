@@ -596,7 +596,7 @@ export default function NewRequestPage() {
               <div>
                 <h3 className="text-base font-bold text-[var(--color-text)] flex items-center gap-2">
                   <Cross size={15} className="text-slate-500" />
-                  Deceased Person's Information
+                  Deceased Person&apos;s Information
                 </h3>
                 <p className="text-xs text-[var(--color-text-secondary)] mt-1">
                   Fill in the complete name of the deceased.
@@ -664,7 +664,7 @@ export default function NewRequestPage() {
                   />
                   <FieldError name="funeral_home" />
                   <p className="text-[10px] text-slate-400 mt-0.5">
-                    {FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.length} verified homes. Not listed? Select "Other Funeral Home (Within Bogo to Daanbantayan Area)".
+                    {FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.length} verified homes. Not listed? Select &ldquo;Other Funeral Home (Within Bogo to Daanbantayan Area)&rdquo;.
                   </p>
                 </div>
               </div>

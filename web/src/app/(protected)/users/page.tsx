@@ -62,7 +62,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Avatar Helper ────────────────────────────────────────────────────────────
 
 function Avatar({ user, size = 8 }: { user: { full_name: string; avatar_url?: string }; size?: number }) {
-  const cls = `w-${size} h-${size}`
+  const cls = size === 12 ? 'w-12 h-12' : size === 10 ? 'w-10 h-10' : 'w-8 h-8'
   return user.avatar_url ? (
     <img
       src={user.avatar_url}
@@ -147,6 +147,45 @@ function InfoRow({ label, value, valueClass = 'text-slate-200' }: { label: strin
     <div className="flex items-start justify-between gap-4">
       <span className="text-slate-400 shrink-0 w-36">{label}</span>
       <span className={`font-medium text-right ${valueClass}`}>{value}</span>
+    </div>
+  )
+}
+
+function SkeletonRow({ cols }: { cols: number }) {
+  return (
+    <tr>
+      {Array.from({ length: cols }).map((_, j) => (
+        <td key={j}><div className="skeleton h-5 w-full" /></td>
+      ))}
+    </tr>
+  )
+}
+
+function StatusFilter({
+  value, onChange
+}: {
+  value: 'all' | 'active' | 'inactive'
+  onChange: (v: 'all' | 'active' | 'inactive') => void
+}) {
+  return (
+    <div className="flex p-1 bg-slate-800/60 rounded-lg border border-slate-700/40 gap-0.5">
+      {(['all', 'active', 'inactive'] as const).map(opt => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
+            value === opt
+              ? opt === 'active'
+                ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
+                : opt === 'inactive'
+                ? 'bg-red-500/20 text-red-300 shadow-sm'
+                : 'bg-slate-700 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          {opt === 'all' ? 'All' : opt === 'active' ? 'Active' : 'Inactive'}
+        </button>
+      ))}
     </div>
   )
 }
@@ -351,49 +390,12 @@ export default function UsersPage() {
   const activeResidents = residents.filter(u => u.is_active).length
   const inactiveResidents = residents.filter(u => !u.is_active).length
 
-  // ── Skeleton Rows ────────────────────────────────────────────────────────
-  const SkeletonRow = ({ cols }: { cols: number }) => (
-    <tr>
-      {Array.from({ length: cols }).map((_, j) => (
-        <td key={j}><div className="skeleton h-5 w-full" /></td>
-      ))}
-    </tr>
-  )
-
-  // ── Status Filter Buttons ─────────────────────────────────────────────────
-  const StatusFilter = ({
-    value, onChange
-  }: {
-    value: 'all' | 'active' | 'inactive'
-    onChange: (v: 'all' | 'active' | 'inactive') => void
-  }) => (
-    <div className="flex p-1 bg-slate-800/60 rounded-lg border border-slate-700/40 gap-0.5">
-      {(['all', 'active', 'inactive'] as const).map(opt => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
-            value === opt
-              ? opt === 'active'
-                ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
-                : opt === 'inactive'
-                ? 'bg-red-500/20 text-red-300 shadow-sm'
-                : 'bg-slate-700 text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          {opt === 'all' ? 'All' : opt === 'active' ? 'Active' : 'Inactive'}
-        </button>
-      ))}
-    </div>
-  )
-
   return (
-    <div className="space-y-8" id="users-page">
+    <div className="space-y-6 sm:space-y-8" id="users-page">
       {/* ── Page Header ───────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">User Management</h1>
-        <p className="text-[var(--color-text-secondary)] text-sm mt-0.5">
+        <h1 className="text-xl sm:text-2xl font-bold text-[var(--color-text)]">User Management</h1>
+        <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm mt-0.5">
           Manage system staff and resident accounts
         </p>
       </div>
@@ -521,7 +523,8 @@ export default function UsersPage() {
 
         {/* Staff Table */}
         <div className="card overflow-hidden">
-          <table className="data-table" id="staff-table">
+          <div className="overflow-x-auto">
+            <table className="data-table" id="staff-table">
             <thead>
               <tr>
                 {['Full Name', 'Role', 'Status', 'Added On', 'Actions'].map(h => (
@@ -601,6 +604,7 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -659,7 +663,8 @@ export default function UsersPage() {
 
         {/* Resident Table */}
         <div className="card overflow-hidden">
-          <table className="data-table" id="residents-table">
+          <div className="overflow-x-auto">
+            <table className="data-table" id="residents-table">
             <thead>
               <tr>
                 {['Full Name', 'Contact Number', 'Email', 'Status', 'Registered On', 'Actions'].map(h => (
@@ -746,6 +751,7 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Pagination */}

@@ -385,8 +385,8 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Data Table */}
-          <div className="card overflow-hidden">
+          {/* Data Table (Desktop) */}
+          <div className="card overflow-hidden hidden md:block">
             <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
               <h2 className="font-semibold text-[var(--color-text)] text-[15px]">{t('reports_records')}</h2>
               <span className="text-xs text-[var(--color-text-secondary)]">{t('reports_showing')} {Math.min(filteredData.length, 50)} {t('reports_of')} {filteredData.length}</span>
@@ -424,10 +424,54 @@ export default function ReportsPage() {
                       <td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-10">{t('reports_noRecords')}</td>
                     </tr>
                   )}
-
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Mobile Breakdown Cards */}
+          <div className="md:hidden space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="font-semibold text-[var(--color-text)] text-sm">{t('reports_records')}</h2>
+              <span className="text-xs text-[var(--color-text-secondary)]">{t('reports_showing')} {Math.min(filteredData.length, 50)} {t('reports_of')} {filteredData.length}</span>
+            </div>
+
+            {filteredData.length === 0 ? (
+              <div className="card p-6 text-center text-[var(--color-text-secondary)] text-sm">
+                {t('reports_noRecords')}
+              </div>
+            ) : (
+              filteredData.slice(0, 50).map((r: any) => (
+                <div key={r.id} className="card p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-bold text-sm text-[var(--color-text)]">
+                        {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
+                      </h3>
+                      <p className="text-xs text-[var(--color-text-secondary)]">
+                        {r.beneficiaries?.barangay ? `Brgy. ${r.beneficiaries?.barangay}` : '—'}
+                      </p>
+                    </div>
+                    <span className="badge" style={{ background: `${STATUS_COLORS[r.status]}20`, color: STATUS_COLORS[r.status] }}>
+                      {r.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--color-border)]">
+                    <span className="badge" style={{ background: `${(ASSISTANCE_COLORS as any)[r.assistance_type]}20`, color: (ASSISTANCE_COLORS as any)[r.assistance_type] }}>
+                      {r.assistance_type}
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {r.amount_approved ? `₱${Number(r.amount_approved).toLocaleString()}` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="text-right text-[11px] text-[var(--color-text-secondary)]">
+                    {format(new Date(r.created_at), 'MMM d, yyyy')}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </>
       )}

@@ -513,29 +513,31 @@ export default function TreasurerDashboardPage() {
             </button>
           )}
         </div>
-        <select
-          value={type}
-          onChange={(e) => {
-            const val = e.target.value
-            setType(val)
-            setActiveFund(val || null)
-            setActiveCard(null)
-          }}
-          className="form-input w-auto min-w-[150px]"
-          id="type-filter"
-        >
-          <option value="">{t('requests_allTypes')}</option>
-          {ASSISTANCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select
-          value={releaseFilter}
-          onChange={(e) => { setReleaseFilter(e.target.value); setActiveCard(null) }}
-          className="form-input w-auto min-w-[160px]"
-          id="release-status-filter"
-        >
-          <option value="">All Release Statuses</option>
-          {RELEASE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={type}
+            onChange={(e) => {
+              const val = e.target.value
+              setType(val)
+              setActiveFund(val || null)
+              setActiveCard(null)
+            }}
+            className="form-input flex-1 sm:flex-none sm:w-auto sm:min-w-[150px]"
+            id="type-filter"
+          >
+            <option value="">{t('requests_allTypes')}</option>
+            {ASSISTANCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select
+            value={releaseFilter}
+            onChange={(e) => { setReleaseFilter(e.target.value); setActiveCard(null) }}
+            className="form-input flex-1 sm:flex-none sm:w-auto sm:min-w-[160px]"
+            id="release-status-filter"
+          >
+            <option value="">All Release Statuses</option>
+            {RELEASE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* ── Quick Release Filter Tabs ─────────────────────────────── */}

@@ -6,7 +6,7 @@ import { Clock, Calendar } from 'lucide-react'
 
 function LiveClock() {
   const [now, setNow] = useState<Date | null>(null)
-  
+
   useEffect(() => {
     setNow(new Date())
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -33,16 +33,19 @@ function LiveClock() {
   )
 }
 
-
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-abstract bg-overlay">
+    <div className="flex min-h-screen bg-abstract bg-overlay overflow-x-hidden">
       <Sidebar />
-      <main className="flex-1 transition-all duration-300 ease-out lg:ml-[var(--sidebar-width,260px)] p-5 md:p-7 pt-16 lg:pt-5">
-        <div className="flex justify-end mb-6">
+      {/*
+        Mobile: no left margin (sidebar slides in as overlay), pt-[90px] clears the fixed mobile header+date bar.
+        lg+: left margin equals the sidebar width CSS variable; top padding resets to normal.
+      */}
+      <main className="flex-1 min-w-0 transition-all duration-300 ease-out lg:ml-[var(--sidebar-width,260px)] px-3 sm:px-5 md:px-7 pt-[90px] pb-6 lg:pt-5 lg:pb-8">
+        <div className="flex justify-end mb-4 lg:mb-6">
           <LiveClock />
         </div>
-        <div className="page-enter max-w-[1400px] mx-auto">
+        <div className="page-enter w-full max-w-[1400px] mx-auto">
           {children}
         </div>
       </main>

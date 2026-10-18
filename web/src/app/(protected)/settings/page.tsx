@@ -445,7 +445,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="pt-4 flex justify-end">
-              <button type="submit" disabled={saving} className="btn btn-primary px-8">
+              <button type="submit" disabled={saving} className="btn btn-primary px-8 w-full sm:w-auto">
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18} /> {t('settings_saveChanges')}</>}
               </button>
             </div>

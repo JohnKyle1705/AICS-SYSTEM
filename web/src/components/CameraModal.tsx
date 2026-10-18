@@ -106,6 +106,16 @@ export default function CameraModal({ isOpen, label, onCapture, onClose }: Camer
     }
   }, [])
 
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+  }, [])
+
   // ── Open/close lifecycle ───────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
@@ -116,18 +126,10 @@ export default function CameraModal({ isOpen, label, onCapture, onClose }: Camer
     } else {
       stopStream()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen])
-
-  const stopStream = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
-      streamRef.current = null
+    return () => {
+      stopStream()
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
-    }
-  }
+  }, [isOpen, facingMode, startCamera, stopStream])
 
   // ── Capture photo from video ───────────────────────────────────
   const capturePhoto = () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient, clearAllSupabaseAuth } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ShieldAlert, LogOut, RefreshCw, AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
@@ -12,8 +12,13 @@ export default function PendingPage() {
   const [stillPending, setStillPending] = useState(false)
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch {
+      // ignore
+    }
+    clearAllSupabaseAuth()
+    window.location.href = '/login'
   }
 
   const handleCheckStatus = async () => {
@@ -23,7 +28,8 @@ export default function PendingPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
-        router.push('/login')
+        clearAllSupabaseAuth()
+        window.location.href = '/login'
         return
       }
 

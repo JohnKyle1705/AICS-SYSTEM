@@ -25,7 +25,8 @@ export default function AssessmentsPage() {
         <p className="text-[var(--color-text-secondary)] text-sm mt-0.5">{assessments.length} assessment records</p>
       </div>
 
-      <div className="card overflow-hidden">
+      {/* Desktop Table */}
+      <div className="card overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="data-table" id="assessments-table">
             <thead>
@@ -66,6 +67,58 @@ export default function AssessmentsPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card List */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card p-4 space-y-2">
+              <div className="skeleton h-4 w-1/2" />
+              <div className="skeleton h-4 w-1/3" />
+            </div>
+          ))
+        ) : assessments.length === 0 ? (
+          <div className="card p-8 text-center">
+            <ClipboardList size={36} className="mx-auto mb-2 text-slate-300" />
+            <p className="text-slate-400 text-sm">No assessments found</p>
+          </div>
+        ) : (
+          assessments.map(a => (
+            <div key={a.id} className="card p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="font-bold text-sm text-[var(--color-text)]">
+                    {a.requests?.beneficiaries?.last_name}, {a.requests?.beneficiaries?.first_name}
+                  </h3>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    Interview: {format(new Date(a.interview_date), 'MMM d, yyyy')}
+                  </p>
+                </div>
+                <span className="badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>
+                  {a.requests?.assistance_type}
+                </span>
+              </div>
+
+              <div className="bg-[var(--color-background)] p-3 rounded-xl border border-[var(--color-border)] text-xs">
+                <span className="font-semibold text-[var(--color-text-secondary)] block mb-1">Recommendation:</span>
+                <p className="text-[var(--color-text)] leading-relaxed">{a.recommendation}</p>
+                <div className="mt-2 pt-2 border-t border-[var(--color-border)] flex items-center justify-between text-[11px]">
+                  <span>Home Visit: {a.home_visit ? <strong className="text-emerald-600">Yes</strong> : <span className="text-slate-400">No</span>}</span>
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <Link
+                  href={`/requests/${a.request_id}`}
+                  className="btn btn-secondary w-full text-center text-xs py-2 block font-semibold"
+                >
+                  View Request Details
+                </Link>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   )

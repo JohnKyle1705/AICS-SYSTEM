@@ -3,8 +3,13 @@
 -- Run this in Supabase Dashboard → SQL Editor
 -- ============================================================
 
+ALTER TABLE system_logs ENABLE ROW LEVEL SECURITY;
+
 -- DROP the old catch-all policy that blocks non-admin inserts
 DROP POLICY IF EXISTS "System logs admin only" ON system_logs;
+-- Drop new policies too so this script is safe to re-run
+DROP POLICY IF EXISTS "System logs admin select" ON system_logs;
+DROP POLICY IF EXISTS "System logs authenticated insert" ON system_logs;
 
 -- Admins can read all logs
 CREATE POLICY "System logs admin select"
