@@ -187,12 +187,12 @@ function formatLogDetails(log: AuditLog): string {
 
 function RoleBadge({ role }: { role?: string }) {
   const map: Record<string, string> = {
-    admin:     'bg-violet-500/15 text-violet-400 border-violet-500/30',
-    treasurer: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-    resident:  'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    admin:     'bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30',
+    treasurer: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
+    resident:  'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30',
   }
   return (
-    <span className={`badge border text-[10px] font-black uppercase ${map[role ?? ''] ?? 'bg-slate-700 text-slate-300'}`}>
+    <span className={`badge border text-[10px] font-black uppercase ${map[role ?? ''] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600'}`}>
       {role ?? 'System'}
     </span>
   )
@@ -322,7 +322,7 @@ function DetailsModal({ log, onClose }: { log: AuditLog; onClose: () => void }) 
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-700/50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center">
               <Icon size={20} className={meta.color} />
             </div>
             <div>
@@ -331,7 +331,7 @@ function DetailsModal({ log, onClose }: { log: AuditLog; onClose: () => void }) 
             </div>
           </div>
           <button onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-700/50 text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors">
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -703,16 +703,16 @@ export default function LogsPage() {
                 const Icon = meta.icon
                 return (
                   <tr key={log.id}
-                    className="text-[13px] hover:bg-slate-800/30 cursor-pointer transition-colors"
+                    className="text-[13px] hover:bg-slate-100/70 dark:hover:bg-slate-800/30 cursor-pointer transition-colors"
                     onClick={() => setSelected(log)}>
                     <td className="whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <Clock size={13} className="text-slate-500 shrink-0" />
+                        <Clock size={13} className="text-slate-400 dark:text-slate-500 shrink-0" />
                         <div>
                           <p className="text-xs font-medium text-[var(--color-text)]">
                             {format(new Date(log.created_at), 'MMM d, yyyy')}
                           </p>
-                          <p className="text-[11px] text-slate-500">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
                             {format(new Date(log.created_at), 'hh:mm:ss a')}
                           </p>
                         </div>
@@ -720,9 +720,9 @@ export default function LogsPage() {
                     </td>
                     <td>
                       <div className="flex items-center gap-2">
-                        <User size={13} className="text-blue-500 shrink-0" />
+                        <User size={13} className="text-blue-600 dark:text-blue-500 shrink-0" />
                         <div>
-                          <p className="font-medium text-[var(--color-text)] leading-tight">
+                          <p className="font-semibold text-[var(--color-text)] leading-tight">
                             {log.profiles?.full_name ?? 'System'}
                           </p>
                           <RoleBadge role={log.profiles?.role} />
@@ -735,7 +735,7 @@ export default function LogsPage() {
                         {meta.label}
                       </div>
                     </td>
-                    <td className="font-mono text-[11px] text-slate-400">{log.table_name ?? '—'}</td>
+                    <td className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{log.table_name ?? '—'}</td>
                     <td className="max-w-[320px]">
                       <p className="truncate text-[var(--color-text-secondary)] text-xs font-medium" title={formatLogDetails(log)}>
                         {formatLogDetails(log)}
@@ -744,7 +744,7 @@ export default function LogsPage() {
                     <td>
                       <button
                         onClick={e => { e.stopPropagation(); setSelected(log) }}
-                        className="p-1.5 rounded-lg hover:bg-slate-700/50 text-slate-500 hover:text-blue-400 transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                         title="View details">
                         <Info size={14} />
                       </button>
@@ -824,7 +824,7 @@ export default function LogsPage() {
           </p>
           <div className="flex items-center gap-2">
             <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-              className="p-1.5 rounded-lg hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
               id="logs-prev-page">
               <ChevronLeft size={16} />
             </button>
@@ -832,7 +832,7 @@ export default function LogsPage() {
               Page {page + 1} of {totalPages}
             </span>
             <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-              className="p-1.5 rounded-lg hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
               id="logs-next-page">
               <ChevronRight size={16} />
             </button>
@@ -848,9 +848,9 @@ export default function LogsPage() {
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 bg-blue-500/15 text-blue-400 border border-blue-500/30 rounded-full px-2.5 py-0.5 text-xs font-semibold">
+    <span className="inline-flex items-center gap-1 bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-full px-2.5 py-0.5 text-xs font-semibold">
       {label}
-      <button onClick={onRemove} className="hover:text-blue-200 transition-colors"><X size={11} /></button>
+      <button onClick={onRemove} className="hover:text-blue-900 dark:hover:text-blue-200 transition-colors"><X size={11} /></button>
     </span>
   )
 }

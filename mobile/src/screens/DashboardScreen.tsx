@@ -12,11 +12,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native'
 import { format } from 'date-fns'
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  Pending: { bg: '#fef3c7', text: '#92400e' },
-  Approved: { bg: '#dbeafe', text: '#1e40af' },
-  Released: { bg: '#d1fae5', text: '#065f46' },
-  Declined: { bg: '#fee2e2', text: '#991b1b' },
+const STATUS_COLORS: Record<string, { bg: string; text: string; darkBg: string; darkText: string }> = {
+  Pending:  { bg: '#fef3c7', text: '#92400e', darkBg: '#3d3014', darkText: '#fbbf24' },
+  Approved: { bg: '#dbeafe', text: '#1e40af', darkBg: '#142c3d', darkText: '#60a5fa' },
+  Released: { bg: '#d1fae5', text: '#065f46', darkBg: '#143d2c', darkText: '#34d399' },
+  Declined: { bg: '#fee2e2', text: '#991b1b', darkBg: '#3d1414', darkText: '#f87171' },
 }
 
 export default function DashboardScreen({ navigation }: any) {
@@ -484,8 +484,8 @@ export default function DashboardScreen({ navigation }: any) {
                         Filed {format(new Date(req.created_at), 'MMM d, yyyy')}
                       </Text>
                     </View>
-                    <View style={[s.recentReqBadge, { backgroundColor: sc.bg }]}>
-                      <Text style={[s.recentReqBadgeText, { color: sc.text }]}>{req.status}</Text>
+                    <View style={[s.recentReqBadge, { backgroundColor: isDark ? sc.darkBg : sc.bg }]}>
+                      <Text style={[s.recentReqBadgeText, { color: isDark ? sc.darkText : sc.text }]}>{req.status}</Text>
                     </View>
                   </TouchableOpacity>
                 )
@@ -695,7 +695,7 @@ const styles = (colors: any, isDark: boolean, insets: any) => StyleSheet.create(
   verifiedBadgeText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#10b981',
+    color: isDark ? '#34d399' : '#047857',
     letterSpacing: 0.5,
   },
   verifiedSub: {

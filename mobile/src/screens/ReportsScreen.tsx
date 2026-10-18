@@ -19,6 +19,12 @@ const STATUS_COLORS: Record<string, string> = {
   Released: '#10b981',
   Declined: '#ef4444',
 }
+const STATUS_TEXT_COLORS: Record<string, { light: string; dark: string }> = {
+  Pending:  { light: '#b45309', dark: '#fbbf24' },
+  Approved: { light: '#1d4ed8', dark: '#60a5fa' },
+  Released: { light: '#047857', dark: '#34d399' },
+  Declined: { light: '#b91c1c', dark: '#f87171' },
+}
 const BARANGAYS = [
   'Aguho', 'Bagay', 'Bakhaw', 'Bateria', 'Bitoon', 'Calape', 'Carnaza',
   'Daanbantayan', 'Dalingding', 'Lanao', 'Logon', 'Malbago', 'Malingin',
@@ -349,9 +355,14 @@ export default function ReportsScreen({ navigation }: any) {
                   </View>
                 </View>
                 <View style={s.tableRight}>
-                  <View style={[s.statusBadge, { backgroundColor: STATUS_COLORS[r.status] + '20' }]}>
-                    <Text style={[s.statusText, { color: STATUS_COLORS[r.status] }]}>{r.status}</Text>
-                  </View>
+                  {(() => {
+                    const stColor = (STATUS_TEXT_COLORS[r.status] || STATUS_TEXT_COLORS.Pending)[isDark ? 'dark' : 'light']
+                    return (
+                      <View style={[s.statusBadge, { backgroundColor: stColor + '20' }]}>
+                        <Text style={[s.statusText, { color: stColor }]}>{r.status}</Text>
+                      </View>
+                    )
+                  })()}
                   <Text style={s.tableAmount}>{r.amount_approved ? `₱${Number(r.amount_approved).toLocaleString()}` : '—'}</Text>
                 </View>
               </View>

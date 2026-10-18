@@ -48,9 +48,9 @@ interface ResidentUser {
 const RESIDENTS_PER_PAGE = 10
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: 'bg-violet-500/20 text-violet-300 border border-violet-500/30',
-  treasurer: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
-  resident: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+  admin: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30',
+  treasurer: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+  resident: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -67,7 +67,7 @@ function Avatar({ user, size = 8 }: { user: { full_name: string; avatar_url?: st
     <img
       src={user.avatar_url}
       alt={user.full_name}
-      className={`${cls} rounded-lg object-cover border border-slate-700 shadow-sm`}
+      className={`${cls} rounded-lg object-cover border border-slate-200 dark:border-slate-700 shadow-sm`}
     />
   ) : (
     <div className={`${cls} bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm`}>
@@ -84,13 +84,13 @@ function ResidentProfileModal({ resident, onClose }: { resident: ResidentUser; o
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-2xl border border-slate-700/50 bg-[#0f1624] shadow-2xl p-6 animate-fade-in"
+        className="relative w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[#0f1624] shadow-2xl p-6 animate-fade-in"
         onClick={e => e.stopPropagation()}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
         >
           <X size={20} />
         </button>
@@ -99,7 +99,7 @@ function ResidentProfileModal({ resident, onClose }: { resident: ResidentUser; o
         <div className="flex items-center gap-4 mb-6">
           <Avatar user={resident} size={12} />
           <div>
-            <h3 className="text-lg font-bold text-white">{resident.full_name}</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{resident.full_name}</h3>
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${ROLE_COLORS.resident}`}>
               Resident
             </span>
@@ -113,14 +113,14 @@ function ResidentProfileModal({ resident, onClose }: { resident: ResidentUser; o
           <InfoRow
             label="Status"
             value={resident.is_active ? 'Active' : 'Inactive'}
-            valueClass={resident.is_active ? 'text-emerald-400' : 'text-red-400'}
+            valueClass={resident.is_active ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}
           />
           <InfoRow label="Registered On" value={format(new Date(resident.created_at), 'MMMM d, yyyy')} />
 
           {ben && (
             <>
-              <div className="border-t border-slate-700/50 pt-3 mt-3">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Beneficiary Details</p>
+              <div className="border-t border-slate-200 dark:border-slate-700/50 pt-3 mt-3">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Beneficiary Details</p>
               </div>
               <InfoRow label="Address" value={ben.address || '—'} />
               <InfoRow label="Barangay" value={ben.barangay || '—'} />
@@ -131,8 +131,8 @@ function ResidentProfileModal({ resident, onClose }: { resident: ResidentUser; o
           )}
 
           {!ben && (
-            <div className="mt-3 flex items-center gap-2 text-xs text-slate-400 bg-slate-800/50 rounded-xl p-3 border border-slate-700/40">
-              <Info size={14} />
+            <div className="mt-3 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700/40">
+              <Info size={14} className="text-blue-500 shrink-0" />
               <span>No beneficiary profile linked to this account yet.</span>
             </div>
           )}
@@ -142,10 +142,10 @@ function ResidentProfileModal({ resident, onClose }: { resident: ResidentUser; o
   )
 }
 
-function InfoRow({ label, value, valueClass = 'text-slate-200' }: { label: string; value: string; valueClass?: string }) {
+function InfoRow({ label, value, valueClass = 'text-slate-800 dark:text-slate-200' }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <span className="text-slate-400 shrink-0 w-36">{label}</span>
+      <span className="text-slate-500 dark:text-slate-400 shrink-0 w-36">{label}</span>
       <span className={`font-medium text-right ${valueClass}`}>{value}</span>
     </div>
   )
@@ -168,7 +168,7 @@ function StatusFilter({
   onChange: (v: 'all' | 'active' | 'inactive') => void
 }) {
   return (
-    <div className="flex p-1 bg-slate-800/60 rounded-lg border border-slate-700/40 gap-0.5">
+    <div className="flex p-1 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700/40 gap-0.5">
       {(['all', 'active', 'inactive'] as const).map(opt => (
         <button
           key={opt}
@@ -176,11 +176,11 @@ function StatusFilter({
           className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
             value === opt
               ? opt === 'active'
-                ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
+                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shadow-sm font-semibold'
                 : opt === 'inactive'
-                ? 'bg-red-500/20 text-red-300 shadow-sm'
-                : 'bg-slate-700 text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-red-500/20 text-red-700 dark:text-red-300 shadow-sm font-semibold'
+                : 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-semibold border border-slate-200/80 dark:border-transparent'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           {opt === 'all' ? 'All' : opt === 'active' ? 'Active' : 'Inactive'}
@@ -413,8 +413,9 @@ export default function UsersPage() {
             <div>
               <h2 className="text-base font-bold text-[var(--color-text)]">Admin & Treasurer Accounts</h2>
               {!loading && (
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {staff.length} Staff Account{staff.length !== 1 ? 's' : ''} &bull; {activeStaff} Active
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {staff.length} Staff Account{staff.length !== 1 ? 's' : ''} &bull;{' '}
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{activeStaff} Active</span>
                 </p>
               )}
             </div>
@@ -423,7 +424,7 @@ export default function UsersPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Staff Search */}
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 value={staffSearch}
@@ -453,10 +454,10 @@ export default function UsersPage() {
         {showStaffForm && (
           <form onSubmit={createStaffUser} className="card p-6 animate-fade-in border border-violet-500/20" id="create-staff-form">
             <div className="flex items-center gap-2 mb-5">
-              <Shield size={16} className="text-violet-400" />
+              <Shield size={16} className="text-violet-500" />
               <h3 className="font-semibold text-[var(--color-text)] text-[15px]">Add Staff Account</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4 -mt-2">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 -mt-2">
               Creates an Administrator or Treasurer account with immediate system access.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -506,7 +507,7 @@ export default function UsersPage() {
               </div>
             </div>
             {staffError && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mt-4">
+              <div className="bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl mt-4">
                 {staffError}
               </div>
             )}
@@ -538,8 +539,8 @@ export default function UsersPage() {
               ) : filteredStaff.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-12">
-                    <ShieldCheck size={36} className="mx-auto mb-3 text-slate-600" />
-                    <p className="text-slate-400 text-sm">No staff accounts found</p>
+                    <ShieldCheck size={36} className="mx-auto mb-3 text-slate-400 dark:text-slate-600" />
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">No staff accounts found</p>
                   </td>
                 </tr>
               ) : filteredStaff.map(u => (
@@ -549,8 +550,8 @@ export default function UsersPage() {
                     <div className="flex items-center gap-3">
                       <Avatar user={u} />
                       <div>
-                        <p className="font-semibold">{u.full_name}</p>
-                        <p className="text-xs text-slate-400">{u.email}</p>
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">{u.full_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
                       </div>
                     </div>
                   </td>
@@ -561,7 +562,7 @@ export default function UsersPage() {
                       value={u.role}
                       onChange={e => updateStaffRole(u.id, e.target.value)}
                       disabled={currentUser?.id === u.id}
-                      className={`border-0 rounded-lg px-3 py-1 text-xs font-semibold cursor-pointer ${ROLE_COLORS[u.role] ?? 'bg-slate-700'} disabled:opacity-70 disabled:cursor-not-allowed`}
+                      className={`border rounded-lg px-3 py-1 text-xs font-semibold cursor-pointer ${ROLE_COLORS[u.role] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200'} disabled:opacity-70 disabled:cursor-not-allowed`}
                     >
                       <option value="admin">Administrator</option>
                       <option value="treasurer">Treasurer</option>
@@ -570,20 +571,20 @@ export default function UsersPage() {
 
                   {/* Status */}
                   <td>
-                    <span className={`badge ${u.is_active ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/15 text-red-400 border border-red-500/30'}`}>
+                    <span className={`badge ${u.is_active ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30' : 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30'}`}>
                       {u.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
 
                   {/* Added On */}
-                  <td className="text-slate-400 text-xs">{format(new Date(u.created_at), 'MMM d, yyyy')}</td>
+                  <td className="text-slate-500 dark:text-slate-400 text-xs">{format(new Date(u.created_at), 'MMM d, yyyy')}</td>
 
                   {/* Actions */}
                   <td>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => toggleActive(u.id, u.is_active, false)}
-                        className={`transition-colors ${u.is_active ? 'text-emerald-500 hover:text-emerald-300' : 'text-red-500 hover:text-red-300'}`}
+                        className={`transition-colors ${u.is_active ? 'text-emerald-600 hover:text-emerald-500' : 'text-red-600 hover:text-red-500'}`}
                         title={u.is_active ? 'Deactivate' : 'Activate'}
                         disabled={currentUser?.id === u.id}
                       >
@@ -592,7 +593,7 @@ export default function UsersPage() {
                       {currentUser?.id !== u.id && (
                         <button
                           onClick={() => deleteUser(u.id, u.full_name, false)}
-                          className="text-slate-500 hover:text-red-400 transition-colors"
+                          className="text-slate-400 hover:text-red-500 transition-colors"
                           title="Delete Staff Account"
                         >
                           <Trash2 size={17} />
@@ -616,16 +617,16 @@ export default function UsersPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <Users size={18} className="text-emerald-400" />
+              <Users size={18} className="text-emerald-500" />
             </div>
             <div>
               <h2 className="text-base font-bold text-[var(--color-text)]">Resident Accounts</h2>
               {!loading && (
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   {residents.length} Resident Account{residents.length !== 1 ? 's' : ''} &bull;{' '}
-                  <span className="text-emerald-400">{activeResidents} Active</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{activeResidents} Active</span>
                   {inactiveResidents > 0 && (
-                    <> &bull; <span className="text-red-400">{inactiveResidents} Inactive</span></>
+                    <> &bull; <span className="text-red-600 dark:text-red-400 font-semibold">{inactiveResidents} Inactive</span></>
                   )}
                 </p>
               )}
@@ -635,7 +636,7 @@ export default function UsersPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Resident Search */}
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 value={residentSearch}
@@ -652,11 +653,11 @@ export default function UsersPage() {
         </div>
 
         {/* Info Notice */}
-        <div className="flex items-start gap-3 bg-slate-800/40 border border-slate-700/40 rounded-xl px-4 py-3 text-xs text-slate-400">
-          <Info size={14} className="text-blue-400 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 bg-blue-50 dark:bg-slate-800/40 border border-blue-200 dark:border-slate-700/40 rounded-xl px-4 py-3 text-xs text-slate-700 dark:text-slate-300">
+          <Info size={14} className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
           <span>
             Resident accounts are created through the{' '}
-            <strong className="text-slate-300">Resident Registration / Sign-Up system</strong>,
+            <strong className="text-slate-900 dark:text-white font-semibold">Resident Registration / Sign-Up system</strong>,
             not manually through the Staff Account form. Manage existing resident accounts below.
           </span>
         </div>
@@ -678,8 +679,8 @@ export default function UsersPage() {
               ) : pagedResidents.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12">
-                    <User size={36} className="mx-auto mb-3 text-slate-600" />
-                    <p className="text-slate-400 text-sm">
+                    <User size={36} className="mx-auto mb-3 text-slate-400 dark:text-slate-600" />
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">
                       {residentSearch || residentStatusFilter !== 'all'
                         ? 'No residents match your filters'
                         : 'No resident accounts found'}
@@ -692,29 +693,29 @@ export default function UsersPage() {
                   <td className="font-medium text-[var(--color-text)]">
                     <div className="flex items-center gap-3">
                       <Avatar user={u} />
-                      <span className="font-semibold">{u.full_name}</span>
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{u.full_name}</span>
                     </div>
                   </td>
 
                   {/* Contact Number */}
-                  <td className="text-slate-300 text-sm">
-                    {u.contact_number || <span className="text-slate-500">—</span>}
+                  <td className="text-slate-700 dark:text-slate-300 text-sm">
+                    {u.contact_number || <span className="text-slate-400 dark:text-slate-500">—</span>}
                   </td>
 
                   {/* Email */}
-                  <td className="text-slate-300 text-sm">
-                    {u.email || <span className="text-slate-500">—</span>}
+                  <td className="text-slate-700 dark:text-slate-300 text-sm">
+                    {u.email || <span className="text-slate-400 dark:text-slate-500">—</span>}
                   </td>
 
                   {/* Status */}
                   <td>
-                    <span className={`badge ${u.is_active ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/15 text-red-400 border border-red-500/30'}`}>
+                    <span className={`badge ${u.is_active ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30' : 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30'}`}>
                       {u.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
 
                   {/* Registered On */}
-                  <td className="text-slate-400 text-xs">{format(new Date(u.created_at), 'MMM d, yyyy')}</td>
+                  <td className="text-slate-500 dark:text-slate-400 text-xs">{format(new Date(u.created_at), 'MMM d, yyyy')}</td>
 
                   {/* Actions */}
                   <td>
@@ -722,7 +723,7 @@ export default function UsersPage() {
                       {/* View Profile */}
                       <button
                         onClick={() => setViewingResident(u)}
-                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                         title="View Profile"
                       >
                         <Eye size={17} />
@@ -731,7 +732,7 @@ export default function UsersPage() {
                       {/* Toggle Active */}
                       <button
                         onClick={() => toggleActive(u.id, u.is_active, true)}
-                        className={`transition-colors ${u.is_active ? 'text-emerald-500 hover:text-emerald-300' : 'text-red-500 hover:text-red-300'}`}
+                        className={`transition-colors ${u.is_active ? 'text-emerald-600 hover:text-emerald-500' : 'text-red-600 hover:text-red-500'}`}
                         title={u.is_active ? 'Deactivate Resident' : 'Activate Resident'}
                       >
                         {u.is_active ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
@@ -740,7 +741,7 @@ export default function UsersPage() {
                       {/* Delete */}
                       <button
                         onClick={() => deleteUser(u.id, u.full_name, true)}
-                        className="text-slate-500 hover:text-red-400 transition-colors"
+                        className="text-slate-400 hover:text-red-500 transition-colors"
                         title="Delete Resident Account"
                       >
                         <Trash2 size={17} />
@@ -756,7 +757,7 @@ export default function UsersPage() {
 
         {/* Pagination */}
         {!loading && filteredResidents.length > RESIDENTS_PER_PAGE && (
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>
               Showing {((residentPage - 1) * RESIDENTS_PER_PAGE) + 1}–{Math.min(residentPage * RESIDENTS_PER_PAGE, filteredResidents.length)} of {filteredResidents.length} residents
             </span>
@@ -764,7 +765,7 @@ export default function UsersPage() {
               <button
                 onClick={() => setResidentPage(p => Math.max(1, p - 1))}
                 disabled={residentPage === 1}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700/50 disabled:opacity-40 hover:bg-slate-700 transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               >
                 <ChevronLeft size={14} /> Prev
               </button>
@@ -774,8 +775,8 @@ export default function UsersPage() {
                   onClick={() => setResidentPage(p)}
                   className={`w-8 h-8 rounded-lg border text-xs font-medium transition-colors ${
                     p === residentPage
-                      ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'bg-slate-800 border-slate-700/50 hover:bg-slate-700 text-slate-300'
+                      ? 'bg-blue-600 border-blue-500 text-white font-bold'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   {p}
@@ -784,7 +785,7 @@ export default function UsersPage() {
               <button
                 onClick={() => setResidentPage(p => Math.min(totalResidentPages, p + 1))}
                 disabled={residentPage === totalResidentPages}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700/50 disabled:opacity-40 hover:bg-slate-700 transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               >
                 Next <ChevronRight size={14} />
               </button>

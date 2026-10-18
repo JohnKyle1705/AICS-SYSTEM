@@ -1003,13 +1003,13 @@ export default function NewRequestPage() {
 
   if (isUnregistered) {
     return (
-      <div className="max-w-lg mx-auto my-14 card p-8 sm:p-10 text-center space-y-6 bg-slate-900/90 border border-slate-800 shadow-2xl rounded-2xl animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+      <div className="max-w-lg mx-auto my-14 card p-8 sm:p-10 text-center space-y-6 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl animate-fade-in">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-500 dark:text-amber-400 flex items-center justify-center mx-auto shadow-inner">
           <ShieldAlert size={36} />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">Beneficiary Registration Required</h2>
-          <p className="text-slate-300 text-sm leading-relaxed max-w-md mx-auto">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Beneficiary Registration Required</h2>
+          <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed max-w-md mx-auto">
             You must complete your beneficiary registration before submitting an AICS request.
           </p>
         </div>
@@ -1017,7 +1017,7 @@ export default function NewRequestPage() {
           <Link href="/beneficiaries/new" className="btn btn-primary px-7 py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 text-center">
             Complete Registration
           </Link>
-          <Link href="/resident/dashboard" className="px-6 py-3 rounded-xl text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 text-sm font-semibold transition-colors text-center border border-slate-700/50">
+          <Link href="/resident/dashboard" className="px-6 py-3 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-sm font-semibold transition-colors text-center border border-slate-200 dark:border-slate-700/50">
             Back to Dashboard
           </Link>
         </div>

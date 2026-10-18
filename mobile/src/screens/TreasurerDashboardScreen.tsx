@@ -12,10 +12,10 @@ import { format } from 'date-fns'
 
 const RELEASE_STATUSES = ['Pending Release', 'Ready for Release', 'Released']
 
-const STATUS_STYLE: Record<string, { bg: string; text: string; icon: string }> = {
-  'Released':          { bg: '#d1fae5', text: '#065f46', icon: 'check-circle' },
-  'Ready for Release': { bg: '#fef3c7', text: '#92400e', icon: 'clock'        },
-  'Pending Release':   { bg: '#f1f5f9', text: '#475569', icon: 'loader'       },
+const STATUS_STYLE: Record<string, { bg: string; text: string; darkBg: string; darkText: string; icon: string }> = {
+  'Released':          { bg: '#d1fae5', text: '#065f46', darkBg: 'rgba(16, 185, 129, 0.2)',  darkText: '#34d399', icon: 'check-circle' },
+  'Ready for Release': { bg: '#fef3c7', text: '#92400e', darkBg: 'rgba(245, 158, 11, 0.2)',  darkText: '#fbbf24', icon: 'clock'        },
+  'Pending Release':   { bg: '#f1f5f9', text: '#334155', darkBg: '#1e293b',                  darkText: '#94a3b8', icon: 'loader'       },
 }
 
 const FILTER_TABS = ['All', 'Pending Release', 'Ready for Release', 'Released']
@@ -605,8 +605,8 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
             </TouchableOpacity>
             <Text style={s.barangay}>Brgy. {r.beneficiaries?.barangay || '—'}</Text>
           </View>
-          <View style={[s.statusBadge, { backgroundColor: isDark ? '#1e293b' : st.bg }]}>
-            <Text style={[s.statusText, { color: isDark ? '#94a3b8' : st.text }]}>{rStatus}</Text>
+          <View style={[s.statusBadge, { backgroundColor: isDark ? st.darkBg : st.bg }]}>
+            <Text style={[s.statusText, { color: isDark ? st.darkText : st.text }]}>{rStatus}</Text>
           </View>
         </View>
 

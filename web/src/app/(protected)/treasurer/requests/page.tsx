@@ -566,69 +566,69 @@ export default function TreasurerRequestsPage() {
             <div className="mt-4 space-y-4 text-sm">
               {/* Beneficiary Header */}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[var(--color-border)]">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Beneficiary Profile</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">Beneficiary Profile</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                   <div>
-                    <span className="text-slate-400 block">Name:</span>
-                    <strong className="text-slate-800 dark:text-white">
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Name:</span>
+                    <strong className="text-slate-900 dark:text-white">
                       {drawerRequest.beneficiaries?.last_name}, {drawerRequest.beneficiaries?.first_name} {drawerRequest.beneficiaries?.middle_name || ''}
                     </strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Barangay:</span>
-                    <strong className="text-slate-800 dark:text-white">{drawerRequest.beneficiaries?.barangay || '—'}</strong>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Barangay:</span>
+                    <strong className="text-slate-900 dark:text-white">{drawerRequest.beneficiaries?.barangay || '—'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Contact:</span>
-                    <strong className="text-slate-800 dark:text-white">{drawerRequest.beneficiaries?.contact_number || '—'}</strong>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Contact:</span>
+                    <strong className="text-slate-900 dark:text-white">{drawerRequest.beneficiaries?.contact_number || '—'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Civil Status:</span>
-                    <strong className="text-slate-800 dark:text-white">{drawerRequest.beneficiaries?.civil_status || '—'}</strong>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Civil Status:</span>
+                    <strong className="text-slate-900 dark:text-white">{drawerRequest.beneficiaries?.civil_status || '—'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Sex:</span>
-                    <strong className="text-slate-800 dark:text-white">{drawerRequest.beneficiaries?.sex || '—'}</strong>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Sex:</span>
+                    <strong className="text-slate-900 dark:text-white">{drawerRequest.beneficiaries?.sex || '—'}</strong>
                   </div>
                 </div>
               </div>
 
               {/* Assistance Details */}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[var(--color-border)]">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Assistance & Financial Details</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">Assistance & Financial Details</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                   <div>
-                    <span className="text-slate-400 block">Assistance Type:</span>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Assistance Type:</span>
                     <strong className="text-blue-600 dark:text-blue-400">{drawerRequest.assistance_type}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Amount Requested:</span>
-                    <strong>₱{Number(drawerRequest.amount_requested || 0).toLocaleString()}</strong>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Amount Requested:</span>
+                    <strong className="text-slate-900 dark:text-white">₱{Number(drawerRequest.amount_requested || 0).toLocaleString()}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Amount Approved:</span>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Amount Approved:</span>
                     <strong className="text-emerald-600 dark:text-emerald-400 text-sm">₱{Number(drawerRequest.amount_approved || 0).toLocaleString()}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Release Status:</span>
-                    <strong className="text-amber-600">{drawerRequest.release_status || 'Pending Release'}</strong>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Release Status:</span>
+                    <strong className="text-amber-600 dark:text-amber-400">{drawerRequest.release_status || 'Pending Release'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Voucher Number:</span>
-                    <strong className="font-mono">{drawerRequest.voucher_number || drawerRequest.extra_fields?.voucher_number || '—'}</strong>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Voucher Number:</span>
+                    <strong className="font-mono text-slate-900 dark:text-white">{drawerRequest.voucher_number || drawerRequest.extra_fields?.voucher_number || '—'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Check Number:</span>
-                    <strong className="font-mono">{drawerRequest.check_number || drawerRequest.extra_fields?.check_number || '—'}</strong>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Check Number:</span>
+                    <strong className="font-mono text-slate-900 dark:text-white">{drawerRequest.check_number || drawerRequest.extra_fields?.check_number || '—'}</strong>
                   </div>
                   <div className="col-span-2 sm:col-span-3">
-                    <span className="text-slate-400 block">Purpose / Crisis Need:</span>
-                    <p className="text-slate-700 dark:text-slate-300 mt-0.5">{drawerRequest.purpose}</p>
+                    <span className="text-slate-600 dark:text-slate-400 block font-medium">Purpose / Crisis Need:</span>
+                    <p className="text-slate-800 dark:text-slate-200 mt-0.5">{drawerRequest.purpose}</p>
                   </div>
                   {drawerRequest.remarks && (
                     <div className="col-span-2 sm:col-span-3">
-                      <span className="text-slate-400 block">Admin Approval Notes:</span>
-                      <p className="text-slate-700 dark:text-slate-300 mt-0.5 italic">{drawerRequest.remarks}</p>
+                      <span className="text-slate-600 dark:text-slate-400 block font-medium">Admin Approval Notes:</span>
+                      <p className="text-slate-800 dark:text-slate-200 mt-0.5 italic">{drawerRequest.remarks}</p>
                     </div>
                   )}
                 </div>
@@ -636,7 +636,7 @@ export default function TreasurerRequestsPage() {
 
               {/* Attached Requirements */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Attached Proof & Requirements</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">Attached Proof & Requirements</h4>
                 {loadingDocs ? (
                   <div className="skeleton h-12 w-full" />
                 ) : drawerDocs.length === 0 ? (

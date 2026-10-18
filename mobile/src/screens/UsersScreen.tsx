@@ -475,7 +475,9 @@ export default function UsersScreen() {
   // ── Staff Card ─────────────────────────────────────────────────────────
   const renderStaffCard = ({ item }: { item: StaffUser }) => {
     const isProcessing = processingId === item.id
-    const roleColor = item.role === 'admin' ? '#a78bfa' : '#fbbf24'
+    const roleColor = item.role === 'admin'
+      ? (isDark ? '#a78bfa' : '#6d28d9')
+      : (isDark ? '#fbbf24' : '#b45309')
     const roleLabel = item.role === 'admin' ? 'Administrator' : 'Treasurer'
     const avatarColor = item.role === 'admin' ? '#6d28d9' : '#b45309'
 
@@ -641,7 +643,7 @@ export default function UsersScreen() {
               icon="shield"
               title="Admin & Treasurer Accounts"
               subtitle={`${staff.length} Staff Account${staff.length !== 1 ? 's' : ''} · ${activeStaff} Active`}
-              accentColor="#a78bfa"
+              accentColor={isDark ? '#a78bfa' : '#6d28d9'}
               isDark={isDark}
             />
 
@@ -690,7 +692,7 @@ export default function UsersScreen() {
                 `${residents.length} Resident${residents.length !== 1 ? 's' : ''} · ${activeResidents} Active` +
                 (inactiveResidents > 0 ? ` · ${inactiveResidents} Inactive` : '')
               }
-              accentColor="#34d399"
+              accentColor={isDark ? '#34d399' : '#059669'}
               isDark={isDark}
             />
 
@@ -832,8 +834,8 @@ export default function UsersScreen() {
               <Text style={[styles.fieldLabel, { color: textSecondary }]}>Role *</Text>
               <View style={styles.rolePickerRow}>
                 {[
-                  { value: 'admin', label: 'Administrator', color: '#a78bfa', bg: '#a78bfa20' },
-                  { value: 'treasurer', label: 'Treasurer', color: '#fbbf24', bg: '#fbbf2420' },
+                  { value: 'admin', label: 'Administrator', color: isDark ? '#a78bfa' : '#6d28d9', bg: isDark ? '#a78bfa20' : '#f5f3ff' },
+                  { value: 'treasurer', label: 'Treasurer', color: isDark ? '#fbbf24' : '#b45309', bg: isDark ? '#fbbf2420' : '#fffbeb' },
                 ].map(opt => (
                   <TouchableOpacity
                     key={opt.value}
@@ -895,8 +897,8 @@ export default function UsersScreen() {
                   <AvatarBubble name={viewingResident.full_name} color="#0369a1" />
                   <View>
                     <Text style={[styles.modalTitle, { color: textPrimary }]}>{viewingResident.full_name}</Text>
-                    <View style={[styles.roleBadge, { backgroundColor: '#34d39920', borderColor: '#34d39940', alignSelf: 'flex-start' }]}>
-                      <Text style={[styles.roleBadgeText, { color: '#34d399' }]}>Resident</Text>
+                    <View style={[styles.roleBadge, { backgroundColor: isDark ? '#34d39920' : '#ecfdf5', borderColor: isDark ? '#34d39940' : '#a7f3d0', alignSelf: 'flex-start' }]}>
+                      <Text style={[styles.roleBadgeText, { color: isDark ? '#34d399' : '#047857' }]}>Resident</Text>
                     </View>
                   </View>
                 </View>

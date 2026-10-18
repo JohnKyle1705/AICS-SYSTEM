@@ -89,14 +89,14 @@ export default function ResidentDashboard() {
 
       {/* ── Registration Card ────────────────────────────────────── */}
       {!hasBeneficiaryRecord && !loading && (
-        <div className="bg-slate-900/90 dark:bg-[#0c1322] border border-slate-800/90 rounded-2xl p-6 sm:p-7 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 transition-all">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-slate-900 dark:to-[#0c1322] border border-blue-500/30 dark:border-slate-800/90 rounded-2xl p-6 sm:p-7 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 transition-all">
           <div className="flex items-center gap-4 sm:gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-slate-800/90 border border-slate-700/60 flex items-center justify-center shrink-0 text-slate-300 shadow-inner">
-              <Users size={28} className="text-slate-300" />
+            <div className="w-14 h-14 rounded-2xl bg-white/15 dark:bg-slate-800/90 border border-white/20 dark:border-slate-700/60 flex items-center justify-center shrink-0 text-white dark:text-slate-300 shadow-inner">
+              <Users size={28} className="text-white dark:text-slate-300" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-white mb-1">Complete Your Registration</h2>
-              <p className="text-slate-400 text-sm leading-relaxed max-w-xl">
+              <p className="text-blue-100 dark:text-slate-400 text-sm leading-relaxed max-w-xl">
                 Please complete your beneficiary registration to unlock AICS request capabilities.
               </p>
             </div>
@@ -112,20 +112,20 @@ export default function ResidentDashboard() {
 
       {/* ── Verified Card (Replaces Registration Warning) ──────── */}
       {hasBeneficiaryRecord && !loading && (
-        <div className="bg-emerald-950/20 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all shadow-lg">
+        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all shadow-lg">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 size={24} />
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h3 className="font-bold text-white text-base">Beneficiary Registration Verified</h3>
-                <span className="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md">
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">Beneficiary Registration Verified</h3>
+                <span className="badge bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md">
                   Verified
                 </span>
               </div>
-              <p className="text-slate-400 text-xs mt-1">
-                Profile registered for <span className="text-slate-200 font-medium">{beneficiary?.first_name} {beneficiary?.last_name}</span> ({beneficiary?.barangay}) · Ready for Medical &amp; Burial assistance requests.
+              <p className="text-slate-600 dark:text-slate-400 text-xs mt-1">
+                Profile registered for <span className="text-slate-900 dark:text-slate-200 font-semibold">{beneficiary?.first_name} {beneficiary?.last_name}</span> ({beneficiary?.barangay}) · Ready for Medical &amp; Burial assistance requests.
               </p>
             </div>
           </div>
@@ -338,17 +338,17 @@ export default function ResidentDashboard() {
         >
           <div className="min-h-full flex items-center justify-center py-4">
             <div 
-              className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 animate-scale-in my-auto"
+              className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 animate-scale-in my-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0">
                   <AlertTriangle size={24} />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowRegModal(false)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
                   aria-label="Close"
                 >
                   <X size={18} />
@@ -356,8 +356,8 @@ export default function ResidentDashboard() {
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white">Beneficiary Registration Required</h3>
-                <p className="text-slate-300 text-sm leading-relaxed">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Beneficiary Registration Required</h3>
+                <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
                   You must complete your beneficiary registration before submitting an AICS request.
                 </p>
               </div>
@@ -372,7 +372,7 @@ export default function ResidentDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowRegModal(false)}
-                  className="w-full py-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 text-sm font-medium transition-colors cursor-pointer"
+                  className="w-full py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-sm font-medium transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>

@@ -388,24 +388,24 @@ function RequestsContent() {
                 {/* Assistance Type & Financial details */}
                 <div className="grid grid-cols-2 gap-2 text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-[var(--color-border)]">
                   <div>
-                    <span className="text-slate-400 text-[10px] block uppercase font-medium">Assistance Type</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[10px] block uppercase font-medium">Assistance Type</span>
                     <span className="font-semibold text-blue-600 dark:text-blue-400">{r.assistance_type} Assistance</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] block uppercase font-medium">Date Submitted</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[10px] block uppercase font-medium">Date Submitted</span>
                     <span className="text-[var(--color-text)] font-medium">{format(new Date(r.created_at), 'MMM d, yyyy')}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] block uppercase font-medium">Requested Amount</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[10px] block uppercase font-medium">Requested Amount</span>
                     <span className="text-[var(--color-text)] font-medium">{requestedAmt}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] block uppercase font-medium">Approved Amount</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[10px] block uppercase font-medium">Approved Amount</span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">{approvedAmt}</span>
                   </div>
                   {releaseDate !== '—' && (
                     <div className="col-span-2 pt-1 border-t border-[var(--color-border)] flex items-center justify-between">
-                      <span className="text-slate-400 text-[10px] uppercase font-medium">Release Date:</span>
+                      <span className="text-slate-600 dark:text-slate-400 text-[10px] uppercase font-medium">Release Date:</span>
                       <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-xs">{releaseDate}</span>
                     </div>
                   )}
@@ -531,12 +531,12 @@ function RequestsContent() {
                             {approvedAmt}
                           </span>
                         ) : (
-                          <span className="text-slate-400 text-xs">—</span>
+                          <span className="text-slate-400 dark:text-slate-500 text-xs">—</span>
                         )}
                       </td>
 
                       {/* Date Submitted */}
-                      <td className="text-slate-500 text-xs">
+                      <td className="text-slate-600 dark:text-slate-400 text-xs">
                         {format(new Date(r.created_at), 'MMM d, yyyy')}
                       </td>
 
