@@ -9,7 +9,8 @@ import {
   Search, FileText, CheckCircle2, AlertCircle, Briefcase,
   ArrowDownRight, PieChart, BookOpen, CreditCard, X, Info,
   TrendingUp, Filter, RotateCcw, Send, CheckCircle, BarChart2,
-  ScrollText, Wallet, Clock, ArrowUpRight, Plus, RefreshCw, XCircle
+  ScrollText, Wallet, Clock, ArrowUpRight, Plus, RefreshCw, XCircle,
+  ClipboardList, ChevronRight
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -37,6 +38,7 @@ export default function TreasurerDashboardPage() {
   const [loading, setLoading]             = useState(true)
   const [profile, setProfile]             = useState<any>(null)
   const [pendingCount, setPendingCount]   = useState(0)
+  const [totalRequestsCount, setTotalRequestsCount] = useState(0)
 
   const [activeCard, setActiveCard]       = useState<ActiveCard>(null)
   const [activeFund, setActiveFund]       = useState<ActiveFund>(null)
@@ -90,6 +92,12 @@ export default function TreasurerDashboardPage() {
       .eq('status', 'Approved')
       .or('release_status.is.null,release_status.neq.Released')
     setPendingCount(count ?? 0)
+
+    // Total requests across all statuses for financial monitoring
+    const { count: totalReqs } = await supabase
+      .from('requests')
+      .select('*', { count: 'exact', head: true })
+    setTotalRequestsCount(totalReqs ?? 0)
 
     // Recent fund transactions
     const { data: txData } = await supabase
@@ -366,6 +374,11 @@ export default function TreasurerDashboardPage() {
 
         {/* ── Quick Action Buttons ──────────────────────────────────── */}
         <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/requests"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 shadow-sm transition-colors">
+            <ClipboardList size={14} />
+            All Requests
+          </Link>
           <Link href="/payouts"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-colors">
             <CreditCard size={14} />
@@ -545,27 +558,26 @@ export default function TreasurerDashboardPage() {
           <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Waiting for Voucher/Release</span>
         </button>
 
-        {/* 6. Approved Assistance Requests */}
-        <button
-          id="card-total-approved"
-          onClick={() => handleCardClick('approved')}
+        {/* 6. Total Requests */}
+        <Link
+          href="/requests"
+          id="card-total-requests"
           style={{ textAlign: 'left' }}
           className={[
-            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-violet-400',
+            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-violet-400 block',
             'bg-violet-50/70 dark:bg-violet-950/40 border-violet-100 dark:border-violet-900/50',
-            activeCard === 'approved'
-              ? 'ring-2 ring-violet-500 scale-[1.02] shadow-lg shadow-violet-500/20'
-              : 'hover:scale-[1.015] hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700',
+            'hover:scale-[1.015] hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700',
           ].join(' ')}
-          aria-pressed={activeCard === 'approved'}
         >
           <div className="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center mb-2.5 group-hover:bg-violet-200 transition-colors">
-            <FileText size={16} className="text-violet-600 dark:text-violet-400" />
+            <ClipboardList size={16} className="text-violet-600 dark:text-violet-400" />
           </div>
-          <p className="text-xl font-extrabold text-violet-700 dark:text-violet-300">{requests.length}</p>
-          <p className="text-[11px] font-semibold text-violet-600/80 dark:text-violet-400/80 mt-0.5">Approved Requests</p>
-          <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Admin Approved AICS</span>
-        </button>
+          <p className="text-xl font-extrabold text-violet-700 dark:text-violet-300">{totalRequestsCount}</p>
+          <p className="text-[11px] font-semibold text-violet-600/80 dark:text-violet-400/80 mt-0.5">Total Requests</p>
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-0.5 group-hover:text-violet-600 transition-colors font-medium">
+            View All Requests <ChevronRight size={10} />
+          </span>
+        </Link>
 
       </div>
 

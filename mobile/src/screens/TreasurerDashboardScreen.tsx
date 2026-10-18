@@ -33,6 +33,7 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
   const [refreshing, setRefreshing]     = useState(false)
   const [profile, setProfile]           = useState<any>(null)
   const [pendingCount, setPendingCount] = useState(0)
+  const [totalRequestsCount, setTotalRequestsCount] = useState(0)
   const [activeCard, setActiveCard]     = useState<ActiveCard>(null)
   const [activeFund, setActiveFund]     = useState<string | null>(null)
 
@@ -85,6 +86,11 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
       .eq('status', 'Approved')
       .or('release_status.is.null,release_status.neq.Released')
     setPendingCount(count ?? 0)
+
+    // Total requests across all statuses
+    const { count: totalReqs } = await supabase.from('requests')
+      .select('*', { count: 'exact', head: true })
+    setTotalRequestsCount(totalReqs ?? 0)
 
     // Recent transactions
     const { data: txData } = await supabase
@@ -450,23 +456,27 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
           <Text style={s.statLabel}>Pending</Text>
         </TouchableOpacity>
 
-        {/* 6. Approved Requests */}
+        {/* 6. Total Requests */}
         <TouchableOpacity
-          style={[s.statCard, { backgroundColor: isDark ? '#3b0764' : '#faf5ff' }, activeCard === 'approved' && s.statCardActive]}
-          onPress={() => handleCardClick('approved')}
+          style={[s.statCard, { backgroundColor: isDark ? '#3b0764' : '#faf5ff' }]}
+          onPress={() => navigation.navigate('Requests', { statusFilter: 'All' })}
           activeOpacity={0.75}
         >
           <View style={[s.statIcon, { backgroundColor: isDark ? '#6b21a8' : '#f3e8ff' }]}>
-            <Feather name="file-text" size={14} color="#9333ea" />
+            <Feather name="clipboard" size={14} color="#9333ea" />
           </View>
-          <Text style={[s.statValue, { color: '#9333ea' }]}>{requests.length}</Text>
-          <Text style={s.statLabel}>Approved</Text>
+          <Text style={[s.statValue, { color: '#9333ea' }]}>{totalRequestsCount}</Text>
+          <Text style={s.statLabel}>Total Requests</Text>
         </TouchableOpacity>
 
       </View>
 
       {/* ── Quick Actions ───────────────────────────── */}
       <View style={s.quickActions}>
+        <TouchableOpacity style={[s.actionBtn, { backgroundColor: '#7c3aed' }]} onPress={() => navigation.navigate('Requests', { statusFilter: 'All' })} activeOpacity={0.8}>
+          <Feather name="clipboard" size={14} color="#fff" />
+          <Text style={s.actionBtnText}>All Requests</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={s.actionBtn} onPress={() => navigation.navigate('FundsDashboard')} activeOpacity={0.8}>
           <Feather name="pie-chart" size={14} color="#fff" />
           <Text style={s.actionBtnText}>Funds</Text>

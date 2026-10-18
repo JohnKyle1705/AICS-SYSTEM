@@ -7,7 +7,7 @@ import { ASSISTANCE_TYPES, BARANGAYS } from '@/lib/constants'
 import {
   Search, FileText, CheckCircle, AlertCircle, Clock, RotateCcw,
   Filter, Download, ChevronRight, X, ArrowUpDown, Banknote,
-  Calendar, Eye, XCircle, CheckCircle2, User, Phone, MapPin, Building
+  Calendar, Eye, XCircle, CheckCircle2, User, Phone, MapPin, Building, ClipboardList
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -31,6 +31,7 @@ export default function TreasurerRequestsPage() {
   const [dateTo, setDateTo]               = useState('')
   const [sortBy, setSortBy]               = useState<'date' | 'amount'>('date')
   const [sortOrder, setSortOrder]         = useState<'asc' | 'desc'>('desc')
+  const [statusFilter, setStatusFilter]   = useState('')
   const [profile, setProfile]             = useState<any>(null)
 
   // Voucher modal state
@@ -61,15 +62,23 @@ export default function TreasurerRequestsPage() {
       if (p?.full_name) setDisbursingOfficer(p.full_name)
     }
 
-    const { data } = await supabase
+    let query = supabase
       .from('requests')
-      .select('*, beneficiaries(*)')
-      .eq('status', 'Approved')
+      .select('*, beneficiaries(*), payouts(release_date, amount_released)')
       .order('created_at', { ascending: false })
+
+    if (statusFilter && statusFilter !== 'All') {
+      query = query.eq('status', statusFilter)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      console.error('Error fetching requests for treasurer:', error)
+    }
 
     setRequests(data ?? [])
     setLoading(false)
-  }, [profile])
+  }, [profile, statusFilter])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -248,6 +257,7 @@ export default function TreasurerRequestsPage() {
 
   const clearFilters = () => {
     setSearch('')
+    setStatusFilter('')
     setTypeFilter('')
     setReleaseFilter('')
     setBarangayFilter('')
@@ -255,7 +265,7 @@ export default function TreasurerRequestsPage() {
     setDateTo('')
   }
 
-  const hasFilter = !!(search || typeFilter || releaseFilter || barangayFilter || dateFrom || dateTo)
+  const hasFilter = !!(search || statusFilter || typeFilter || releaseFilter || barangayFilter || dateFrom || dateTo)
 
   return (
     <div className="space-y-6">
@@ -273,7 +283,14 @@ export default function TreasurerRequestsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href="/requests"
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors flex items-center gap-1.5 shadow-sm"
+          >
+            <ClipboardList size={14} />
+            All Requests Table
+          </Link>
           <Link
             href="/treasurer"
             className="px-3.5 py-2 rounded-xl text-xs font-semibold border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -307,7 +324,19 @@ export default function TreasurerRequestsPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-wrap">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 flex-wrap">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="form-input text-xs"
+            >
+              <option value="">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Released">Released</option>
+              <option value="Declined">Declined</option>
+            </select>
+
             <select
               value={releaseFilter}
               onChange={(e) => setReleaseFilter(e.target.value)}
@@ -469,7 +498,7 @@ export default function TreasurerRequestsPage() {
                           Details
                         </button>
 
-                        {rStatus !== 'Released' && (
+                        {r.status === 'Approved' && rStatus !== 'Released' && (
                           <button
                             onClick={() => openVoucherModal(r)}
                             title="Process Disbursement Voucher"
@@ -479,7 +508,7 @@ export default function TreasurerRequestsPage() {
                           </button>
                         )}
 
-                        {rStatus !== 'Released' && (
+                        {r.status === 'Approved' && rStatus !== 'Released' && (
                           <button
                             onClick={() => handleConfirmRelease(r)}
                             title="Confirm physical disbursement"
@@ -489,7 +518,7 @@ export default function TreasurerRequestsPage() {
                           </button>
                         )}
 
-                        {rStatus !== 'Released' && (
+                        {r.status === 'Approved' && rStatus !== 'Released' && (
                           <button
                             onClick={() => openReturnModal(r)}
                             title="Return request to Admin"
@@ -497,6 +526,18 @@ export default function TreasurerRequestsPage() {
                           >
                             Return
                           </button>
+                        )}
+
+                        {r.status === 'Pending' && (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20">
+                            Awaiting Admin
+                          </span>
+                        )}
+
+                        {r.status === 'Declined' && (
+                          <span className="text-[10px] text-red-500 font-medium px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/20">
+                            Declined by Admin
+                          </span>
                         )}
                       </div>
                     </td>

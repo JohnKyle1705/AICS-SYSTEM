@@ -209,7 +209,8 @@ export default function Sidebar() {
     ],
     treasurer: [
       { href: '/treasurer', label: t('nav_treasurerDashboard'), icon: LayoutDashboard },
-      { href: '/treasurer/requests', label: 'Approved Requests', icon: FileText },
+      { href: '/requests', label: t('nav_allRequests'), icon: ClipboardList },
+      { href: '/treasurer/requests', label: 'Approved Releases', icon: Banknote },
       { href: '/treasurer/funds', label: 'Fund Tracking', icon: Wallet },
       { href: '/treasurer/transactions', label: 'Financial Ledger', icon: ScrollText },
       { href: '/payouts', label: t('nav_payouts'), icon: Banknote },

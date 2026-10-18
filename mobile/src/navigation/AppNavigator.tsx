@@ -56,7 +56,7 @@ function TabNavigator() {
           let iconName: any = 'circle'
           if (route.name === 'Dashboard' || route.name === 'TreasurerDashboard') iconName = 'home'
           else if (route.name === 'Beneficiaries') iconName = 'users'
-          else if (route.name === 'Requests') iconName = 'file-text'
+          else if (route.name === 'Requests') iconName = profile?.role === 'treasurer' ? 'clipboard' : 'file-text'
           else if (route.name === 'Notifications') iconName = 'bell'
           else if (route.name === 'Users') iconName = 'shield'
           return <Feather name={iconName} size={size} color={color} />
@@ -88,7 +88,7 @@ function TabNavigator() {
           options={{ tabBarLabel: 'Beneficiaries' }} />
       )}
       <Tab.Screen name="Requests" component={RequestsScreen}
-        options={{ tabBarLabel: 'Requests' }} />
+        options={{ tabBarLabel: profile?.role === 'treasurer' ? 'All Requests' : 'Requests' }} />
       {profile?.role === 'admin' && (
         <Tab.Screen name="Users" component={UsersScreen}
           options={{ tabBarLabel: 'Users' }} />

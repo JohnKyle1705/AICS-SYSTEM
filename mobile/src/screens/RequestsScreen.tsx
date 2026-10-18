@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { Feather } from '@expo/vector-icons'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; darkBg: string; darkText: string }> = {
-  Pending: { bg: '#fef3c7', text: '#92400e', darkBg: '#3d3014', darkText: '#fbbf24' },
+  Pending:  { bg: '#fef3c7', text: '#92400e', darkBg: '#3d3014', darkText: '#fbbf24' },
   Approved: { bg: '#dbeafe', text: '#1e40af', darkBg: '#142c3d', darkText: '#60a5fa' },
   Released: { bg: '#d1fae5', text: '#065f46', darkBg: '#143d2c', darkText: '#34d399' },
   Declined: { bg: '#fee2e2', text: '#991b1b', darkBg: '#3d1414', darkText: '#f87171' },
@@ -17,6 +17,7 @@ export default function RequestsScreen({ route, navigation }: any) {
   const [requests, setRequests] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('All')
+  const [typeFilter, setTypeFilter] = useState<string>('All')
   const [loading, setLoading] = useState(true)
   const [userRole, setUserRole] = useState('')
   const { colors, isDark } = useTheme()
@@ -29,15 +30,15 @@ export default function RequestsScreen({ route, navigation }: any) {
     if (profile) setUserRole(profile.role)
 
     let query = supabase.from('requests')
-      .select('*, beneficiaries(first_name, last_name, barangay)')
+      .select('*, beneficiaries(first_name, last_name, barangay, contact_number), payouts(release_date, amount_released)')
       .order('created_at', { ascending: false })
 
-    if (statusFilter !== 'All') {
-      if (statusFilter === 'Approved') {
-        query = query.in('status', ['Approved', 'Released'])
-      } else {
-        query = query.eq('status', statusFilter)
-      }
+    if (statusFilter && statusFilter !== 'All') {
+      query = query.eq('status', statusFilter)
+    }
+
+    if (typeFilter && typeFilter !== 'All') {
+      query = query.eq('assistance_type', typeFilter)
     }
 
     if (profile?.role === 'resident') {
@@ -46,12 +47,19 @@ export default function RequestsScreen({ route, navigation }: any) {
 
     const { data } = await query
 
-    const filtered = search
-      ? (data ?? []).filter((r: any) => `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name}`.toLowerCase().includes(search.toLowerCase()))
+    const filtered = search.trim()
+      ? (data ?? []).filter((r: any) => {
+          const q = search.toLowerCase().trim()
+          const benName = `${r.beneficiaries?.first_name || ''} ${r.beneficiaries?.last_name || ''}`.toLowerCase()
+          const refNo = `ref-${(r.id || '').slice(0, 8)}`.toLowerCase()
+          const fullId = (r.id || '').toLowerCase()
+          const purpose = (r.purpose || '').toLowerCase()
+          return benName.includes(q) || refNo.includes(q) || fullId.includes(q) || purpose.includes(q)
+        })
       : (data ?? [])
     setRequests(filtered)
     setLoading(false)
-  }, [search, statusFilter])
+  }, [search, statusFilter, typeFilter])
 
   useEffect(() => { load() }, [load])
 
@@ -72,7 +80,6 @@ export default function RequestsScreen({ route, navigation }: any) {
   useEffect(() => {
     if (route.params?.statusFilter) {
       setStatusFilter(route.params.statusFilter)
-      // Clear the param so it doesn't force this filter continuously if navigated to normally
       navigation.setParams({ statusFilter: undefined })
     }
   }, [route.params?.statusFilter])
@@ -93,7 +100,6 @@ export default function RequestsScreen({ route, navigation }: any) {
               Alert.alert(t('error') || 'Error', error.message)
             } else {
               setRequests(prev => prev.filter(r => r.id !== id))
-              // Optional success toast/alert
             }
             setLoading(false)
           }
@@ -102,12 +108,24 @@ export default function RequestsScreen({ route, navigation }: any) {
     )
   }
 
-  const s = styles(colors)
+  const s = styles(colors, isDark)
+
+  const getScreenTitle = () => {
+    if (userRole === 'treasurer') return 'All Requests (Treasury)'
+    if (userRole === 'resident') return t('dashboard_myRequests') || 'My Requests'
+    return t('requests_title') || 'All Requests'
+  }
 
   return (
     <View style={s.container}>
+      {/* Header */}
       <View style={s.header}>
-        <Text style={s.title}>{t('requests_title')}</Text>
+        <View>
+          <Text style={s.title}>{getScreenTitle()}</Text>
+          <Text style={s.subtitle}>
+            {userRole === 'treasurer' ? 'Financial oversight & tracking' : `${requests.length} total records`}
+          </Text>
+        </View>
         {userRole === 'resident' && (
           <TouchableOpacity style={s.addBtn} onPress={() => navigation.navigate('RequestForm')} activeOpacity={0.8}>
             <Text style={s.addBtnText}>+ {t('requests_new')}</Text>
@@ -115,70 +133,148 @@ export default function RequestsScreen({ route, navigation }: any) {
         )}
       </View>
 
-      <TextInput style={s.search} placeholder={t('requests_search')} value={search}
-        onChangeText={setSearch} placeholderTextColor={colors.textSecondary} />
+      {/* Search Input */}
+      <TextInput
+        style={s.search}
+        placeholder="Search beneficiary, Ref #, ID..."
+        value={search}
+        onChangeText={setSearch}
+        placeholderTextColor={colors.textSecondary}
+      />
 
-      <View style={{ paddingBottom: 12 }}>
+      {/* Status Filter Chips */}
+      <View style={{ paddingBottom: 8 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
-          {['All', 'Pending', 'Approved', 'Released', 'Declined'].map(status => (
+          {['All', 'Pending', 'Approved', 'Released', 'Declined'].map(st => (
             <TouchableOpacity 
-              key={status} 
-              style={[s.filterChip, statusFilter === status && s.filterChipActive]}
-              onPress={() => setStatusFilter(status)}
+              key={st} 
+              style={[s.filterChip, statusFilter === st && s.filterChipActive]}
+              onPress={() => setStatusFilter(st)}
               activeOpacity={0.7}
             >
-              <Text style={[s.filterChipText, statusFilter === status && s.filterChipTextActive]}>{status === 'All' ? t('dashboard_totalRequests').split(' ')[0] : t(('dashboard_' + status.toLowerCase()) as any) || status}</Text>
+              <Text style={[s.filterChipText, statusFilter === st && s.filterChipTextActive]}>
+                {st}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
+      {/* Assistance Type Filter Chips */}
+      <View style={{ paddingBottom: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
+          {[
+            { key: 'All', label: 'All Types' },
+            { key: 'Medical', label: 'Medical Assistance' },
+            { key: 'Burial', label: 'Burial Assistance' },
+          ].map(tp => (
+            <TouchableOpacity
+              key={tp.key}
+              style={[s.subFilterChip, typeFilter === tp.key && s.subFilterChipActive]}
+              onPress={() => setTypeFilter(tp.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[s.subFilterChipText, typeFilter === tp.key && s.subFilterChipTextActive]}>
+                {tp.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Request List */}
       <FlatList
         data={requests}
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={load}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 30 }}
         renderItem={({ item }) => {
           const c = STATUS_COLORS[item.status] ?? STATUS_COLORS.Pending
+          const refNo = `REF-${item.id.slice(0, 8).toUpperCase()}`
+          const requestedAmt = item.amount_requested
+            ? `₱${Number(item.amount_requested).toLocaleString()}`
+            : (item.extra_fields?.estimated_cost ? `₱${Number(item.extra_fields.estimated_cost).toLocaleString()}` : (item.extra_fields?.amount_range || '—'))
+          const approvedAmt = item.amount_approved ? `₱${Number(item.amount_approved).toLocaleString()}` : '—'
+          const releaseDate = item.payouts?.[0]?.release_date
+            ? format(new Date(item.payouts[0].release_date), 'MMM d, yyyy')
+            : (item.status === 'Released' ? 'Released' : '—')
+
           return (
-            <TouchableOpacity style={s.card}
-              onPress={() => navigation.navigate('RequestDetail', { id: item.id })} activeOpacity={0.7}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <TouchableOpacity
+              style={s.card}
+              onPress={() => navigation.navigate('RequestDetail', { id: item.id })}
+              activeOpacity={0.7}
+            >
+              {/* Header: Ref & Status */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                 <View style={{ flex: 1 }}>
+                  <Text style={s.refText}>{refNo}</Text>
                   <Text style={s.cardName}>{item.beneficiaries?.last_name}, {item.beneficiaries?.first_name}</Text>
-                  <Text style={s.cardSub}>{item.beneficiaries?.barangay} • {item.assistance_type}</Text>
+                  <Text style={s.cardSub}>{item.beneficiaries?.barangay || 'Daanbantayan'} • {item.assistance_type} Assistance</Text>
                 </View>
                 <View style={[s.badge, { backgroundColor: isDark ? c.darkBg : c.bg }]}>
-                  <Text style={[s.badgeText, { color: isDark ? c.darkText : c.text }]}>{t(('dashboard_' + item.status.toLowerCase()) as any) || item.status}</Text>
+                  <Text style={[s.badgeText, { color: isDark ? c.darkText : c.text }]}>
+                    {item.status}
+                  </Text>
                 </View>
               </View>
-              <Text style={s.purpose} numberOfLines={1}>{item.purpose}</Text>
+
+              {/* Purpose */}
+              {item.purpose ? (
+                <Text style={s.purpose} numberOfLines={2}>
+                  <Text style={{ fontWeight: '600' }}>Purpose: </Text>{item.purpose}
+                </Text>
+              ) : null}
+
+              {/* Financial Box */}
+              <View style={s.financeBox}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.financeLabel}>REQUESTED</Text>
+                  <Text style={s.financeVal}>{requestedAmt}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.financeLabel}>APPROVED</Text>
+                  <Text style={[s.financeVal, { color: item.amount_approved ? '#10b981' : colors.textSecondary }]}>
+                    {approvedAmt}
+                  </Text>
+                </View>
+                {releaseDate !== '—' && (
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.financeLabel}>RELEASED</Text>
+                    <Text style={[s.financeVal, { color: '#059669', fontSize: 11 }]}>{releaseDate}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Declined reason */}
               {item.status === 'Declined' && !!item.remarks && (
-                <Text style={{ fontSize: 12, color: '#ef4444', fontStyle: 'italic', marginTop: 4 }} numberOfLines={2}>
+                <Text style={{ fontSize: 12, color: '#ef4444', fontStyle: 'italic', marginTop: 6 }} numberOfLines={2}>
                   Reason: {item.remarks}
                 </Text>
               )}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, alignItems: 'center' }}>
-                <Text style={s.amount}>
-                  {(item.status === 'Approved' || item.status === 'Released') && item.amount_approved
-                    ? `₱${Number(item.amount_approved).toLocaleString()}`
-                    : item.amount_requested
-                    ? `₱${Number(item.amount_requested).toLocaleString()}`
-                    : '—'}
-                </Text>
-                
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+
+              {/* Footer */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, alignItems: 'center', paddingTop: 8, borderTopWidth: 1, borderTopColor: isDark ? '#334155' : '#f1f5f9' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Feather name="calendar" size={12} color={colors.textSecondary} />
                   <Text style={s.date}>{format(new Date(item.created_at), 'MMM d, yyyy')}</Text>
-                  {(userRole === 'admin' || userRole === 'resident') && (
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '700' }}>
+                    View Details →
+                  </Text>
+
+                  {(userRole === 'admin' || (userRole === 'resident' && item.status === 'Pending')) && (
                     <TouchableOpacity 
                       onPress={(e) => {
-                        e.stopPropagation(); // prevent navigation
+                        e.stopPropagation();
                         handleDelete(item.id);
                       }}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Feather name="trash-2" size={16} color="#ef4444" />
+                      <Feather name="trash-2" size={15} color="#ef4444" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -186,30 +282,44 @@ export default function RequestsScreen({ route, navigation }: any) {
             </TouchableOpacity>
           )
         }}
-        ListEmptyComponent={!loading ? <Text style={s.empty}>{t('requests_noRequestsFound')}</Text> : null}
+        ListEmptyComponent={!loading ? (
+          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+            <Feather name="file-text" size={36} color={colors.textSecondary} style={{ opacity: 0.5, marginBottom: 8 }} />
+            <Text style={s.empty}>{t('requests_noRequestsFound') || 'No requests found.'}</Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>Try clearing or changing your filters</Text>
+          </View>
+        ) : null}
       />
     </View>
   )
 }
 
-const styles = (colors: any) => StyleSheet.create({
+const styles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background, paddingTop: 50 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
-  addBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, shadowColor: colors.primary, shadowOpacity: 0.25, shadowRadius: 6 },
-  addBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  search: { marginHorizontal: 20, borderWidth: 1.5, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, color: colors.text, marginBottom: 12, backgroundColor: colors.card },
-  filterChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  subtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  addBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, shadowColor: colors.primary, shadowOpacity: 0.25, shadowRadius: 6 },
+  addBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  search: { marginHorizontal: 20, borderWidth: 1.5, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, fontSize: 13, color: colors.text, marginBottom: 10, backgroundColor: colors.card },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  filterChipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   filterChipTextActive: { color: '#fff' },
-  card: { backgroundColor: colors.card, marginHorizontal: 20, marginBottom: 10, borderRadius: 14, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: colors.border },
-  cardName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  subFilterChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderWidth: 1, borderColor: colors.border },
+  subFilterChipActive: { backgroundColor: isDark ? '#334155' : '#e2e8f0', borderColor: colors.primary },
+  subFilterChipText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
+  subFilterChipTextActive: { color: colors.primary },
+  card: { backgroundColor: colors.card, marginHorizontal: 20, marginBottom: 12, borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: colors.border },
+  refText: { fontSize: 10, fontFamily: 'monospace', fontWeight: '700', color: colors.primary, marginBottom: 2 },
+  cardName: { fontSize: 15, fontWeight: '700', color: colors.text },
   cardSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  badge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 8 },
   badgeText: { fontSize: 11, fontWeight: '700' },
-  purpose: { fontSize: 13, color: colors.textSecondary, marginTop: 8 },
-  amount: { fontSize: 14, fontWeight: '600', color: colors.text },
-  date: { fontSize: 12, color: colors.textSecondary },
-  empty: { textAlign: 'center', color: colors.textSecondary, marginTop: 40, fontSize: 14 },
+  purpose: { fontSize: 12, color: colors.textSecondary, marginTop: 6, lineHeight: 17 },
+  financeBox: { flexDirection: 'row', backgroundColor: isDark ? '#0f172a' : '#f8fafc', padding: 8, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: colors.border },
+  financeLabel: { fontSize: 9, fontWeight: '700', color: colors.textSecondary, marginBottom: 2 },
+  financeVal: { fontSize: 13, fontWeight: '700', color: colors.text },
+  date: { fontSize: 11, color: colors.textSecondary },
+  empty: { textAlign: 'center', color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
 })
