@@ -320,6 +320,17 @@ export default function SettingsScreen() {
     setSaving(false)
   }
 
+  const handleConfirmSignOut = () => {
+    Alert.alert(
+      t('signOut'),
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: t('signOut'), style: 'destructive', onPress: () => signOut() },
+      ]
+    )
+  }
+
   const s = styles(colors)
 
   if (fetching) {
@@ -581,7 +592,7 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={s.signOutBtn} onPress={signOut} activeOpacity={0.8}>
+            <TouchableOpacity style={s.signOutBtn} onPress={handleConfirmSignOut} activeOpacity={0.8}>
               <Feather name="log-out" size={20} color="#dc2626" />
               <Text style={s.signOutText}>{t('signOut')}</Text>
             </TouchableOpacity>

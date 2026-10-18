@@ -11,22 +11,17 @@ export default function PendingPage() {
   const [checking, setChecking] = useState(false)
   const [stillPending, setStillPending] = useState(false)
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
+    // Purge client-side auth state synchronously
+    clearAllSupabaseAuth()
+    // Navigate immediately — proxy will clear httpOnly cookies on ?logout=true
+    window.location.replace('/login?logout=true')
+    // Cleanup fire-and-forget after navigation
+    supabase.auth.signOut({ scope: 'local' }).catch(() => {})
     try {
-      await supabase.auth.signOut({ scope: 'local' })
-    } catch {
-      // ignore
-    }
-    // Use keepalive:true so the request survives navigation without ECONNRESET.
-    try {
-      const sent = navigator.sendBeacon?.('/api/auth/signout')
-      if (!sent) {
+      navigator.sendBeacon?.('/api/auth/signout') ||
         fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
-      }
-    } catch {
-      // ignore
-    }
-    window.location.href = '/login?logout=true'
+    } catch { /* ignore */ }
   }
 
   const handleCheckStatus = async () => {

@@ -154,38 +154,36 @@ export default function Sidebar() {
     return () => { if (channel) supabase.removeChannel(channel) }
   }, [])
 
-  const handleLogout = async () => {
-    // 1. Audit log signout in background without blocking navigation
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        supabase.from('system_logs').insert({
-          user_id: user.id,
-          action: 'LOGOUT',
-          table_name: 'auth',
-          details: { event: 'User signed out' },
-        }).then(() => {}).catch(() => {})
-      }
-    } catch { /* ignore */ }
-
-    // 2. Client-side sign out and storage purge
-    try {
-      await supabase.auth.signOut({ scope: 'local' })
-    } catch { /* ignore */ }
+  const handleLogout = () => {
+    // ── Step 1: Immediately purge all client-side auth state ──────────────
+    // Do this synchronously before anything async so the UI is unblocked instantly.
     clearAllSupabaseAuth()
 
-    // 3. Purge httpOnly cache & server-side cookies.
-    // Use keepalive:true so the request survives the upcoming page navigation
-    // without causing ECONNRESET. sendBeacon is the ultimate fallback.
-    try {
-      const sent = navigator.sendBeacon?.('/api/auth/signout')
-      if (!sent) {
-        fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
-      }
-    } catch { /* ignore */ }
+    // ── Step 2: Navigate to login FIRST so the user sees a response now ───
+    // Use replace so the dashboard is removed from browser history.
+    window.location.replace('/login?logout=true')
 
-    // 4. Clean navigation to login (fires after fetch is handed off)
-    window.location.href = '/login?logout=true'
+    // ── Step 3: Everything else runs fire-and-forget after navigation ─────
+    // The server will clear httpOnly cookies when it sees ?logout=true (proxy.ts).
+    // We also fire the signout API and Supabase client cleanup non-blocking.
+    Promise.all([
+      // Audit log (best-effort, keepalive so it survives navigation)
+      supabase.auth.getUser().then((res: any) => {
+        const user = res?.data?.user
+        if (user) {
+          navigator.sendBeacon?.('/api/auth/signout') ||
+            fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
+          supabase.from('system_logs').insert({
+            user_id: user.id,
+            action: 'LOGOUT',
+            table_name: 'auth',
+            details: { event: 'User signed out' },
+          }).then(() => {}).catch(() => {})
+        }
+      }).catch(() => {}),
+      // Supabase client-side session revocation (local scope only — fast)
+      supabase.auth.signOut({ scope: 'local' }).catch(() => {}),
+    ]).catch(() => {})
   }
 
   const toggleTheme = () => {

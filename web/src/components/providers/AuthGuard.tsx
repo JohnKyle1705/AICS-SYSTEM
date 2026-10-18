@@ -47,27 +47,28 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     const supabase = createClient()
 
-    const handleAuthFailure = async () => {
-      try {
-        await supabase.auth.signOut({ scope: 'local' })
-      } catch {
-        // ignore
-      }
+    const handleAuthFailure = () => {
+      // Purge client-side state immediately
       clearAllSupabaseAuth()
-      // keepalive survives navigation; sendBeacon is the ultimate fallback
-      try {
-        const sent = navigator.sendBeacon?.('/api/auth/signout')
-        if (!sent) fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
-      } catch { /* ignore */ }
+
       const pathname = window.location.pathname
       const isPublic =
         pathname.startsWith('/login') ||
         pathname.startsWith('/register') ||
         pathname.startsWith('/forgot-password') ||
-        pathname.startsWith('/auth')
+        pathname.startsWith('/auth') ||
+        pathname.startsWith('/pending')
 
+      // Only redirect if we're actually on a protected page.
+      // If already on /login (e.g. we just navigated there), do nothing.
       if (!isPublic && pathname !== '/') {
-        window.location.href = '/login?logout=true'
+        // Fire cleanup fire-and-forget AFTER navigating
+        window.location.replace('/login?logout=true')
+        supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+        try {
+          navigator.sendBeacon?.('/api/auth/signout') ||
+            fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
+        } catch { /* ignore */ }
       }
     }
 
@@ -87,10 +88,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event: AuthChangeEvent, session: Session | null) => {
-        if (
-          event === 'SIGNED_OUT' ||
-          (!session && (event as string) === 'TOKEN_REFRESH_FAILED')
-        ) {
+        // SIGNED_OUT fires during our own intentional logout too.
+        // Only act on it for TOKEN_REFRESH_FAILED (unexpected session loss).
+        // Our Sidebar.tsx handleLogout already navigates — no need to redirect again.
+        if (!session && (event as string) === 'TOKEN_REFRESH_FAILED') {
           handleAuthFailure()
         }
       }

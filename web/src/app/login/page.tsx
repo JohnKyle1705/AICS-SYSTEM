@@ -225,6 +225,9 @@ export default function LoginPage() {
     // Check URL parameters for messages/errors (e.g. from password reset)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
+      if (params.get('logout')) {
+        clearAllSupabaseAuth()
+      }
       const msg = params.get('message')
       const err = params.get('error')
       if (msg === 'password_updated') {

@@ -114,19 +114,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Immediately reset local state so React Navigation instantly navigates to Login
+      // 1. Immediately reset state so navigation jumps to Login instantly
       setProfile(null)
       setSession(null)
       setLoading(false)
 
-      // Purge cached storage keys
-      await clearStaleSession()
-
-      // Inform Supabase client with a 1.5s timeout so network failures never freeze the app
+      // 2. Best-effort Supabase client signout (local scope, 800ms timeout)
       await Promise.race([
         supabase.auth.signOut({ scope: 'local' }),
-        new Promise((resolve) => setTimeout(resolve, 1500)),
-      ])
+        new Promise((resolve) => setTimeout(resolve, 800)),
+      ]).catch(() => {})
+
+      // 3. Purge any lingering sb- keys from AsyncStorage
+      await clearStaleSession().catch(() => {})
     } catch (err) {
       console.warn('Mobile signOut error:', err)
     } finally {

@@ -102,8 +102,13 @@ export async function proxy(request: NextRequest) {
     })
   }
 
-  // Explicit logout flag in URL: immediately purge cookies and stay on login page
+  // Explicit logout flag in URL: immediately purge cookies and ensure landing on /login
   if (request.nextUrl.searchParams.has('logout')) {
+    if (pathname !== '/login') {
+      const redirectResponse = NextResponse.redirect(new URL('/login?logout=true', request.url))
+      clearAuthCookies(redirectResponse)
+      return redirectResponse
+    }
     clearAuthCookies(supabaseResponse)
     return supabaseResponse
   }
@@ -123,7 +128,8 @@ export async function proxy(request: NextRequest) {
   if (!hasAuthTokenCookie) {
     clearAuthCookies(supabaseResponse)
     if (isProtected) {
-      const redirectResponse = NextResponse.redirect(new URL('/login', request.url))
+      // Use ?logout=true so the proxy clears the cache cookie on the /login page too
+      const redirectResponse = NextResponse.redirect(new URL('/login?logout=true', request.url))
       clearAuthCookies(redirectResponse)
       return redirectResponse
     }
@@ -204,7 +210,7 @@ export async function proxy(request: NextRequest) {
   if (authError || !user) {
     clearAuthCookies(supabaseResponse)
     if (isProtected) {
-      return redirect('/login', true)
+      return redirect('/login?logout=true', true)
     }
     return supabaseResponse
   }
