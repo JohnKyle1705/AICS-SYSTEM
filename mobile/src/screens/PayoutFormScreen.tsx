@@ -15,7 +15,7 @@ export default function PayoutFormScreen({ route, navigation }: any) {
 
   const s = styles(colors)
 
-  if (profile?.role !== 'admin') {
+  if (profile?.role !== 'admin' && profile?.role !== 'treasurer') {
     return (
       <View style={s.centerContainer}>
         <Text style={s.errorText}>Unauthorized Access</Text>
@@ -28,11 +28,12 @@ export default function PayoutFormScreen({ route, navigation }: any) {
     
     setSubmitting(true)
     const { data: { user } } = await supabase.auth.getUser()
+    const releasedAmt = parseFloat(amount)
 
     // Create payout record
     const { error: payoutErr } = await supabase.from('payouts').insert({
       request_id,
-      amount_released: parseFloat(amount),
+      amount_released: releasedAmt,
       acknowledgment_notes: notes,
       released_by: user?.id,
     })
@@ -45,13 +46,36 @@ export default function PayoutFormScreen({ route, navigation }: any) {
 
     await supabase.from('requests').update({ status: 'Released', release_status: 'Released' }).eq('id', request_id)
 
+    // Deduct from corresponding fund and log transaction
+    const { data: req } = await supabase.from('requests').select('encoded_by, assistance_type, amount_approved').eq('id', request_id).single()
+    if (req?.assistance_type) {
+      const { data: fund } = await supabase.from('funds').select('*').eq('assistance_type', req.assistance_type).single()
+      if (fund) {
+        const newBalance = Math.max(0, Number(fund.current_balance) - releasedAmt)
+        const newReleased = Number(fund.total_released || 0) + releasedAmt
+        await supabase.from('funds').update({
+          current_balance: newBalance,
+          total_released: newReleased
+        }).eq('id', fund.id)
+
+        await supabase.from('fund_transactions').insert({
+          fund_id: fund.id,
+          request_id: request_id,
+          transaction_type: 'Release',
+          amount: releasedAmt,
+          balance_after: newBalance,
+          processed_by: user?.id,
+          remarks: notes || `Assistance disbursement for Request #${request_id.slice(0, 8).toUpperCase()}`
+        })
+      }
+    }
+
     // Notify Resident
-    const { data: req } = await supabase.from('requests').select('encoded_by, assistance_type').eq('id', request_id).single()
     if (req?.encoded_by) {
       await supabase.from('notifications').insert({
         user_id: req.encoded_by,
         title: 'Assistance Released',
-        message: `Your ${req.assistance_type} assistance payout of ₱${parseFloat(amount).toLocaleString()} has been released.`,
+        message: `Your ${req.assistance_type} assistance payout of ₱${releasedAmt.toLocaleString()} has been released.`,
         type: 'info',
         request_id
       })

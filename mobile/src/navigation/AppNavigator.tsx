@@ -87,10 +87,8 @@ function TabNavigator() {
         <Tab.Screen name="Beneficiaries" component={BeneficiariesScreen}
           options={{ tabBarLabel: 'Beneficiaries' }} />
       )}
-      {profile?.role !== 'treasurer' && (
-        <Tab.Screen name="Requests" component={RequestsScreen}
-          options={{ tabBarLabel: 'Requests' }} />
-      )}
+      <Tab.Screen name="Requests" component={RequestsScreen}
+        options={{ tabBarLabel: 'Requests' }} />
       {profile?.role === 'admin' && (
         <Tab.Screen name="Users" component={UsersScreen}
           options={{ tabBarLabel: 'Users' }} />

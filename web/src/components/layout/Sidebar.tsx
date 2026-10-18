@@ -209,6 +209,11 @@ export default function Sidebar() {
     ],
     treasurer: [
       { href: '/treasurer', label: t('nav_treasurerDashboard'), icon: LayoutDashboard },
+      { href: '/treasurer/requests', label: 'Approved Requests', icon: FileText },
+      { href: '/treasurer/funds', label: 'Fund Tracking', icon: Wallet },
+      { href: '/treasurer/transactions', label: 'Financial Ledger', icon: ScrollText },
+      { href: '/payouts', label: t('nav_payouts'), icon: Banknote },
+      { href: '/treasurer/reports', label: 'Financial Reports', icon: BarChart2 },
       { href: '/notifications', label: t('nav_notifications'), icon: Bell },
       { href: '/about', label: t('nav_aboutAICS'), icon: Info },
       { href: '/settings', label: t('nav_settings'), icon: Settings },

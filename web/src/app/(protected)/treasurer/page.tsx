@@ -8,7 +8,8 @@ import { ASSISTANCE_TYPES } from '@/lib/constants'
 import {
   Search, FileText, CheckCircle2, AlertCircle, Briefcase,
   ArrowDownRight, PieChart, BookOpen, CreditCard, X, Info,
-  TrendingUp, Filter
+  TrendingUp, Filter, RotateCcw, Send, CheckCircle, BarChart2,
+  ScrollText, Wallet, Clock, ArrowUpRight, Plus, RefreshCw, XCircle
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -23,13 +24,13 @@ const RELEASE_STATUS_STYLE: Record<string, { bg: string; text: string; border: s
 }
 
 /* ─── types ──────────────────────────────────────────────────────── */
-type ActiveCard = 'pending' | 'approved' | 'available' | 'released' | null
+type ActiveCard = 'total_funds' | 'total_allocated' | 'released' | 'available' | 'pending' | 'approved' | null
 type ActiveFund = string | null
 
-/* ─── component ──────────────────────────────────────────────────── */
 export default function TreasurerDashboardPage() {
-  const [requests, setRequests]           = useState<Request[]>([])
+  const [requests, setRequests]           = useState<any[]>([])
   const [funds, setFunds]                 = useState<any[]>([])
+  const [transactions, setTransactions]   = useState<any[]>([])
   const [search, setSearch]               = useState('')
   const [type, setType]                   = useState('')
   const [releaseFilter, setReleaseFilter] = useState('')
@@ -42,6 +43,20 @@ export default function TreasurerDashboardPage() {
   const [showTooltip, setShowTooltip]     = useState(false)
   const tooltipRef                        = useRef<HTMLDivElement>(null)
 
+  // Voucher modal state
+  const [voucherModalOpen, setVoucherModalOpen] = useState(false)
+  const [selectedRequest, setSelectedRequest]   = useState<any>(null)
+  const [voucherNo, setVoucherNo]               = useState('')
+  const [checkNo, setCheckNo]                   = useState('')
+  const [paymentMethod, setPaymentMethod]       = useState('Cash')
+  const [disbursingOfficer, setDisbursingOfficer] = useState('')
+  const [voucherNotes, setVoucherNotes]         = useState('')
+  const [processingAction, setProcessingAction] = useState(false)
+
+  // Return to Admin modal state
+  const [returnModalOpen, setReturnModalOpen]   = useState(false)
+  const [returnRemarks, setReturnRemarks]       = useState('')
+
   const supabase = createClient()
   const { t }    = useLanguage()
 
@@ -53,29 +68,61 @@ export default function TreasurerDashboardPage() {
     if (user && !profile) {
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       setProfile(p)
+      if (p?.full_name) setDisbursingOfficer(p.full_name)
     }
 
-    const { data } = await supabase
+    // Fetch approved requests
+    const { data: reqData } = await supabase
       .from('requests')
-      .select('*, beneficiaries(first_name, last_name, barangay)')
+      .select('*, beneficiaries(first_name, last_name, barangay, contact_number)')
       .eq('status', 'Approved')
       .order('created_at', { ascending: false })
-    setRequests(data ?? [])
+    setRequests(reqData ?? [])
 
+    // Fetch funds
     const { data: fundsData } = await supabase.from('funds').select('*').order('assistance_type')
     setFunds(fundsData ?? [])
 
+    // Accurate pending count
     const { count } = await supabase
       .from('requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'Approved')
-      .in('release_status', ['Pending Release', 'Ready for Release'])
+      .or('release_status.is.null,release_status.neq.Released')
     setPendingCount(count ?? 0)
+
+    // Recent fund transactions
+    const { data: txData } = await supabase
+      .from('fund_transactions')
+      .select('*, funds(assistance_type), profiles(full_name), requests(id, beneficiaries(first_name, last_name))')
+      .order('created_at', { ascending: false })
+      .limit(6)
+    setTransactions(txData ?? [])
 
     setLoading(false)
   }, [profile])
 
   useEffect(() => { load() }, [load])
+
+  // Real-time synchronization
+  useEffect(() => {
+    const channel = supabase
+      .channel('treasurer_dashboard_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+        load()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'funds' }, () => {
+        load()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fund_transactions' }, () => {
+        load()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [load])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -87,67 +134,15 @@ export default function TreasurerDashboardPage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  /* ── release status update ────────────────────────────────────── */
-  const updateReleaseStatus = async (id: string, release_status: string) => {
-    const requestDetails = requests.find(r => r.id === id)
+  /* ── financial calculations ───────────────────────────────────── */
+  const totalFundsBudget = funds.reduce((s, f) => s + Number(f.total_allocated || 0), 0)
+  const totalAvailable   = funds.reduce((s, f) => s + Number(f.current_balance || 0), 0)
+  const totalReleased    = funds.reduce((s, f) => s + Number(f.total_released || 0), 0)
 
-    if (release_status === 'Released' && (!requestDetails?.amount_approved || Number(requestDetails.amount_approved) <= 0)) {
-      alert('Cannot release this request: Approved amount is missing or zero. Please ask the Admin to set the approved amount first.')
-      setRequests([...requests])
-      return
-    }
-
-    const { error } = await supabase.from('requests').update({ release_status }).eq('id', id)
-    if (error) { alert(error.message); return }
-
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, release_status: release_status as any } : r))
-
-    if (release_status === 'Released') {
-      const { data: updatedFunds } = await supabase.from('funds').select('*').order('assistance_type')
-      if (updatedFunds) setFunds(updatedFunds)
-      setPendingCount(c => Math.max(0, c - 1))
-
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      await supabase.from('payouts').insert({
-        request_id: id,
-        amount_released: Number(requestDetails?.amount_approved ?? 0),
-        release_date: new Date().toISOString().split('T')[0],
-        released_by: currentUser?.id ?? null,
-        acknowledgment_notes: 'Released via Treasurer Dashboard',
-      })
-    }
-
-    if (profile) {
-      await supabase.from('system_logs').insert({
-        user_id: profile.id,
-        action: 'UPDATE_RELEASE_STATUS',
-        table_name: 'requests',
-        record_id: id,
-        details: { new_release_status: release_status }
-      })
-    }
-
-    if (release_status === 'Ready for Release' || release_status === 'For Release') {
-      const benName = requestDetails?.beneficiaries
-        ? `${requestDetails.beneficiaries.first_name} ${requestDetails.beneficiaries.last_name}` : 'Unknown'
-      const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin')
-      if (admins) {
-        await supabase.from('notifications').insert(
-          admins.map((admin: any) => ({
-            user_id: admin.id,
-            title: 'Ready for Release',
-            message: `Treasurer Notification: Request for ${benName} is now ready for release.`,
-            type: 'info',
-            request_id: id
-          }))
-        )
-      }
-    }
-  }
-
-  /* ── derived totals ───────────────────────────────────────────── */
-  const totalAvailable = funds.reduce((s, f) => s + Number(f.current_balance), 0)
-  const totalReleased  = funds.reduce((s, f) => s + Number(f.total_released),  0)
+  // Total allocated earmarked for pending/ready release requests
+  const totalEarmarkedAllocated = requests
+    .filter(r => (r.release_status || 'Pending Release') !== 'Released')
+    .reduce((s, r) => s + Number(r.amount_approved || 0), 0)
 
   const formatPHP = (val: number) =>
     new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val)
@@ -161,9 +156,22 @@ export default function TreasurerDashboardPage() {
       setActiveCard(card)
       setActiveFund(null)
       setType('')
-      if (card === 'pending')   setReleaseFilter('Pending Release')
-      else if (card === 'released') setReleaseFilter('Released')
-      else { setReleaseFilter(''); if (card === 'available') setShowTooltip(true) }
+
+      if (card === 'total_funds') {
+        setReleaseFilter('')
+        document.getElementById('fund-balances-section')?.scrollIntoView({ behavior: 'smooth' })
+      } else if (card === 'total_allocated') {
+        setReleaseFilter('Pending Release')
+      } else if (card === 'released') {
+        setReleaseFilter('Released')
+      } else if (card === 'available') {
+        setReleaseFilter('')
+        setShowTooltip(true)
+      } else if (card === 'pending') {
+        setReleaseFilter('Pending Release')
+      } else if (card === 'approved') {
+        setReleaseFilter('')
+      }
     }
   }
 
@@ -187,13 +195,135 @@ export default function TreasurerDashboardPage() {
     setShowTooltip(false)
   }
 
+  /* ── voucher processing ───────────────────────────────────────── */
+  const openVoucherModal = (req: any) => {
+    setSelectedRequest(req)
+    setVoucherNo(req.voucher_number || `DV-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`)
+    setCheckNo(req.check_number || '')
+    setPaymentMethod(req.payment_method || 'Cash')
+    setDisbursingOfficer(req.disbursing_officer || profile?.full_name || 'Municipal Treasurer')
+    setVoucherNotes(req.notes || '')
+    setVoucherModalOpen(true)
+  }
+
+  const handleSaveVoucher = async () => {
+    if (!selectedRequest) return
+    if (!voucherNo.trim()) {
+      alert('Disbursement Voucher (DV) Number is required')
+      return
+    }
+
+    setProcessingAction(true)
+    try {
+      const res = await fetch('/api/treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'process_voucher',
+          requestId: selectedRequest.id,
+          voucherNumber: voucherNo.trim(),
+          checkNumber: checkNo.trim() || null,
+          paymentMethod,
+          disbursingOfficer: disbursingOfficer.trim() || profile?.full_name || 'Municipal Treasurer',
+          notes: voucherNotes.trim() || null
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to process voucher')
+
+      alert('Disbursement Voucher processed! Request is now Ready for Release.')
+      setVoucherModalOpen(false)
+      load()
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setProcessingAction(false)
+    }
+  }
+
+  /* ── confirm release ──────────────────────────────────────────── */
+  const handleConfirmRelease = async (req: any) => {
+    if (!req.amount_approved || Number(req.amount_approved) <= 0) {
+      alert('Cannot release: Approved amount is missing or zero.')
+      return
+    }
+
+    const benName = req.beneficiaries ? `${req.beneficiaries.first_name} ${req.beneficiaries.last_name}` : 'the beneficiary'
+    if (!confirm(`Confirm disbursement of ${formatPHP(Number(req.amount_approved))} to ${benName}? This will deduct the fund balance and create payout and ledger records.`)) {
+      return
+    }
+
+    setProcessingAction(true)
+    try {
+      const res = await fetch('/api/treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'confirm_release',
+          requestId: req.id,
+          notes: 'Disbursed and confirmed via Treasurer Dashboard'
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to confirm release')
+
+      alert('Assistance released and recorded successfully!')
+      load()
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setProcessingAction(false)
+    }
+  }
+
+  /* ── return to admin ──────────────────────────────────────────── */
+  const openReturnModal = (req: any) => {
+    setSelectedRequest(req)
+    setReturnRemarks('')
+    setReturnModalOpen(true)
+  }
+
+  const handleReturnSubmit = async () => {
+    if (!selectedRequest) return
+    if (!returnRemarks.trim()) {
+      alert('Remarks are required to return this request')
+      return
+    }
+
+    setProcessingAction(true)
+    try {
+      const res = await fetch('/api/treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'return_request',
+          requestId: selectedRequest.id,
+          remarks: returnRemarks.trim()
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to return request')
+
+      alert('Request returned to Admin with remarks.')
+      setReturnModalOpen(false)
+      load()
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setProcessingAction(false)
+    }
+  }
+
   /* ── filtered list ────────────────────────────────────────────── */
   const displayedRequests = requests.filter(r => {
-    const rStatus = (r as any).release_status || 'Pending Release'
+    const rStatus = r.release_status || 'Pending Release'
     const matchRelease = releaseFilter ? rStatus === releaseFilter : true
-    const matchType    = type ? (r as any).assistance_type === type : true
+    const matchType    = type ? r.assistance_type === type : true
     const matchSearch  = search
-      ? `${(r as any).beneficiaries?.first_name} ${(r as any).beneficiaries?.last_name}`
+      ? `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name} ${r.id} ${r.voucher_number || ''}`
           .toLowerCase().includes(search.toLowerCase())
       : true
     return matchRelease && matchType && matchSearch
@@ -215,121 +345,148 @@ export default function TreasurerDashboardPage() {
     pct:     f.total_allocated > 0 ? Math.round((Number(f.current_balance) / Number(f.total_allocated)) * 100) : 0,
   }))
 
-  /* ─────────────────────────────────────────────────────────────── */
   return (
     <div className="space-y-6" id="treasurer-page">
 
       {/* ── Page Header ──────────────────────────────────────────── */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)]">
-            {t('nav_treasurerDashboard')}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-[var(--color-text)]">
+              {t('nav_treasurerDashboard')}
+            </h1>
+            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+              Municipality of Daanbantayan
+            </span>
+          </div>
           <p className="text-[var(--color-text-secondary)] text-sm mt-0.5">
-            {requests.length} approved request{requests.length !== 1 ? 's' : ''} awaiting release
+            Financial clearance, fund tracking, voucher processing, and assistance disbursements.
           </p>
         </div>
+
+        {/* ── Quick Action Buttons ──────────────────────────────────── */}
         <div className="flex items-center gap-2 flex-wrap">
           <Link href="/payouts"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors">
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-colors">
             <CreditCard size={14} />
-            Payouts
+            Record Payout
           </Link>
-          <Link href="/dashboard"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors">
-            <BookOpen size={14} />
+          <Link href="/treasurer/funds"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors">
+            <Wallet size={14} />
+            Fund Allocation
+          </Link>
+          <Link href="/treasurer/reports"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors">
+            <BarChart2 size={14} />
+            Financial Report
+          </Link>
+          <Link href="/treasurer/transactions"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors">
+            <ScrollText size={14} />
             Ledger
           </Link>
         </div>
       </div>
 
-      {/* ── KPI Stat Cards ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* ── 6 KPI Summary Cards ──────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
 
-        {/* Pending Releases */}
+        {/* 1. Total Funds Received */}
         <button
-          id="card-pending-releases"
-          onClick={() => handleCardClick('pending')}
+          id="card-total-funds"
+          onClick={() => handleCardClick('total_funds')}
           style={{ textAlign: 'left' }}
           className={[
-            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-blue-400',
-            'bg-blue-50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900/50',
-            activeCard === 'pending'
-              ? 'ring-2 ring-blue-500 scale-[1.02] shadow-lg shadow-blue-500/20'
-              : 'hover:scale-[1.015] hover:shadow-md hover:shadow-blue-500/10 hover:border-blue-300 dark:hover:border-blue-700',
+            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-indigo-400',
+            'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-100 dark:border-indigo-900/50',
+            activeCard === 'total_funds'
+              ? 'ring-2 ring-indigo-500 scale-[1.02] shadow-lg shadow-indigo-500/20'
+              : 'hover:scale-[1.015] hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700',
           ].join(' ')}
-          aria-pressed={activeCard === 'pending'}
+          aria-pressed={activeCard === 'total_funds'}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-800/60 transition-colors">
-              <AlertCircle size={17} className="text-blue-600 dark:text-blue-400" />
-            </div>
-            {pendingCount > 0 && (
-              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded-full">
-                Action needed
-              </span>
-            )}
+          <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-2.5 group-hover:bg-indigo-200 transition-colors">
+            <Wallet size={16} className="text-indigo-600 dark:text-indigo-400" />
           </div>
-          <p className="text-2xl font-extrabold text-blue-700 dark:text-blue-300">{pendingCount}</p>
-          <p className="text-xs font-semibold text-blue-600/70 dark:text-blue-400/70 mt-0.5">Pending Releases</p>
-          {activeCard === 'pending' && (
-            <p className="mt-2 text-[10px] font-semibold text-blue-500 dark:text-blue-400 flex items-center gap-1">
-              <Filter size={9} /> Filtering by Pending Release
-            </p>
-          )}
+          <p className="text-base font-extrabold text-indigo-700 dark:text-indigo-300 leading-tight">
+            {formatPHP(totalFundsBudget)}
+          </p>
+          <p className="text-[11px] font-semibold text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">Total Funds</p>
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Budget Received</span>
         </button>
 
-        {/* Total Approved */}
+        {/* 2. Total Allocated Funds */}
         <button
-          id="card-total-approved"
-          onClick={() => handleCardClick('approved')}
+          id="card-total-allocated"
+          onClick={() => handleCardClick('total_allocated')}
           style={{ textAlign: 'left' }}
           className={[
-            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-violet-400',
-            'bg-violet-50 dark:bg-violet-950/40 border-violet-100 dark:border-violet-900/50',
-            activeCard === 'approved'
-              ? 'ring-2 ring-violet-500 scale-[1.02] shadow-lg shadow-violet-500/20'
-              : 'hover:scale-[1.015] hover:shadow-md hover:shadow-violet-500/10 hover:border-violet-300 dark:hover:border-violet-700',
+            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-amber-400',
+            'bg-amber-50/70 dark:bg-amber-950/40 border-amber-100 dark:border-amber-900/50',
+            activeCard === 'total_allocated'
+              ? 'ring-2 ring-amber-500 scale-[1.02] shadow-lg shadow-amber-500/20'
+              : 'hover:scale-[1.015] hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700',
           ].join(' ')}
-          aria-pressed={activeCard === 'approved'}
+          aria-pressed={activeCard === 'total_allocated'}
         >
-          <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center mb-3 group-hover:bg-violet-200 dark:group-hover:bg-violet-800/60 transition-colors">
-            <FileText size={17} className="text-violet-600 dark:text-violet-400" />
+          <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center mb-2.5 group-hover:bg-amber-200 transition-colors">
+            <Clock size={16} className="text-amber-600 dark:text-amber-400" />
           </div>
-          <p className="text-2xl font-extrabold text-violet-700 dark:text-violet-300">{requests.length}</p>
-          <p className="text-xs font-semibold text-violet-600/70 dark:text-violet-400/70 mt-0.5">Total Approved</p>
-          {activeCard === 'approved' && (
-            <p className="mt-2 text-[10px] font-semibold text-violet-500 dark:text-violet-400 flex items-center gap-1">
-              <Filter size={9} /> Showing all approved
-            </p>
-          )}
+          <p className="text-base font-extrabold text-amber-700 dark:text-amber-300 leading-tight">
+            {formatPHP(totalEarmarkedAllocated)}
+          </p>
+          <p className="text-[11px] font-semibold text-amber-600/80 dark:text-amber-400/80 mt-0.5">Total Allocated</p>
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Earmarked for Requests</span>
         </button>
 
-        {/* Total Available — with breakdown tooltip */}
+        {/* 3. Total Released Funds */}
+        <button
+          id="card-total-released"
+          onClick={() => handleCardClick('released')}
+          style={{ textAlign: 'left' }}
+          className={[
+            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-orange-400',
+            'bg-orange-50/70 dark:bg-orange-950/40 border-orange-100 dark:border-orange-900/50',
+            activeCard === 'released'
+              ? 'ring-2 ring-orange-500 scale-[1.02] shadow-lg shadow-orange-500/20'
+              : 'hover:scale-[1.015] hover:shadow-md hover:border-orange-300 dark:hover:border-orange-700',
+          ].join(' ')}
+          aria-pressed={activeCard === 'released'}
+        >
+          <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center mb-2.5 group-hover:bg-orange-200 transition-colors">
+            <ArrowDownRight size={16} className="text-orange-600 dark:text-orange-400" />
+          </div>
+          <p className="text-base font-extrabold text-orange-700 dark:text-orange-300 leading-tight">
+            {formatPHP(totalReleased)}
+          </p>
+          <p className="text-[11px] font-semibold text-orange-600/80 dark:text-orange-400/80 mt-0.5">Total Released</p>
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Disbursed to Beneficiaries</span>
+        </button>
+
+        {/* 4. Remaining Balance */}
         <div className="relative" ref={tooltipRef}>
           <button
-            id="card-total-available"
+            id="card-remaining-balance"
             onClick={() => handleCardClick('available')}
             style={{ textAlign: 'left' }}
             className={[
               'w-full rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-400',
-              'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-900/50',
+              'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-900/50',
               activeCard === 'available'
                 ? 'ring-2 ring-emerald-500 scale-[1.02] shadow-lg shadow-emerald-500/20'
-                : 'hover:scale-[1.015] hover:shadow-md hover:shadow-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-700',
+                : 'hover:scale-[1.015] hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700',
             ].join(' ')}
             aria-pressed={activeCard === 'available'}
           >
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-3 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/60 transition-colors">
-              <Briefcase size={17} className="text-emerald-600 dark:text-emerald-400" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-2.5 group-hover:bg-emerald-200 transition-colors">
+              <Briefcase size={16} className="text-emerald-600 dark:text-emerald-400" />
             </div>
-            <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-300 leading-tight">{formatPHP(totalAvailable)}</p>
-            <p className="text-xs font-semibold text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Total Available</p>
-            {activeCard === 'available' && (
-              <p className="mt-2 text-[10px] font-semibold text-emerald-500 dark:text-emerald-400 flex items-center gap-1">
-                <Info size={9} /> Breakdown shown ↓
-              </p>
-            )}
+            <p className="text-base font-extrabold text-emerald-700 dark:text-emerald-300 leading-tight">
+              {formatPHP(totalAvailable)}
+            </p>
+            <p className="text-[11px] font-semibold text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Remaining Balance</p>
+            <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Available in Treasury</span>
           </button>
 
           {/* Breakdown tooltip */}
@@ -366,40 +523,61 @@ export default function TreasurerDashboardPage() {
           )}
         </div>
 
-        {/* Total Released */}
+        {/* 5. Pending Transactions */}
         <button
-          id="card-total-released"
-          onClick={() => handleCardClick('released')}
+          id="card-pending-releases"
+          onClick={() => handleCardClick('pending')}
           style={{ textAlign: 'left' }}
           className={[
-            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-orange-400',
-            'bg-orange-50 dark:bg-orange-950/40 border-orange-100 dark:border-orange-900/50',
-            activeCard === 'released'
-              ? 'ring-2 ring-orange-500 scale-[1.02] shadow-lg shadow-orange-500/20'
-              : 'hover:scale-[1.015] hover:shadow-md hover:shadow-orange-500/10 hover:border-orange-300 dark:hover:border-orange-700',
+            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-blue-400',
+            'bg-blue-50/70 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900/50',
+            activeCard === 'pending'
+              ? 'ring-2 ring-blue-500 scale-[1.02] shadow-lg shadow-blue-500/20'
+              : 'hover:scale-[1.015] hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700',
           ].join(' ')}
-          aria-pressed={activeCard === 'released'}
+          aria-pressed={activeCard === 'pending'}
         >
-          <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center mb-3 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/60 transition-colors">
-            <ArrowDownRight size={17} className="text-orange-600 dark:text-orange-400" />
+          <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center mb-2.5 group-hover:bg-blue-200 transition-colors">
+            <AlertCircle size={16} className="text-blue-600 dark:text-blue-400" />
           </div>
-          <p className="text-lg font-extrabold text-orange-700 dark:text-orange-300 leading-tight">{formatPHP(totalReleased)}</p>
-          <p className="text-xs font-semibold text-orange-600/70 dark:text-orange-400/70 mt-0.5">Total Released</p>
-          {activeCard === 'released' && (
-            <p className="mt-2 text-[10px] font-semibold text-orange-500 dark:text-orange-400 flex items-center gap-1">
-              <Filter size={9} /> Filtering by Released
-            </p>
-          )}
+          <p className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{pendingCount}</p>
+          <p className="text-[11px] font-semibold text-blue-600/80 dark:text-blue-400/80 mt-0.5">Pending Releases</p>
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Waiting for Voucher/Release</span>
         </button>
+
+        {/* 6. Approved Assistance Requests */}
+        <button
+          id="card-total-approved"
+          onClick={() => handleCardClick('approved')}
+          style={{ textAlign: 'left' }}
+          className={[
+            'rounded-2xl p-4 border transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-violet-400',
+            'bg-violet-50/70 dark:bg-violet-950/40 border-violet-100 dark:border-violet-900/50',
+            activeCard === 'approved'
+              ? 'ring-2 ring-violet-500 scale-[1.02] shadow-lg shadow-violet-500/20'
+              : 'hover:scale-[1.015] hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700',
+          ].join(' ')}
+          aria-pressed={activeCard === 'approved'}
+        >
+          <div className="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center mb-2.5 group-hover:bg-violet-200 transition-colors">
+            <FileText size={16} className="text-violet-600 dark:text-violet-400" />
+          </div>
+          <p className="text-xl font-extrabold text-violet-700 dark:text-violet-300">{requests.length}</p>
+          <p className="text-[11px] font-semibold text-violet-600/80 dark:text-violet-400/80 mt-0.5">Approved Requests</p>
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Admin Approved AICS</span>
+        </button>
+
       </div>
 
       {/* ── Fund Balances ─────────────────────────────────────────── */}
       {funds.length > 0 && (
-        <div>
+        <div id="fund-balances-section">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-[var(--color-text-secondary)] uppercase tracking-wide">Fund Balances</h2>
-            <Link href="/dashboard" className="text-xs font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1">
-              <PieChart size={12} /> View Funds Dashboard
+            <h2 className="text-sm font-bold text-[var(--color-text-secondary)] uppercase tracking-wide">
+              Municipal Fund Balances by Assistance Type
+            </h2>
+            <Link href="/treasurer/funds" className="text-xs font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1">
+              <PieChart size={13} /> Manage Allocations
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -458,15 +636,10 @@ export default function TreasurerDashboardPage() {
                     <span>of {formatPHP(fund.total_allocated)}</span>
                   </div>
 
-                  <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-[11px] text-slate-500">
-                    Released: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatPHP(fund.total_released)}</span>
+                  <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-[11px] text-slate-500 flex justify-between">
+                    <span>Released: <strong className="text-emerald-600 dark:text-emerald-400">{formatPHP(fund.total_released)}</strong></span>
+                    <span>Limit: {formatPHP(fund.low_balance_threshold)}</span>
                   </div>
-
-                  {isActive && (
-                    <p className="mt-1.5 text-[10px] font-semibold text-[var(--color-primary)]">
-                      Click again to clear filter
-                    </p>
-                  )}
                 </button>
               )
             })}
@@ -493,21 +666,21 @@ export default function TreasurerDashboardPage() {
         </div>
       )}
 
-      {/* ── Search & Filters ──────────────────────────────────────── */}
+      {/* ── Search & Filter Controls ──────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setActiveCard(null) }}
-            placeholder={t('requests_searchPlaceholder')}
+            placeholder="Search by beneficiary name, request ID, or DV number..."
             className="form-input pl-10"
             id="request-search"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               <X size={14} />
             </button>
@@ -525,7 +698,7 @@ export default function TreasurerDashboardPage() {
             className="form-input flex-1 sm:flex-none sm:w-auto sm:min-w-[150px]"
             id="type-filter"
           >
-            <option value="">{t('requests_allTypes')}</option>
+            <option value="">All Assistance Types</option>
             {ASSISTANCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
           <select
@@ -540,12 +713,12 @@ export default function TreasurerDashboardPage() {
         </div>
       </div>
 
-      {/* ── Quick Release Filter Tabs ─────────────────────────────── */}
+      {/* ── Quick Tabs ────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap -mt-2">
         {['', ...RELEASE_STATUSES].map(tab => {
           const count = tab === ''
             ? requests.length
-            : requests.filter(r => ((r as any).release_status || 'Pending Release') === tab).length
+            : requests.filter(r => (r.release_status || 'Pending Release') === tab).length
           const isActive = releaseFilter === tab
           return (
             <button
@@ -558,35 +731,48 @@ export default function TreasurerDashboardPage() {
                   : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]'
               }`}
             >
-              {tab || 'All'} <span className="ml-1 opacity-70">({count})</span>
+              {tab || 'All Approved'} <span className="ml-1 opacity-70">({count})</span>
             </button>
           )
         })}
       </div>
 
-      {/* ── Requests Table ────────────────────────────────────────── */}
+      {/* ── Approved Requests Table ───────────────────────────────── */}
       <div className="card overflow-hidden">
+        <div className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-sm text-[var(--color-text)]">Approved Assistance Requests for Disbursement</h2>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+              {displayedRequests.length}
+            </span>
+          </div>
+          <Link href="/treasurer/requests" className="text-xs text-[var(--color-primary)] font-semibold hover:underline">
+            View Full Request Queue →
+          </Link>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="data-table" id="treasurer-requests-table">
             <thead>
               <tr>
-                <th>{t('requests_beneficiary')}</th>
+                <th>Beneficiary Name</th>
                 <th>Barangay</th>
-                <th>{t('requests_type')}</th>
+                <th>Assistance Type</th>
                 <th>Approved Amount</th>
                 <th>Release Status</th>
-                <th>{t('requests_date')}</th>
-                <th>{t('actions')}</th>
+                <th>Voucher / Check #</th>
+                <th>Date Approved</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>{Array.from({ length: 7 }).map((_, j) => <td key={j}><div className="skeleton h-5 w-full" /></td>)}</tr>
+                  <tr key={i}>{Array.from({ length: 8 }).map((_, j) => <td key={j}><div className="skeleton h-5 w-full" /></td>)}</tr>
                 ))
               ) : displayedRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-16">
+                  <td colSpan={8} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                         <FileText size={28} className="text-slate-300 dark:text-slate-600" />
@@ -616,7 +802,10 @@ export default function TreasurerDashboardPage() {
                 return (
                   <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="font-semibold text-[var(--color-text)]">
-                      {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
+                      <Link href={`/requests/${r.id}`} className="hover:text-[var(--color-primary)] hover:underline">
+                        {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
+                      </Link>
+                      <span className="block text-[10px] text-slate-400">Ref: #{r.id.slice(0, 8).toUpperCase()}</span>
                     </td>
                     <td className="text-sm text-[var(--color-text-secondary)]">
                       {r.beneficiaries?.barangay ?? '—'}
@@ -638,20 +827,50 @@ export default function TreasurerDashboardPage() {
                       {r.amount_approved ? `₱${Number(r.amount_approved).toLocaleString()}` : <span className="text-slate-400">—</span>}
                     </td>
                     <td>
-                      <select
-                        value={rStatus}
-                        onChange={(e) => updateReleaseStatus(r.id, e.target.value)}
-                        className={`border rounded-lg px-2 py-1 text-xs font-semibold cursor-pointer focus:outline-none ${st.bg} ${st.text} ${st.border}`}
-                      >
-                        {RELEASE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${st.bg} ${st.text} ${st.border}`}>
+                        {rStatus}
+                      </span>
+                    </td>
+                    <td className="text-xs text-[var(--color-text-secondary)] font-mono">
+                      {r.voucher_number || r.extra_fields?.voucher_number || '—'}
                     </td>
                     <td className="text-slate-500 text-xs">{format(new Date(r.created_at), 'MMM d, yyyy')}</td>
                     <td>
-                      <Link href={`/requests/${r.id}`}
-                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-semibold hover:underline">
-                        <CheckCircle2 size={12} /> {t('view')}
-                      </Link>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {rStatus !== 'Released' && (
+                          <button
+                            onClick={() => openVoucherModal(r)}
+                            title="Process Disbursement Voucher"
+                            className="px-2 py-1 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors"
+                          >
+                            Voucher
+                          </button>
+                        )}
+                        {rStatus !== 'Released' && (
+                          <button
+                            onClick={() => handleConfirmRelease(r)}
+                            title="Confirm physical disbursement"
+                            className="px-2 py-1 text-xs font-medium rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 transition-colors"
+                          >
+                            Release
+                          </button>
+                        )}
+                        {rStatus !== 'Released' && (
+                          <button
+                            onClick={() => openReturnModal(r)}
+                            title="Return request to Admin"
+                            className="px-2 py-1 text-xs font-medium rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 transition-colors"
+                          >
+                            Return
+                          </button>
+                        )}
+                        <Link
+                          href={`/requests/${r.id}`}
+                          className="px-2 py-1 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -660,6 +879,249 @@ export default function TreasurerDashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* ── Recent Financial Transactions Ledger Widget ──────────── */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-bold text-sm text-[var(--color-text)] flex items-center gap-2">
+              <ScrollText size={16} className="text-indigo-500" /> Recent Treasury Financial Transactions
+            </h2>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+              Live audit record of budget allocations, disbursements, and fund adjustments.
+            </p>
+          </div>
+          <Link href="/treasurer/transactions" className="text-xs text-[var(--color-primary)] font-semibold hover:underline">
+            View Complete Ledger →
+          </Link>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-slate-400 uppercase tracking-wider">
+                <th className="pb-2 font-semibold">Date & Time</th>
+                <th className="pb-2 font-semibold">Type</th>
+                <th className="pb-2 font-semibold">Fund</th>
+                <th className="pb-2 font-semibold">Beneficiary / Reference</th>
+                <th className="pb-2 font-semibold text-right">Amount</th>
+                <th className="pb-2 font-semibold text-right">Balance After</th>
+                <th className="pb-2 font-semibold">Processed By</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)]">
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-6 text-center text-slate-400">
+                    No financial transactions recorded yet.
+                  </td>
+                </tr>
+              ) : transactions.map((tx: any) => {
+                const isAdd = tx.transaction_type === 'Allocation'
+                return (
+                  <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                    <td className="py-2.5 font-medium text-slate-600 dark:text-slate-300">
+                      {format(new Date(tx.created_at), 'MMM d, yyyy • h:mm a')}
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                        isAdd
+                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                          : 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
+                      }`}>
+                        {isAdd ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                        {tx.transaction_type}
+                      </span>
+                    </td>
+                    <td className="py-2.5 font-semibold text-[var(--color-text)]">
+                      {tx.funds?.assistance_type} Assistance
+                    </td>
+                    <td className="py-2.5 text-slate-600 dark:text-slate-300">
+                      {tx.requests?.beneficiaries
+                        ? `${tx.requests.beneficiaries.first_name} ${tx.requests.beneficiaries.last_name}`
+                        : tx.remarks || 'Municipal Treasury'}
+                    </td>
+                    <td className={`py-2.5 text-right font-bold ${isAdd ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                      {isAdd ? '+' : '-'}{formatPHP(Number(tx.amount))}
+                    </td>
+                    <td className="py-2.5 text-right font-semibold text-slate-700 dark:text-slate-300">
+                      {formatPHP(Number(tx.balance_after))}
+                    </td>
+                    <td className="py-2.5 text-slate-500">
+                      {tx.profiles?.full_name || 'Treasury Officer'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Voucher Processing Modal ──────────────────────────────── */}
+      {voucherModalOpen && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[var(--color-border)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
+              <div>
+                <h3 className="text-lg font-bold text-[var(--color-text)]">Process Disbursement Voucher</h3>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Beneficiary: {selectedRequest.beneficiaries?.first_name} {selectedRequest.beneficiaries?.last_name} · Approved Amount: {formatPHP(Number(selectedRequest.amount_approved || 0))}
+                </p>
+              </div>
+              <button onClick={() => setVoucherModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Disbursement Voucher (DV) Number *
+                </label>
+                <input
+                  type="text"
+                  className="form-input w-full"
+                  placeholder="e.g. DV-2026-10-0089"
+                  value={voucherNo}
+                  onChange={(e) => setVoucherNo(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Check / Reference Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  className="form-input w-full"
+                  placeholder="e.g. CHK-554219"
+                  value={checkNo}
+                  onChange={(e) => setCheckNo(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    className="form-input w-full"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Digital Wallet">Digital Wallet</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                    Disbursing Officer
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input w-full"
+                    placeholder="Officer Name"
+                    value={disbursingOfficer}
+                    onChange={(e) => setDisbursingOfficer(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Notes / Instructions
+                </label>
+                <textarea
+                  className="form-input w-full h-20 text-xs"
+                  placeholder="Voucher prepared, ready for beneficiary release..."
+                  value={voucherNotes}
+                  onChange={(e) => setVoucherNotes(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-[var(--color-border)]">
+              <button
+                type="button"
+                onClick={() => setVoucherModalOpen(false)}
+                className="btn btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveVoucher}
+                disabled={processingAction}
+                className="btn btn-primary text-sm flex items-center gap-1.5"
+              >
+                <CheckCircle size={15} />
+                {processingAction ? 'Saving...' : 'Save & Mark Ready for Release'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Return to Admin Modal ─────────────────────────────────── */}
+      {returnModalOpen && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[var(--color-border)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
+              <div>
+                <h3 className="text-lg font-bold text-red-600">Return Request to Admin</h3>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Beneficiary: {selectedRequest.beneficiaries?.first_name} {selectedRequest.beneficiaries?.last_name}
+                </p>
+              </div>
+              <button onClick={() => setReturnModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Please state the reason for returning this request (e.g., insufficient fund balance, missing supporting receipt, amount mismatch). The Admin will be notified immediately.
+              </p>
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Remarks / Reason *
+                </label>
+                <textarea
+                  className="form-input w-full h-24 text-xs"
+                  placeholder="State the reason for return..."
+                  value={returnRemarks}
+                  onChange={(e) => setReturnRemarks(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-[var(--color-border)]">
+              <button
+                type="button"
+                onClick={() => setReturnModalOpen(false)}
+                className="btn btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleReturnSubmit}
+                disabled={processingAction || !returnRemarks.trim()}
+                className="btn btn-danger text-sm flex items-center gap-1.5"
+              >
+                <RotateCcw size={15} />
+                {processingAction ? 'Returning...' : 'Confirm Return'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

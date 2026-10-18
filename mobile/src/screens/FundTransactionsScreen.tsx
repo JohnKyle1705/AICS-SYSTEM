@@ -95,8 +95,6 @@ export default function FundTransactionsScreen({ navigation }: any) {
 
   return (
     <View style={s.container}>
-      <GlobalHeader />
-      
       <View style={s.filterContainer}>
         <View style={s.searchBox}>
           <Feather name="search" size={16} color={colors.textSecondary} style={s.searchIcon} />

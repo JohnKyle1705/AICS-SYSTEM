@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Image, Platform } from 'react-native'
+import React, { useEffect, useState, useMemo } from 'react'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Image, Platform, Modal } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { useTheme } from '../lib/ThemeContext'
 import { useLanguage } from '../lib/LanguageContext'
@@ -112,6 +112,17 @@ export default function RequestFormScreen({ navigation, route }: any) {
   const [blockedMessage, setBlockedMessage] = useState('')
   const [recentRequests, setRecentRequests] = useState<any[]>([])
   const [restrictionDays, setRestrictionDays] = useState(30)
+
+  // Funeral Home Searchable Modal State
+  const [funeralHomeModalOpen, setFuneralHomeModalOpen] = useState(false)
+  const [funeralHomeQuery, setFuneralHomeQuery] = useState('')
+
+  const filteredFuneralHomes = useMemo(() => {
+    const q = funeralHomeQuery.trim().toLowerCase()
+    return q
+      ? FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.filter(h => h.toLowerCase().includes(q))
+      : FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN
+  }, [funeralHomeQuery])
 
   const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }))
   const updatePersonal = (key: string, value: string) => setPersonalInfo(prev => ({ ...prev, [key]: value }))
@@ -551,9 +562,9 @@ export default function RequestFormScreen({ navigation, route }: any) {
             style={s.picker}
             dropdownIconColor={colors.textSecondary}
           >
-            <Picker.Item label={t('newRequest_selectAmount')} value="" color={Platform.OS === 'android' ? '#64748b' : colors.textSecondary} />
+            <Picker.Item label={t('newRequest_selectAmount')} value="" color={Platform.OS === 'android' ? (isDark ? '#94a3b8' : '#64748b') : colors.textSecondary} />
             {(AMOUNT_RANGES[form.assistance_type] || []).map(r => 
-              <Picker.Item key={r} label={r} value={r} color={Platform.OS === 'android' ? '#0f172a' : colors.text} />
+              <Picker.Item key={r} label={r} value={r} color={Platform.OS === 'android' ? (isDark ? '#f8fafc' : '#0f172a') : colors.text} />
             )}
           </Picker>
         </View>
@@ -562,7 +573,46 @@ export default function RequestFormScreen({ navigation, route }: any) {
       {TYPE_FIELDS[form.assistance_type]?.map((field) => (
         <View key={field.key} style={s.field}>
           <Text style={s.label}>{field.label}</Text>
-          {field.type === 'select' ? (
+          {field.key === 'funeral_home' ? (
+            <View>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => { setFuneralHomeQuery(''); setFuneralHomeModalOpen(true) }}
+                style={[
+                  s.input,
+                  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
+                  fieldErrors[field.key] ? { borderColor: '#ef4444', backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2' } : {}
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10, marginRight: 8 }}>
+                  <Feather name="search" size={16} color={colors.textSecondary} />
+                  {extraFields['funeral_home'] ? (
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, flex: 1 }} numberOfLines={1}>
+                      {extraFields['funeral_home']}
+                    </Text>
+                  ) : (
+                    <Text style={{ fontSize: 14, color: colors.textSecondary, flex: 1 }} numberOfLines={1}>
+                      Search or select a funeral home…
+                    </Text>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {extraFields['funeral_home'] ? (
+                    <TouchableOpacity
+                      onPress={(e) => { e.stopPropagation(); setField('funeral_home', '') }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Feather name="x" size={16} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  ) : null}
+                  <Feather name="chevron-down" size={16} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>
+                {FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.length} verified homes. Bogo to Daanbantayan area only.
+              </Text>
+            </View>
+          ) : field.type === 'select' ? (
             <View style={[
               s.pickerWrap,
               fieldErrors[field.key] ? { borderColor: '#ef4444' } : {}
@@ -576,14 +626,14 @@ export default function RequestFormScreen({ navigation, route }: any) {
                 <Picker.Item 
                   label={`— Select ${field.label.replace(' *', '')} —`} 
                   value="" 
-                  color={Platform.OS === 'android' ? '#64748b' : colors.textSecondary} 
+                  color={Platform.OS === 'android' ? (isDark ? '#94a3b8' : '#64748b') : colors.textSecondary} 
                 />
                 {field.options?.map((opt) => (
                   <Picker.Item 
                     key={opt} 
                     label={opt} 
                     value={opt} 
-                    color={Platform.OS === 'android' ? '#0f172a' : colors.text} 
+                    color={Platform.OS === 'android' ? (isDark ? '#f8fafc' : '#0f172a') : colors.text} 
                   />
                 ))}
               </Picker>
@@ -593,7 +643,7 @@ export default function RequestFormScreen({ navigation, route }: any) {
               style={[
                 s.input,
                 { color: colors.text },
-                fieldErrors[field.key] ? { borderColor: '#ef4444', backgroundColor: '#fef2f2' } : {}
+                fieldErrors[field.key] ? { borderColor: '#ef4444', backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2' } : {}
               ]}
               value={extraFields[field.key] || ''}
               onChangeText={(v) => setField(field.key, v)}
@@ -920,6 +970,106 @@ export default function RequestFormScreen({ navigation, route }: any) {
           </View>
         </>
       )}
+
+      {/* ── Funeral Home Searchable Modal ── */}
+      <Modal
+        visible={funeralHomeModalOpen}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setFuneralHomeModalOpen(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalSheet, { backgroundColor: isDark ? '#0f172a' : '#ffffff' }]}>
+            <View style={[s.modalHeaderRow, { borderBottomColor: colors.border }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.modalTitle, { color: colors.text }]}>Select Funeral Home</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                  Bogo to Daanbantayan Area
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setFuneralHomeModalOpen(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather name="x" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ padding: 16, paddingBottom: 10 }}>
+              <View style={[s.modalSearchBox, {
+                backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                borderColor: isDark ? '#334155' : '#e2e8f0',
+              }]}>
+                <Feather name="search" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                <TextInput
+                  autoFocus
+                  style={[s.modalSearchInput, { color: colors.text }]}
+                  value={funeralHomeQuery}
+                  onChangeText={setFuneralHomeQuery}
+                  placeholder="Type to filter…"
+                  placeholderTextColor={colors.textSecondary}
+                  cursorColor={colors.primary}
+                  selectionColor={colors.primary}
+                />
+                {funeralHomeQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setFuneralHomeQuery('')}>
+                    <Feather name="x" size={14} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} keyboardShouldPersistTaps="handled">
+              {filteredFuneralHomes.map(opt => {
+                const selected = extraFields['funeral_home'] === opt
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    activeOpacity={0.7}
+                    style={[
+                      s.funeralHomeItem,
+                      selected && { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff', borderColor: colors.primary }
+                    ]}
+                    onPress={() => {
+                      setField('funeral_home', opt)
+                      setFuneralHomeModalOpen(false)
+                    }}
+                  >
+                    <Feather
+                      name={selected ? "check-circle" : "circle"}
+                      size={16}
+                      color={selected ? colors.primary : colors.textSecondary}
+                      style={{ marginRight: 10 }}
+                    />
+                    <Text
+                      style={[
+                        s.funeralHomeText,
+                        { color: selected ? (isDark ? '#93c5fd' : colors.primary) : colors.text },
+                        selected && { fontWeight: '700' }
+                      ]}
+                    >
+                      {opt}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+              {filteredFuneralHomes.length === 0 && (
+                <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                    No funeral homes match your search.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={[s.modalFooter, { borderTopColor: colors.border }]}>
+              <Text style={{ fontSize: 11, color: colors.textSecondary, textAlign: 'center' }}>
+                {filteredFuneralHomes.length} of {FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.length} funeral homes · Bogo to Daanbantayan area only
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -1074,4 +1224,61 @@ const styles = (colors: any, isDark: boolean) => StyleSheet.create({
   nextBtn: { backgroundColor: colors.primary, borderColor: colors.primary },
   navBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
   nextBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+  // Funeral Home Searchable Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    maxHeight: '85%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  modalSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  modalSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+  },
+  funeralHomeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: 6,
+  },
+  funeralHomeText: {
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
+  modalFooter: {
+    padding: 14,
+    borderTopWidth: 1,
+  },
 })

@@ -37,10 +37,13 @@ export default function FundsDashboardScreen({ navigation }: any) {
         setThreshold(fundsData[0].low_balance_threshold?.toString() || '0')
       }
 
-      // Fetch pending count
-      const { count: count1 } = await supabase.from('requests').select('*', { count: 'exact', head: true }).eq('status', 'Approved')
-      const { count: count2 } = await supabase.from('requests').select('*', { count: 'exact', head: true }).in('release_status', ['Ready for Release', 'Pending Release'])
-      setPendingCount((count1 || 0) + (count2 || 0))
+      // Fetch accurate pending count (Approved requests awaiting release)
+      const { count: pending } = await supabase
+        .from('requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'Approved')
+        .or('release_status.is.null,release_status.neq.Released')
+      setPendingCount(pending || 0)
 
       // Fetch recent transactions
       const { data: txData } = await supabase.from('fund_transactions').select('*').order('created_at', { ascending: false }).limit(5)

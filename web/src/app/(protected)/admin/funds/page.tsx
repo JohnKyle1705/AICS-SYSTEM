@@ -12,7 +12,7 @@ export default async function FundsDashboard() {
   if (!session) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-  if (profile?.role !== 'admin') redirect('/dashboard')
+  if (profile?.role !== 'admin' && profile?.role !== 'treasurer') redirect('/dashboard')
 
   // Fetch Funds
   const { data: funds, error } = await supabase.from('funds').select('*').order('assistance_type')
@@ -26,18 +26,14 @@ export default async function FundsDashboard() {
   const totalAllocated = funds?.reduce((sum, fund) => sum + Number(fund.total_allocated), 0) || 0
   const totalReleased = funds?.reduce((sum, fund) => sum + Number(fund.total_released), 0) || 0
 
-  // Count pending releases
+  // Count pending releases (Approved requests not yet marked as Released)
   const { count: pendingCount } = await supabase
     .from('requests')
     .select('*', { count: 'exact', head: true })
-    .in('status', ['Approved']) // Usually Approved means waiting for release, or 'Ready for Release' in release_status
+    .eq('status', 'Approved')
+    .or('release_status.is.null,release_status.neq.Released')
 
-  const { count: readyCount } = await supabase
-    .from('requests')
-    .select('*', { count: 'exact', head: true })
-    .in('release_status', ['Ready for Release', 'Pending Release'])
-
-  const finalPendingCount = (pendingCount || 0) + (readyCount || 0)
+  const finalPendingCount = pendingCount || 0
 
   // Fetch recent transactions
   const { data: transactions } = await supabase

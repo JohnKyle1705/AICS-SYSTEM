@@ -314,6 +314,12 @@ input::placeholder, textarea::placeholder {
     background-color: var(--color-surface);
     color: var(--color-text);
   }
+
+  .dark select.form-input option,
+  .dark select option {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
 }
 
 .form-label {

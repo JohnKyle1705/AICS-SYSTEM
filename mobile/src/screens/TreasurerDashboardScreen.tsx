@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ScrollView, RefreshControl, ActivityIndicator
+  StyleSheet, Alert, ScrollView, RefreshControl, ActivityIndicator,
+  Modal
 } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { useTheme } from '../lib/ThemeContext'
@@ -12,18 +13,19 @@ import { format } from 'date-fns'
 const RELEASE_STATUSES = ['Pending Release', 'Ready for Release', 'Released']
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; icon: string }> = {
-  'Released':          { bg: '#d1fae5', text: '#065f46', icon: 'check-circle'  },
-  'Ready for Release': { bg: '#fef3c7', text: '#92400e', icon: 'clock'         },
-  'Pending Release':   { bg: '#f1f5f9', text: '#475569', icon: 'loader'        },
+  'Released':          { bg: '#d1fae5', text: '#065f46', icon: 'check-circle' },
+  'Ready for Release': { bg: '#fef3c7', text: '#92400e', icon: 'clock'        },
+  'Pending Release':   { bg: '#f1f5f9', text: '#475569', icon: 'loader'       },
 }
 
 const FILTER_TABS = ['All', 'Pending Release', 'Ready for Release', 'Released']
 
-type ActiveCard = 'pending' | 'available' | 'released' | null
+type ActiveCard = 'total_funds' | 'total_allocated' | 'available' | 'released' | 'pending' | 'approved' | null
 
 export default function TreasurerDashboardScreen({ navigation }: any) {
   const [requests, setRequests]         = useState<any[]>([])
   const [funds, setFunds]               = useState<any[]>([])
+  const [transactions, setTransactions] = useState<any[]>([])
   const [search, setSearch]             = useState('')
   const [activeFilter, setActiveFilter] = useState('All')
   const [typeFilter, setTypeFilter]     = useState('')
@@ -33,6 +35,20 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
   const [pendingCount, setPendingCount] = useState(0)
   const [activeCard, setActiveCard]     = useState<ActiveCard>(null)
   const [activeFund, setActiveFund]     = useState<string | null>(null)
+
+  // Voucher Modal State
+  const [voucherModalOpen, setVoucherModalOpen]   = useState(false)
+  const [selectedReq, setSelectedReq]             = useState<any>(null)
+  const [voucherNo, setVoucherNo]                 = useState('')
+  const [checkNo, setCheckNo]                     = useState('')
+  const [paymentMethod, setPaymentMethod]         = useState('Cash')
+  const [disbursingOfficer, setDisbursingOfficer] = useState('')
+  const [voucherNotes, setVoucherNotes]           = useState('')
+  const [processingModal, setProcessingModal]     = useState(false)
+
+  // Return to Admin Modal State
+  const [returnModalOpen, setReturnModalOpen]     = useState(false)
+  const [returnRemarks, setReturnRemarks]         = useState('')
 
   const { colors, isDark } = useTheme()
   const { t } = useLanguage()
@@ -46,23 +62,37 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
     const { data: { user } } = await supabase.auth.getUser()
     if (user && !profile) {
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user?.id).single()
-      if (p) setProfile(p)
+      if (p) {
+        setProfile(p)
+        if (p.full_name) setDisbursingOfficer(p.full_name)
+      }
     }
 
+    // Fetch approved requests
     const { data } = await supabase.from('requests')
       .select('*, beneficiaries(first_name, last_name, barangay)')
       .eq('status', 'Approved')
       .order('created_at', { ascending: false })
     setRequests(data ?? [])
 
+    // Fetch funds
     const { data: fundsData } = await supabase.from('funds').select('*').order('assistance_type')
     if (fundsData) setFunds(fundsData)
 
+    // Accurate pending count
     const { count } = await supabase.from('requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'Approved')
-      .in('release_status', ['Pending Release', 'Ready for Release'])
+      .or('release_status.is.null,release_status.neq.Released')
     setPendingCount(count ?? 0)
+
+    // Recent transactions
+    const { data: txData } = await supabase
+      .from('fund_transactions')
+      .select('*, funds(assistance_type), profiles(full_name), requests(id, beneficiaries(first_name, last_name))')
+      .order('created_at', { ascending: false })
+      .limit(4)
+    if (txData) setTransactions(txData)
 
     setLoading(false)
     setRefreshing(false)
@@ -70,73 +100,31 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
 
   useEffect(() => { load() }, [load])
 
-  const handleUpdateReleaseStatus = (id: string, currentStatus: string | null) => {
-    const nextIdx = (RELEASE_STATUSES.indexOf(currentStatus || 'Pending Release') + 1) % RELEASE_STATUSES.length
-    const newStatus = RELEASE_STATUSES[nextIdx]
-    const req = requests.find(r => r.id === id)
+  // Real-time synchronization
+  useEffect(() => {
+    const channel = supabase
+      .channel('mobile_treasurer_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+        load(true)
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'funds' }, () => {
+        load(true)
+      })
+      .subscribe()
 
-    if (newStatus === 'Released' && (!req?.amount_approved || Number(req.amount_approved) <= 0)) {
-      Alert.alert('Cannot Release', 'Approved amount is missing or zero. Please ask the Admin to set it first.')
-      return
+    return () => {
+      supabase.removeChannel(channel)
     }
+  }, [load])
 
-    Alert.alert('Update Release Status', `Change to "${newStatus}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Update', onPress: async () => {
-          const { error } = await supabase.from('requests').update({ release_status: newStatus }).eq('id', id)
-          if (error) { Alert.alert('Error', error.message); return }
+  /* ── financial calculations ───────────────────────────────────── */
+  const totalFundsBudget = funds.reduce((s, f) => s + Number(f.total_allocated || 0), 0)
+  const totalAvailable   = funds.reduce((s, f) => s + Number(f.current_balance || 0), 0)
+  const totalReleased    = funds.reduce((s, f) => s + Number(f.total_released || 0), 0)
 
-          setRequests(prev => prev.map(r => r.id === id ? { ...r, release_status: newStatus } : r))
-
-          if (newStatus === 'Released') {
-            const { data: updatedFunds } = await supabase.from('funds').select('*').order('assistance_type')
-            if (updatedFunds) setFunds(updatedFunds)
-            setPendingCount(c => Math.max(0, c - 1))
-
-            const { data: { user: currentUser } } = await supabase.auth.getUser()
-            await supabase.from('payouts').insert({
-              request_id: id,
-              amount_released: Number(req?.amount_approved ?? 0),
-              release_date: new Date().toISOString().split('T')[0],
-              released_by: currentUser?.id ?? null,
-              acknowledgment_notes: 'Released via Treasurer Dashboard',
-            })
-          }
-
-          if (profile) {
-            await supabase.from('system_logs').insert({
-              user_id: profile.id,
-              action: 'UPDATE_RELEASE_STATUS',
-              table_name: 'requests',
-              record_id: id,
-              details: { new_release_status: newStatus }
-            })
-          }
-
-          if (newStatus === 'Ready for Release') {
-            const benName = req?.beneficiaries
-              ? `${req.beneficiaries.first_name} ${req.beneficiaries.last_name}` : 'Unknown'
-            const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin')
-            if (admins) {
-              await supabase.from('notifications').insert(
-                admins.map((admin: any) => ({
-                  user_id: admin.id,
-                  title: 'Ready for Release',
-                  message: `Treasurer: Request for ${benName} is now ready for release.`,
-                  type: 'info',
-                  request_id: id
-                }))
-              )
-            }
-          }
-        }
-      }
-    ])
-  }
-
-  const totalAvailable = funds.reduce((s, f) => s + Number(f.current_balance), 0)
-  const totalReleased  = funds.reduce((s, f) => s + Number(f.total_released),  0)
+  const totalEarmarkedAllocated = requests
+    .filter(r => (r.release_status || 'Pending Release') !== 'Released')
+    .reduce((s, r) => s + Number(r.amount_approved || 0), 0)
 
   /* ── card click handlers ───────────────────────────────────────── */
   const handleCardClick = (card: ActiveCard) => {
@@ -147,9 +135,20 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
       setActiveCard(card)
       setActiveFund(null)
       setTypeFilter('')
-      if (card === 'pending')       setActiveFilter('Pending Release')
-      else if (card === 'released') setActiveFilter('Released')
-      else                          setActiveFilter('All')
+
+      if (card === 'total_funds') {
+        setActiveFilter('All')
+      } else if (card === 'total_allocated') {
+        setActiveFilter('Pending Release')
+      } else if (card === 'released') {
+        setActiveFilter('Released')
+      } else if (card === 'available') {
+        setActiveFilter('All')
+      } else if (card === 'pending') {
+        setActiveFilter('Pending Release')
+      } else if (card === 'approved') {
+        setActiveFilter('All')
+      }
     }
   }
 
@@ -172,7 +171,200 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
     setSearch('')
   }
 
-  const hasActiveFilter = !!(activeCard || activeFund || activeFilter !== 'All' || typeFilter || search)
+  /* ── voucher processing ───────────────────────────────────────── */
+  const openVoucherModal = (req: any) => {
+    setSelectedReq(req)
+    setVoucherNo(req.extra_fields?.voucher_number || `DV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`)
+    setCheckNo(req.extra_fields?.check_number || '')
+    setPaymentMethod(req.extra_fields?.payment_method || 'Cash')
+    setDisbursingOfficer(req.extra_fields?.disbursing_officer || profile?.full_name || 'Municipal Treasurer')
+    setVoucherNotes(req.extra_fields?.voucher_notes || '')
+    setVoucherModalOpen(true)
+  }
+
+  const handleSaveVoucher = async () => {
+    if (!voucherNo.trim()) {
+      Alert.alert('Required', 'Please enter a Disbursement Voucher (DV) Number.')
+      return
+    }
+
+    setProcessingModal(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { error } = await supabase.from('requests').update({
+        release_status: 'Ready for Release',
+        extra_fields: {
+          ...(selectedReq.extra_fields || {}),
+          voucher_number: voucherNo.trim(),
+          check_number: checkNo.trim() || null,
+          payment_method: paymentMethod,
+          disbursing_officer: disbursingOfficer.trim() || profile?.full_name || 'Municipal Treasurer',
+          voucher_notes: voucherNotes.trim() || null,
+        }
+      }).eq('id', selectedReq.id)
+
+      if (error) throw error
+
+      if (user) {
+        await supabase.from('system_logs').insert({
+          user_id: user.id,
+          action: 'PROCESS_VOUCHER',
+          table_name: 'requests',
+          record_id: selectedReq.id,
+          details: { voucher_number: voucherNo.trim(), release_status: 'Ready for Release' }
+        })
+      }
+
+      setVoucherModalOpen(false)
+      load(true)
+      Alert.alert('Success', 'Voucher details recorded! Status is now Ready for Release.')
+    } catch (e: any) {
+      Alert.alert('Error', e.message)
+    } finally {
+      setProcessingModal(false)
+    }
+  }
+
+  /* ── confirm release ──────────────────────────────────────────── */
+  const handleConfirmRelease = (req: any) => {
+    if (!req.amount_approved || Number(req.amount_approved) <= 0) {
+      Alert.alert('Cannot Release', 'Approved amount is missing or zero.')
+      return
+    }
+
+    const benName = req.beneficiaries ? `${req.beneficiaries.first_name} ${req.beneficiaries.last_name}` : 'the beneficiary'
+    Alert.alert(
+      'Confirm Disbursement',
+      `Release ₱${Number(req.amount_approved).toLocaleString()} to ${benName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm Release',
+          onPress: async () => {
+            try {
+              const { data: { user } } = await supabase.auth.getUser()
+              const amt = Number(req.amount_approved)
+
+              // 1. Payout
+              const { error: payErr } = await supabase.from('payouts').insert({
+                request_id: req.id,
+                amount_released: amt,
+                release_date: new Date().toISOString().split('T')[0],
+                released_by: user?.id,
+                acknowledgment_notes: 'Released via Mobile Treasurer Dashboard'
+              })
+              if (payErr) throw payErr
+
+              // 2. Request status
+              await supabase.from('requests').update({
+                status: 'Released',
+                release_status: 'Released'
+              }).eq('id', req.id)
+
+              // 3. Fund deduction & transaction
+              if (req.assistance_type) {
+                const { data: fund } = await supabase.from('funds').select('*').eq('assistance_type', req.assistance_type).single()
+                if (fund) {
+                  const newBalance = Math.max(0, Number(fund.current_balance) - amt)
+                  const newReleased = Number(fund.total_released || 0) + amt
+                  await supabase.from('funds').update({
+                    current_balance: newBalance,
+                    total_released: newReleased
+                  }).eq('id', fund.id)
+
+                  await supabase.from('fund_transactions').insert({
+                    fund_id: fund.id,
+                    request_id: req.id,
+                    transaction_type: 'Release',
+                    amount: amt,
+                    balance_after: newBalance,
+                    processed_by: user?.id,
+                    remarks: `Disbursement to ${benName}`
+                  })
+                }
+              }
+
+              // 4. Log
+              if (user) {
+                await supabase.from('system_logs').insert({
+                  user_id: user.id,
+                  action: 'CONFIRM_RELEASE',
+                  table_name: 'requests',
+                  record_id: req.id,
+                  details: { amount_released: amt, release_status: 'Released' }
+                })
+              }
+
+              // 5. Notify resident
+              if (req.encoded_by) {
+                await supabase.from('notifications').insert({
+                  user_id: req.encoded_by,
+                  title: 'Assistance Released',
+                  message: `Your ${req.assistance_type} assistance payout of ₱${amt.toLocaleString()} has been released.`,
+                  type: 'info',
+                  request_id: req.id
+                })
+              }
+
+              load(true)
+              Alert.alert('Success', 'Assistance payout released and recorded successfully!')
+            } catch (e: any) {
+              Alert.alert('Error', e.message)
+            }
+          }
+        }
+      ]
+    )
+  }
+
+  /* ── return to admin ──────────────────────────────────────────── */
+  const openReturnModal = (req: any) => {
+    setSelectedReq(req)
+    setReturnRemarks('')
+    setReturnModalOpen(true)
+  }
+
+  const handleReturnToAdmin = async () => {
+    if (!returnRemarks.trim()) {
+      Alert.alert('Required', 'Please state the reason for returning this request.')
+      return
+    }
+
+    setProcessingModal(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { error } = await supabase.from('requests').update({
+        status: 'Pending',
+        release_status: 'Pending Release',
+        remarks: `[Returned by Treasurer]: ${returnRemarks.trim()}`
+      }).eq('id', selectedReq.id)
+
+      if (error) throw error
+
+      // Notify Admins
+      const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin')
+      if (admins) {
+        const benName = selectedReq.beneficiaries ? `${selectedReq.beneficiaries.first_name} ${selectedReq.beneficiaries.last_name}` : 'Unknown'
+        await supabase.from('notifications').insert(
+          admins.map((a: any) => ({
+            user_id: a.id,
+            title: 'Request Returned by Treasurer',
+            message: `Request for ${benName} was returned: ${returnRemarks.trim()}`,
+            type: 'warning',
+            request_id: selectedReq.id
+          }))
+        )
+      }
+
+      setReturnModalOpen(false)
+      load(true)
+      Alert.alert('Returned', 'Request returned to Admin with remarks.')
+    } catch (e: any) {
+      Alert.alert('Error', e.message)
+    } finally {
+      setProcessingModal(false)
+    }
+  }
 
   /* ── filtered list ─────────────────────────────────────────────── */
   const filteredRequests = requests.filter(r => {
@@ -180,7 +372,7 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
     const matchesTab    = activeFilter === 'All' || rStatus === activeFilter
     const matchesType   = typeFilter ? r.assistance_type === typeFilter : true
     const matchesSearch = search
-      ? `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name}`.toLowerCase().includes(search.toLowerCase())
+      ? `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name} ${r.id} ${r.extra_fields?.voucher_number || ''}`.toLowerCase().includes(search.toLowerCase())
       : true
     return matchesTab && matchesType && matchesSearch
   })
@@ -190,66 +382,87 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
   /* ── List Header ──────────────────────────────────────────────── */
   const ListHeader = () => (
     <View>
+      {/* ── 6 Stat Cards Grid ───────────────────────── */}
+      <View style={s.statsGrid}>
 
-      {/* ── Stat Cards ─────────────────────────────── */}
-      <View style={s.statsRow}>
-
-        {/* Pending Releases */}
+        {/* 1. Total Funds */}
         <TouchableOpacity
-          style={[s.statCard, { backgroundColor: isDark ? '#1e3a5f' : '#eff6ff' }, activeCard === 'pending' && s.statCardActive]}
-          onPress={() => handleCardClick('pending')}
+          style={[s.statCard, { backgroundColor: isDark ? '#1e293b' : '#f8fafc' }, activeCard === 'total_funds' && s.statCardActive]}
+          onPress={() => handleCardClick('total_funds')}
           activeOpacity={0.75}
         >
-          <View style={[s.statIcon, { backgroundColor: isDark ? '#1d4ed8' : '#dbeafe' }]}>
-            <Feather name="alert-circle" size={15} color="#3b82f6" />
+          <View style={[s.statIcon, { backgroundColor: isDark ? '#312e81' : '#e0e7ff' }]}>
+            <Feather name="folder" size={14} color="#6366f1" />
           </View>
-          <Text style={[s.statValue, { color: '#3b82f6' }]}>{pendingCount}</Text>
-          <Text style={s.statLabel}>Pending{'\n'}Releases</Text>
-          {activeCard === 'pending' && (
-            <View style={s.activeIndicator}>
-              <Feather name="filter" size={8} color="#3b82f6" />
-              <Text style={[s.activeIndicatorText, { color: '#3b82f6' }]}> Filtering</Text>
-            </View>
-          )}
+          <Text style={[s.statValue, { color: '#6366f1', fontSize: 11 }]}>{formatCurrency(totalFundsBudget)}</Text>
+          <Text style={s.statLabel}>Total Funds</Text>
         </TouchableOpacity>
 
-        {/* Total Available */}
+        {/* 2. Total Allocated */}
+        <TouchableOpacity
+          style={[s.statCard, { backgroundColor: isDark ? '#2e2617' : '#fffbeb' }, activeCard === 'total_allocated' && s.statCardActive]}
+          onPress={() => handleCardClick('total_allocated')}
+          activeOpacity={0.75}
+        >
+          <View style={[s.statIcon, { backgroundColor: isDark ? '#78350f' : '#fef3c7' }]}>
+            <Feather name="clock" size={14} color="#d97706" />
+          </View>
+          <Text style={[s.statValue, { color: '#d97706', fontSize: 11 }]}>{formatCurrency(totalEarmarkedAllocated)}</Text>
+          <Text style={s.statLabel}>Allocated</Text>
+        </TouchableOpacity>
+
+        {/* 3. Total Released */}
+        <TouchableOpacity
+          style={[s.statCard, { backgroundColor: isDark ? '#2a1a12' : '#fff7ed' }, activeCard === 'released' && s.statCardActive]}
+          onPress={() => handleCardClick('released')}
+          activeOpacity={0.75}
+        >
+          <View style={[s.statIcon, { backgroundColor: isDark ? '#7c2d12' : '#ffedd5' }]}>
+            <Feather name="arrow-down-right" size={14} color="#ea580c" />
+          </View>
+          <Text style={[s.statValue, { color: '#ea580c', fontSize: 11 }]}>{formatCurrency(totalReleased)}</Text>
+          <Text style={s.statLabel}>Released</Text>
+        </TouchableOpacity>
+
+        {/* 4. Remaining Balance */}
         <TouchableOpacity
           style={[s.statCard, { backgroundColor: isDark ? '#064e3b' : '#ecfdf5' }, activeCard === 'available' && s.statCardActive]}
           onPress={() => handleCardClick('available')}
           activeOpacity={0.75}
         >
           <View style={[s.statIcon, { backgroundColor: isDark ? '#065f46' : '#d1fae5' }]}>
-            <Feather name="briefcase" size={15} color="#10b981" />
+            <Feather name="briefcase" size={14} color="#10b981" />
           </View>
           <Text style={[s.statValue, { color: '#10b981', fontSize: 11 }]}>{formatCurrency(totalAvailable)}</Text>
-          <Text style={s.statLabel}>Total{'\n'}Available</Text>
-          {activeCard === 'available' && (
-            <View style={s.activeIndicator}>
-              <Feather name="info" size={8} color="#10b981" />
-              <Text style={[s.activeIndicatorText, { color: '#10b981' }]}> Selected</Text>
-            </View>
-          )}
+          <Text style={s.statLabel}>Remaining</Text>
         </TouchableOpacity>
 
-        {/* Total Released */}
+        {/* 5. Pending Releases */}
         <TouchableOpacity
-          style={[s.statCard, { backgroundColor: isDark ? '#312e81' : '#eef2ff' }, activeCard === 'released' && s.statCardActive]}
-          onPress={() => handleCardClick('released')}
+          style={[s.statCard, { backgroundColor: isDark ? '#1e3a5f' : '#eff6ff' }, activeCard === 'pending' && s.statCardActive]}
+          onPress={() => handleCardClick('pending')}
           activeOpacity={0.75}
         >
-          <View style={[s.statIcon, { backgroundColor: isDark ? '#4338ca' : '#e0e7ff' }]}>
-            <Feather name="arrow-down-right" size={15} color="#6366f1" />
+          <View style={[s.statIcon, { backgroundColor: isDark ? '#1d4ed8' : '#dbeafe' }]}>
+            <Feather name="alert-circle" size={14} color="#3b82f6" />
           </View>
-          <Text style={[s.statValue, { color: '#6366f1', fontSize: 11 }]}>{formatCurrency(totalReleased)}</Text>
-          <Text style={s.statLabel}>Total{'\n'}Released</Text>
-          {activeCard === 'released' && (
-            <View style={s.activeIndicator}>
-              <Feather name="filter" size={8} color="#6366f1" />
-              <Text style={[s.activeIndicatorText, { color: '#6366f1' }]}> Filtering</Text>
-            </View>
-          )}
+          <Text style={[s.statValue, { color: '#3b82f6' }]}>{pendingCount}</Text>
+          <Text style={s.statLabel}>Pending</Text>
         </TouchableOpacity>
+
+        {/* 6. Approved Requests */}
+        <TouchableOpacity
+          style={[s.statCard, { backgroundColor: isDark ? '#3b0764' : '#faf5ff' }, activeCard === 'approved' && s.statCardActive]}
+          onPress={() => handleCardClick('approved')}
+          activeOpacity={0.75}
+        >
+          <View style={[s.statIcon, { backgroundColor: isDark ? '#6b21a8' : '#f3e8ff' }]}>
+            <Feather name="file-text" size={14} color="#9333ea" />
+          </View>
+          <Text style={[s.statValue, { color: '#9333ea' }]}>{requests.length}</Text>
+          <Text style={s.statLabel}>Approved</Text>
+        </TouchableOpacity>
+
       </View>
 
       {/* ── Quick Actions ───────────────────────────── */}
@@ -266,6 +479,10 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
           <Feather name="credit-card" size={14} color={colors.primary} />
           <Text style={[s.actionBtnText, { color: colors.primary }]}>Payouts</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[s.actionBtn, s.actionBtnOutline]} onPress={() => navigation.navigate('Reports')} activeOpacity={0.8}>
+          <Feather name="bar-chart-2" size={14} color={colors.primary} />
+          <Text style={[s.actionBtnText, { color: colors.primary }]}>Reports</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Fund Balance Chips ──────────────────────── */}
@@ -280,41 +497,24 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
               return (
                 <TouchableOpacity
                   key={fund.id}
-                  style={[
-                    s.fundChip,
-                    isLow && { borderColor: '#f97316' },
-                    isAct && { borderColor: colors.primary, borderWidth: 2 },
-                  ]}
+                  style={[s.fundChip, isLow && s.fundChipLow, isAct && s.fundChipActive]}
                   onPress={() => handleFundClick(fund.assistance_type)}
                   activeOpacity={0.75}
                 >
-                  {/* Corner icon */}
-                  <View style={{ position: 'absolute', top: 8, right: 8 }}>
-                    {isAct
-                      ? <Feather name="filter" size={10} color={colors.primary} />
-                      : isLow
-                        ? <Feather name="alert-triangle" size={10} color="#f97316" />
-                        : null
-                    }
+                  <View style={s.fundChipTop}>
+                    <Text style={s.fundChipType}>{fund.assistance_type}</Text>
+                    {isLow && (
+                      <View style={s.lowBadge}>
+                        <Feather name="alert-triangle" size={9} color="#ea580c" />
+                        <Text style={s.lowBadgeText}> Low</Text>
+                      </View>
+                    )}
                   </View>
-
-                  <Text style={s.fundChipType}>{fund.assistance_type}</Text>
-                  <Text style={s.fundChipBalance}>{formatCurrency(fund.current_balance)}</Text>
-                  <View style={s.miniProgressBg}>
-                    <View style={[s.miniProgressFill, {
-                      flex: Math.min(pct, 100) / 100,
-                      backgroundColor: isAct ? colors.primary : isLow ? '#f97316' : '#3b82f6'
-                    }]} />
-                    <View style={{ flex: 1 - Math.min(pct, 100) / 100 }} />
+                  <Text style={s.fundChipBal}>{formatCurrency(fund.current_balance)}</Text>
+                  <View style={s.fundProgressBg}>
+                    <View style={[s.fundProgressFill, { width: `${Math.min(pct, 100)}%` as any, backgroundColor: isLow ? '#ea580c' : colors.primary }]} />
                   </View>
-                  <Text style={[s.fundChipPct, isAct && { color: colors.primary }]}>
-                    {Math.round(pct)}% remaining
-                  </Text>
-                  {isAct && (
-                    <Text style={[s.fundChipPct, { color: colors.primary, marginTop: 3 }]}>
-                      Tap again to clear
-                    </Text>
-                  )}
+                  <Text style={s.fundChipSub}>{Math.round(pct)}% remaining</Text>
                 </TouchableOpacity>
               )
             })}
@@ -322,281 +522,654 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
         </View>
       )}
 
-      {/* ── Active Filter Banner ────────────────────── */}
-      {hasActiveFilter && (
-        <TouchableOpacity style={s.filterBanner} onPress={clearAll} activeOpacity={0.85}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Feather name="filter" size={12} color={colors.primary} />
-            <Text style={[s.filterBannerText, { color: colors.primary }]}>
-              {filteredRequests.length} result{filteredRequests.length !== 1 ? 's' : ''} filtered
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Feather name="x" size={12} color={colors.primary} />
-            <Text style={[s.filterBannerText, { color: colors.primary, fontWeight: '700' }]}>Clear all</Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* ── Search ─────────────────────────────────── */}
+      {/* ── Search Bar ──────────────────────────────── */}
       <View style={s.searchRow}>
-        <Feather name="search" size={14} color={colors.textSecondary} style={{ marginRight: 8 }} />
-        <TextInput
-          style={s.searchInput}
-          placeholder="Search beneficiary..."
-          value={search}
-          onChangeText={v => { setSearch(v); if (v) setActiveCard(null) }}
-          placeholderTextColor={colors.textSecondary}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Feather name="x" size={14} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
+        <View style={s.searchBox}>
+          <Feather name="search" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Search beneficiary or DV #..."
+            placeholderTextColor={colors.textSecondary}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Feather name="x" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
-      {/* ── Filter Tabs ────────────────────────────── */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow}>
-        {FILTER_TABS.map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[s.filterTab, activeFilter === tab && s.filterTabActive]}
-            onPress={() => { setActiveFilter(tab); setActiveCard(null) }}
-            activeOpacity={0.75}
-          >
-            <Text style={[s.filterTabText, activeFilter === tab && s.filterTabTextActive]}>
-              {tab}{tab === 'Pending Release' && pendingCount > 0 ? ` (${pendingCount})` : ''}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      {/* ── Filter Tabs ─────────────────────────────── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterTabs}>
+        {FILTER_TABS.map(tab => {
+          const isAct = activeFilter === tab
+          const count = tab === 'All' ? requests.length : requests.filter(r => (r.release_status || 'Pending Release') === tab).length
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[s.tab, isAct && s.tabActive]}
+              onPress={() => { setActiveFilter(tab); setActiveCard(null) }}
+              activeOpacity={0.7}
+            >
+              <Text style={[s.tabText, isAct && s.tabTextActive]}>
+                {tab} ({count})
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
       </ScrollView>
 
-      <Text style={[s.sectionLabel, { marginBottom: 8 }]}>
-        Approved Requests{filteredRequests.length > 0 ? ` · ${filteredRequests.length}` : ''}
+      {/* ── Filter banner if applied ────────────────── */}
+      {(activeCard || activeFund || activeFilter !== 'All' || typeFilter || search) ? (
+        <View style={s.filterBanner}>
+          <Feather name="filter" size={12} color={colors.primary} />
+          <Text style={s.filterBannerText}>
+            Filtering: {activeFilter !== 'All' ? activeFilter : ''} {typeFilter ? `• ${typeFilter}` : ''} {search ? `• "${search}"` : ''} ({filteredRequests.length} results)
+          </Text>
+          <TouchableOpacity onPress={clearAll}>
+            <Text style={s.filterBannerClear}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <Text style={[s.sectionLabel, { marginTop: 8, marginBottom: 8 }]}>
+        Approved Requests ({filteredRequests.length})
       </Text>
     </View>
   )
 
-  return (
-    <View style={s.container}>
-      {/* Page Header */}
-      <View style={s.pageHeader}>
-        <View>
-          <Text style={s.pageTitle}>{t('nav_treasurerDashboard') || 'Treasurer Dashboard'}</Text>
-          <Text style={s.pageSubtitle}>{requests.length} approved request{requests.length !== 1 ? 's' : ''} awaiting release</Text>
+  const renderItem = ({ item: r }: any) => {
+    const rStatus = r.release_status || 'Pending Release'
+    const st = STATUS_STYLE[rStatus] || STATUS_STYLE['Pending Release']
+
+    return (
+      <View style={s.card}>
+        <View style={s.cardTop}>
+          <View style={{ flex: 1 }}>
+            <TouchableOpacity onPress={() => navigation.navigate('RequestDetail', { id: r.id })}>
+              <Text style={s.benName}>
+                {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
+              </Text>
+            </TouchableOpacity>
+            <Text style={s.barangay}>Brgy. {r.beneficiaries?.barangay || '—'}</Text>
+          </View>
+          <View style={[s.statusBadge, { backgroundColor: isDark ? '#1e293b' : st.bg }]}>
+            <Text style={[s.statusText, { color: isDark ? '#94a3b8' : st.text }]}>{rStatus}</Text>
+          </View>
+        </View>
+
+        <View style={s.cardMid}>
+          <View style={s.detailCol}>
+            <Text style={s.detailLabel}>Assistance</Text>
+            <Text style={s.detailVal}>{r.assistance_type}</Text>
+          </View>
+          <View style={s.detailCol}>
+            <Text style={s.detailLabel}>Approved Amount</Text>
+            <Text style={[s.detailVal, { color: '#10b981', fontWeight: 'bold' }]}>
+              ₱{Number(r.amount_approved || 0).toLocaleString()}
+            </Text>
+          </View>
+          <View style={s.detailCol}>
+            <Text style={s.detailLabel}>Voucher #</Text>
+            <Text style={[s.detailVal, { fontSize: 11 }]}>
+              {r.extra_fields?.voucher_number || '—'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Row Action Buttons */}
+        <View style={s.cardActions}>
+          <TouchableOpacity
+            style={s.rowBtn}
+            onPress={() => navigation.navigate('RequestDetail', { id: r.id })}
+          >
+            <Feather name="eye" size={13} color={colors.textSecondary} />
+            <Text style={[s.rowBtnText, { color: colors.textSecondary }]}>View</Text>
+          </TouchableOpacity>
+
+          {rStatus !== 'Released' && (
+            <TouchableOpacity
+              style={[s.rowBtn, { backgroundColor: isDark ? '#1e3a5f' : '#eff6ff' }]}
+              onPress={() => openVoucherModal(r)}
+            >
+              <Feather name="file-text" size={13} color={colors.primary} />
+              <Text style={[s.rowBtnText, { color: colors.primary }]}>Voucher</Text>
+            </TouchableOpacity>
+          )}
+
+          {rStatus !== 'Released' && (
+            <TouchableOpacity
+              style={[s.rowBtn, { backgroundColor: isDark ? '#064e3b' : '#ecfdf5' }]}
+              onPress={() => handleConfirmRelease(r)}
+            >
+              <Feather name="check-circle" size={13} color="#10b981" />
+              <Text style={[s.rowBtnText, { color: '#10b981' }]}>Release</Text>
+            </TouchableOpacity>
+          )}
+
+          {rStatus !== 'Released' && (
+            <TouchableOpacity
+              style={[s.rowBtn, { backgroundColor: isDark ? '#3d1414' : '#fee2e2' }]}
+              onPress={() => openReturnModal(r)}
+            >
+              <Feather name="rotate-ccw" size={13} color="#ef4444" />
+              <Text style={[s.rowBtnText, { color: '#ef4444' }]}>Return</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+    )
+  }
 
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredRequests}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); load(true) }}
-              tintColor={colors.primary}
-            />
-          }
-          ListHeaderComponent={<ListHeader />}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 30 }}
-          renderItem={({ item }) => {
-            const rStatus = item.release_status || 'Pending Release'
-            const st = STATUS_STYLE[rStatus] || STATUS_STYLE['Pending Release']
-            const typeIsActive = activeFund === item.assistance_type
-            return (
-              <TouchableOpacity
-                style={s.requestCard}
-                onPress={() => navigation.navigate('RequestDetail', { id: item.id })}
-                activeOpacity={0.75}
-              >
-                {/* Top Row */}
-                <View style={s.cardTopRow}>
-                  <View style={{ flex: 1, marginRight: 10 }}>
-                    <Text style={s.cardName} numberOfLines={1}>
-                      {item.beneficiaries?.last_name}, {item.beneficiaries?.first_name}
-                    </Text>
-                    <Text style={s.cardSub} numberOfLines={1}>{item.beneficiaries?.barangay}</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={(e) => { e.stopPropagation(); handleUpdateReleaseStatus(item.id, item.release_status) }}
-                    style={[s.statusBadge, { backgroundColor: st.bg, borderColor: st.text + '33' }]}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name={st.icon as any} size={10} color={st.text} style={{ marginRight: 4 }} />
-                    <Text style={[s.statusBadgeText, { color: st.text }]}>{rStatus}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Details Row */}
-                <View style={s.cardDetailsRow}>
-                  {/* Assistance type — tappable to filter */}
-                  <TouchableOpacity
-                    style={[
-                      s.cardDetail,
-                      typeIsActive && { backgroundColor: colors.primary + '22', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 }
-                    ]}
-                    onPress={() => handleFundClick(item.assistance_type)}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name="tag" size={11} color={typeIsActive ? colors.primary : colors.textSecondary} />
-                    <Text style={[s.cardDetailText, typeIsActive && { color: colors.primary, fontWeight: '700' }]}>
-                      {item.assistance_type}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <View style={s.cardDetail}>
-                    <Feather name="check-square" size={11} color="#10b981" />
-                    <Text style={[s.cardDetailText, { color: '#10b981', fontWeight: '700' }]}>
-                      {item.amount_approved ? `₱${Number(item.amount_approved).toLocaleString()}` : '—'}
-                    </Text>
-                  </View>
-                  <View style={s.cardDetail}>
-                    <Feather name="calendar" size={11} color={colors.textSecondary} />
-                    <Text style={s.cardDetailText}>{format(new Date(item.created_at), 'MMM d, yyyy')}</Text>
-                  </View>
-                </View>
-
-                {/* Bottom hint */}
-                <View style={s.cardHint}>
-                  <Text style={s.cardHintText}>Tap badge to update · tap type to filter</Text>
-                  <Feather name="chevron-right" size={12} color={colors.textSecondary} style={{ opacity: 0.4 }} />
-                </View>
-              </TouchableOpacity>
-            )
-          }}
-          ListEmptyComponent={
-            <View style={s.emptyContainer}>
-              <Feather name="inbox" size={38} color={colors.textSecondary} style={{ opacity: 0.35, marginBottom: 12 }} />
-              <Text style={s.emptyText}>No records found</Text>
-              <Text style={s.emptySubText}>
-                {hasActiveFilter
-                  ? 'No requests match the current filters'
-                  : 'No approved requests waiting for release'}
-              </Text>
-              {hasActiveFilter && (
-                <TouchableOpacity onPress={clearAll} style={{ marginTop: 14 }} activeOpacity={0.8}>
-                  <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>Clear all filters</Text>
-                </TouchableOpacity>
-              )}
+  return (
+    <View style={s.container}>
+      <FlatList
+        data={filteredRequests}
+        keyExtractor={item => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={ListHeader}
+        contentContainerStyle={s.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true) }} />}
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+          ) : (
+            <View style={s.emptyBox}>
+              <Feather name="file-text" size={36} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+              <Text style={s.emptyTitle}>No requests found</Text>
+              <Text style={s.emptySub}>No approved requests match your current filters.</Text>
             </View>
-          }
-        />
-      )}
+          )
+        }
+      />
+
+      {/* Voucher Modal */}
+      <Modal visible={voucherModalOpen} animationType="fade" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalBox}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Process Voucher</Text>
+              <TouchableOpacity onPress={() => setVoucherModalOpen(false)}>
+                <Feather name="x" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={s.modalSub}>
+              Beneficiary: {selectedReq?.beneficiaries?.first_name} {selectedReq?.beneficiaries?.last_name} · ₱{Number(selectedReq?.amount_approved || 0).toLocaleString()}
+            </Text>
+
+            <Text style={s.inputLabel}>Disbursement Voucher (DV) # *</Text>
+            <TextInput
+              style={s.modalInput}
+              placeholder="e.g. DV-2026-10-0089"
+              placeholderTextColor={colors.textSecondary}
+              value={voucherNo}
+              onChangeText={setVoucherNo}
+            />
+
+            <Text style={s.inputLabel}>Check / Ref # (Optional)</Text>
+            <TextInput
+              style={s.modalInput}
+              placeholder="e.g. CHK-554219"
+              placeholderTextColor={colors.textSecondary}
+              value={checkNo}
+              onChangeText={setCheckNo}
+            />
+
+            <Text style={s.inputLabel}>Payment Method</Text>
+            <TextInput
+              style={s.modalInput}
+              placeholder="Cash / Cheque / Bank Transfer"
+              placeholderTextColor={colors.textSecondary}
+              value={paymentMethod}
+              onChangeText={setPaymentMethod}
+            />
+
+            <View style={s.modalBtnRow}>
+              <TouchableOpacity style={s.modalCancelBtn} onPress={() => setVoucherModalOpen(false)}>
+                <Text style={s.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.modalConfirmBtn}
+                onPress={handleSaveVoucher}
+                disabled={processingModal}
+              >
+                {processingModal ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={s.modalConfirmText}>Save & Ready</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Return Modal */}
+      <Modal visible={returnModalOpen} animationType="fade" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalBox}>
+            <View style={s.modalHeader}>
+              <Text style={[s.modalTitle, { color: '#ef4444' }]}>Return to Admin</Text>
+              <TouchableOpacity onPress={() => setReturnModalOpen(false)}>
+                <Feather name="x" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={s.modalSub}>
+              State the reason for returning this request (e.g. insufficient funds, documentation issue).
+            </Text>
+
+            <Text style={s.inputLabel}>Reason / Remarks *</Text>
+            <TextInput
+              style={[s.modalInput, { height: 75, textAlignVertical: 'top' }]}
+              multiline
+              numberOfLines={3}
+              placeholder="Enter remarks..."
+              placeholderTextColor={colors.textSecondary}
+              value={returnRemarks}
+              onChangeText={setReturnRemarks}
+            />
+
+            <View style={s.modalBtnRow}>
+              <TouchableOpacity style={s.modalCancelBtn} onPress={() => setReturnModalOpen(false)}>
+                <Text style={s.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modalConfirmBtn, { backgroundColor: '#ef4444' }]}
+                onPress={handleReturnToAdmin}
+                disabled={processingModal}
+              >
+                {processingModal ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={s.modalConfirmText}>Confirm Return</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
 
 const styles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: 16, paddingBottom: 32 },
 
-  pageHeader: {
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+  // 6 Stats Grid
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
   },
-  pageTitle:    { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-  pageSubtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-
-  /* ── Stat Cards ─────────────────────────────────────────────── */
-  statsRow: { flexDirection: 'row', gap: 10, marginTop: 16, marginBottom: 14 },
   statCard: {
-    flex: 1, borderRadius: 14, padding: 12,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-    borderWidth: 2, borderColor: 'transparent',
+    width: '31.5%',
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   statCardActive: {
     borderColor: colors.primary,
-    shadowColor: colors.primary, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+    borderWidth: 2,
   },
   statIcon: {
-    width: 30, height: 30, borderRadius: 8,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  statValue:           { fontSize: 13, fontWeight: '800', marginBottom: 2 },
-  statLabel:           { fontSize: 10, fontWeight: '600', color: colors.textSecondary, lineHeight: 14 },
-  activeIndicator:     { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  activeIndicatorText: { fontSize: 9, fontWeight: '700' },
-
-  /* ── Active filter banner ───────────────────────────────────── */
-  filterBanner: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.primary + '18',
-    borderWidth: 1, borderColor: colors.primary + '40',
-    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12,
+  statValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
-  filterBannerText: { fontSize: 12, fontWeight: '600' },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
 
-  /* ── Quick actions ──────────────────────────────────────────── */
-  quickActions: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  // Quick actions
+  quickActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
   actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 5, backgroundColor: colors.primary, paddingVertical: 9, borderRadius: 12,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: colors.primary,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
   actionBtnOutline: {
-    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  actionBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  actionBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 
-  /* ── Section label ──────────────────────────────────────────── */
   sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: colors.textSecondary,
-    marginBottom: 10, letterSpacing: 0.5, textTransform: 'uppercase',
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
 
-  /* ── Fund chips ─────────────────────────────────────────────── */
+  // Fund chip
   fundChip: {
-    backgroundColor: colors.card, borderRadius: 14, padding: 14, width: 160,
-    borderWidth: 1, borderColor: colors.border, position: 'relative',
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 120,
   },
-  fundChipType:     { fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 },
-  fundChipBalance:  { fontSize: 15, fontWeight: '800', color: colors.text, marginBottom: 8 },
-  miniProgressBg:   { height: 4, flexDirection: 'row', backgroundColor: isDark ? '#334155' : '#e2e8f0', borderRadius: 2, overflow: 'hidden', marginBottom: 4 },
-  miniProgressFill: { height: 4, borderRadius: 2 },
-  fundChipPct:      { fontSize: 10, color: colors.textSecondary, fontWeight: '600' },
+  fundChipLow: {
+    borderColor: '#ea580c',
+  },
+  fundChipActive: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  fundChipTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  fundChipType: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  lowBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff7ed',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  lowBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#ea580c',
+  },
+  fundChipBal: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 5,
+  },
+  fundProgressBg: {
+    height: 3,
+    backgroundColor: isDark ? '#334155' : '#e2e8f0',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  fundProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  fundChipSub: {
+    fontSize: 9,
+    color: colors.textSecondary,
+  },
 
-  /* ── Search ─────────────────────────────────────────────────── */
+  // Search
   searchRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12,
+    marginBottom: 10,
   },
-  searchInput: { flex: 1, fontSize: 14, color: colors.text },
-
-  /* ── Filter tabs ────────────────────────────────────────────── */
-  filterRow:           { gap: 8, paddingRight: 4, marginBottom: 14 },
-  filterTab:           { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9', borderWidth: 1, borderColor: 'transparent' },
-  filterTabActive:     { backgroundColor: isDark ? 'rgba(37,99,235,0.25)' : '#eff6ff', borderColor: colors.primary },
-  filterTabText:       { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-  filterTabTextActive: { color: colors.primary, fontWeight: '700' },
-
-  /* ── Request card ───────────────────────────────────────────── */
-  requestCard: {
-    backgroundColor: colors.card, borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: colors.border,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  cardTopRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  cardName:        { fontSize: 15, fontWeight: '700', color: colors.text },
-  cardSub:         { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  statusBadge:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
-  statusBadgeText: { fontSize: 10, fontWeight: '700' },
-  cardDetailsRow:  { flexDirection: 'row', gap: 12, marginBottom: 8, flexWrap: 'wrap' },
-  cardDetail:      { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  cardDetailText:  { fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
-  cardHint: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border,
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
   },
-  cardHintText: { fontSize: 10, color: colors.textSecondary, opacity: 0.6 },
 
-  /* ── Empty state ────────────────────────────────────────────── */
-  emptyContainer: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 30 },
-  emptyText:      { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 6 },
-  emptySubText:   { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  // Filter tabs
+  filterTabs: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 10,
+  },
+  tab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  tabTextActive: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+
+  filterBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 10,
+    gap: 6,
+  },
+  filterBannerText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  filterBannerClear: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  // Cards
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  benName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  barangay: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  cardMid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
+  },
+  detailCol: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  detailVal: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+  rowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: isDark ? '#334155' : '#f1f5f9',
+  },
+  rowBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  emptyBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalBox: {
+    width: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  modalInput: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: colors.text,
+    marginBottom: 10,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 6,
+  },
+  modalCancelBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: isDark ? '#334155' : '#f1f5f9',
+  },
+  modalCancelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  modalConfirmBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+  },
+  modalConfirmText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+  },
 })

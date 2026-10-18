@@ -16,7 +16,7 @@ export default async function FundTransactionsPage({
   if (!session) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-  if (profile?.role !== 'admin') redirect('/dashboard')
+  if (profile?.role !== 'admin' && profile?.role !== 'treasurer') redirect('/dashboard')
 
   // Build query
   let query = supabase

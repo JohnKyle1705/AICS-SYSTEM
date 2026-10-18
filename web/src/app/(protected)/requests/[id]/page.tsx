@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_COLORS, REQUEST_STATUSES } from '@/lib/constants'
 import { format } from 'date-fns'
-import { FileText, Download, CheckCircle, AlertCircle, Clock, XCircle, ClipboardCheck } from 'lucide-react'
+import { FileText, Download, CheckCircle, AlertCircle, Clock, XCircle, ClipboardCheck, Banknote, Wallet, RotateCcw } from 'lucide-react'
 import AssessmentForm from '@/components/assessments/AssessmentForm'
 import { useLanguage } from '@/lib/LanguageContext'
 
@@ -28,6 +28,106 @@ export default function RequestDetailPage() {
   const [isAssessing, setIsAssessing] = useState(false)
   const searchParams = useSearchParams()
   const [highlight, setHighlight] = useState(false)
+
+  // Treasurer Modal States
+  const [voucherModalOpen, setVoucherModalOpen] = useState(false)
+  const [voucherNo, setVoucherNo] = useState('')
+  const [checkNo, setCheckNo] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('Cash')
+  const [disbursingOfficer, setDisbursingOfficer] = useState('')
+  const [voucherNotes, setVoucherNotes] = useState('')
+
+  const [returnModalOpen, setReturnModalOpen] = useState(false)
+  const [returnRemarks, setReturnRemarks] = useState('')
+
+  const handleSaveVoucher = async () => {
+    if (!voucherNo.trim()) {
+      alert('Disbursement Voucher (DV) Number is required')
+      return
+    }
+    setUpdating(true)
+    try {
+      const res = await fetch('/api/treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'process_voucher',
+          requestId: id,
+          voucherNumber: voucherNo.trim(),
+          checkNumber: checkNo.trim() || null,
+          paymentMethod,
+          disbursingOfficer: disbursingOfficer.trim() || profile?.full_name || 'Municipal Treasurer',
+          notes: voucherNotes.trim() || null
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to process voucher')
+
+      alert('Voucher details recorded and request marked Ready for Release!')
+      setVoucherModalOpen(false)
+      loadData()
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleConfirmRelease = async () => {
+    if (!confirm('Confirm disbursement and mark this assistance request as Released? This will deduct the fund balance and create official payout records.')) {
+      return
+    }
+    setUpdating(true)
+    try {
+      const res = await fetch('/api/treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'confirm_release',
+          requestId: id,
+          notes: 'Released via Treasurer Request Details'
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to confirm release')
+
+      alert('Disbursement successfully confirmed and recorded!')
+      loadData()
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleReturnSubmit = async () => {
+    if (!returnRemarks.trim()) {
+      alert('Remarks are required to return this request')
+      return
+    }
+    setUpdating(true)
+    try {
+      const res = await fetch('/api/treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'return_request',
+          requestId: id,
+          remarks: returnRemarks.trim()
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to return request')
+
+      alert('Request returned to Admin with remarks.')
+      setReturnModalOpen(false)
+      loadData()
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setUpdating(false)
+    }
+  }
 
   useEffect(() => {
     if (searchParams.get('highlight') === 'true') {
@@ -302,20 +402,72 @@ export default function RequestDetailPage() {
         </div>
       ) : null}
 
-      {/* Payout */}
-      {payout && (
-        <div className="card p-6">
-          <h2 className="font-semibold text-[var(--color-text)] mb-4 text-[15px]">{t('payout_record')}</h2>
-          <div className="text-sm space-y-3">
-            <div><span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">{t('payout_amount')}</span><span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">₱{Number(payout.amount_released).toLocaleString()}</span></div>
-            <div><span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">{t('payout_date')}</span><span className="text-[var(--color-text)]">{format(new Date(payout.release_date), 'MMM d, yyyy')}</span></div>
-            {payout.acknowledgment_notes && <div><span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">{t('newRequest_remarks')}</span><p className="text-[var(--color-text)]">{payout.acknowledgment_notes}</p></div>}
+      {/* Financial Processing & Payout Details */}
+      {(payout || request.release_status || request.voucher_number) && (
+        <div className="card p-6 border-l-4 border-emerald-500">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-[var(--color-text)] text-[15px] flex items-center gap-2">
+              <Banknote className="text-emerald-500" size={18} /> Financial & Disbursement Details
+            </h2>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+              request.release_status === 'Released' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
+              request.release_status === 'Ready for Release' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
+              'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
+            }`}>
+              {request.release_status || (payout ? 'Released' : 'Pending Release')}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Approved Amount</span>
+              <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                ₱{Number(request.amount_approved || payout?.amount_released || 0).toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Disbursement Voucher (DV) #</span>
+              <span className="font-medium text-[var(--color-text)]">
+                {request.voucher_number || request.extra_fields?.voucher_number || payout?.acknowledgment_notes?.match(/DV-?[A-Z0-9-]+/i)?.[0] || '—'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Check / Ref #</span>
+              <span className="font-medium text-[var(--color-text)]">
+                {request.check_number || request.extra_fields?.check_number || '—'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Payment Method</span>
+              <span className="font-medium text-[var(--color-text)]">
+                {request.payment_method || request.extra_fields?.payment_method || 'Cash'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Disbursing Officer</span>
+              <span className="font-medium text-[var(--color-text)]">
+                {request.disbursing_officer || request.extra_fields?.disbursing_officer || 'Municipal Treasurer Office'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Release / Payout Date</span>
+              <span className="text-[var(--color-text)]">
+                {payout?.release_date ? format(new Date(payout.release_date), 'MMM d, yyyy') : request.release_date ? format(new Date(request.release_date), 'MMM d, yyyy') : '—'}
+              </span>
+            </div>
+            {payout?.acknowledgment_notes && (
+              <div className="col-span-2 sm:col-span-3">
+                <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Disbursement Notes</span>
+                <p className="text-[var(--color-text)] text-xs bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-[var(--color-border)]">
+                  {payout.acknowledgment_notes}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-
-      {/* Actions */}
+      {/* Admin Actions */}
       {(profile?.role === 'admin') && (
         <div className="card p-6">
           <h2 className="font-semibold text-[var(--color-text)] mb-4 text-[15px]">{t('actions')}</h2>
@@ -342,6 +494,223 @@ export default function RequestDetailPage() {
                 + {t('payout_record')}
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Treasurer Financial Actions */}
+      {(profile?.role === 'treasurer') && (
+        <div className="card p-6 border-l-4 border-amber-500">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold text-[var(--color-text)] text-[15px] flex items-center gap-2">
+              <Wallet className="text-amber-500" size={18} /> Treasurer Financial Actions
+            </h2>
+            <span className="text-xs text-[var(--color-text-secondary)]">Municipal Treasury</span>
+          </div>
+
+          {request.status === 'Approved' ? (
+            <div className="space-y-4 mt-3">
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                This request was approved by the Admin for <strong className="text-emerald-600 dark:text-emerald-400">₱{Number(request.amount_approved || 0).toLocaleString()}</strong>.
+                You can prepare the disbursement voucher, mark it ready for release, confirm physical disbursement, or return to Admin if there is an issue.
+              </p>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                {request.release_status !== 'Released' && (
+                  <button
+                    onClick={() => setVoucherModalOpen(true)}
+                    className="btn btn-primary text-sm flex items-center gap-1.5"
+                  >
+                    <FileText size={15} /> Process Voucher / Release Info
+                  </button>
+                )}
+
+                {request.release_status !== 'Released' && (
+                  <button
+                    onClick={handleConfirmRelease}
+                    disabled={updating}
+                    className="btn btn-success text-sm flex items-center gap-1.5"
+                  >
+                    <CheckCircle size={15} /> Confirm Disbursement & Release
+                  </button>
+                )}
+
+                {request.release_status !== 'Released' && (
+                  <button
+                    onClick={() => setReturnModalOpen(true)}
+                    disabled={updating}
+                    className="btn btn-danger text-sm flex items-center gap-1.5"
+                  >
+                    <RotateCcw size={15} /> Return to Admin
+                  </button>
+                )}
+
+                {request.release_status === 'Released' && (
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold text-sm">
+                    <CheckCircle size={18} /> Assistance has been released and recorded in Treasury ledger.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300 mt-2">
+              <p className="font-medium">Initial Application Status: {request.status}</p>
+              <p className="text-xs mt-1 text-amber-700 dark:text-amber-400">
+                Treasurers only process financial disbursements after the Municipal Social Worker / Admin has officially approved the request. Application approvals and declines are restricted to Admin.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Voucher Preparation Modal */}
+      {voucherModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[var(--color-border)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
+              <h3 className="text-lg font-bold text-[var(--color-text)]">Process Disbursement Voucher</h3>
+              <button onClick={() => setVoucherModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Disbursement Voucher (DV) Number *
+                </label>
+                <input
+                  type="text"
+                  className="form-input w-full"
+                  placeholder="e.g. DV-2026-10-0089"
+                  value={voucherNo}
+                  onChange={(e) => setVoucherNo(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Check / Reference Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  className="form-input w-full"
+                  placeholder="e.g. CHK-554219"
+                  value={checkNo}
+                  onChange={(e) => setCheckNo(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    className="form-input w-full"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Digital Wallet">Digital Wallet</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                    Disbursing Officer
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input w-full"
+                    placeholder="Officer Name"
+                    value={disbursingOfficer}
+                    onChange={(e) => setDisbursingOfficer(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Notes / Instructions
+                </label>
+                <textarea
+                  className="form-input w-full h-20 text-xs"
+                  placeholder="Voucher prepared, ready for beneficiary pickup..."
+                  value={voucherNotes}
+                  onChange={(e) => setVoucherNotes(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-[var(--color-border)]">
+              <button
+                type="button"
+                onClick={() => setVoucherModalOpen(false)}
+                className="btn btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveVoucher}
+                disabled={updating}
+                className="btn btn-primary text-sm"
+              >
+                {updating ? 'Saving...' : 'Save & Mark Ready for Release'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Return to Admin Modal */}
+      {returnModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[var(--color-border)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
+              <h3 className="text-lg font-bold text-red-600">Return Request to Admin</h3>
+              <button onClick={() => setReturnModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Please state the reason for returning this request (e.g., insufficient fund balance, missing supporting receipt, amount mismatch). The Admin will be notified immediately.
+              </p>
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Remarks / Reason *
+                </label>
+                <textarea
+                  className="form-input w-full h-24 text-xs"
+                  placeholder="State the reason for return..."
+                  value={returnRemarks}
+                  onChange={(e) => setReturnRemarks(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-[var(--color-border)]">
+              <button
+                type="button"
+                onClick={() => setReturnModalOpen(false)}
+                className="btn btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleReturnSubmit}
+                disabled={updating || !returnRemarks.trim()}
+                className="btn btn-danger text-sm"
+              >
+                {updating ? 'Returning...' : 'Confirm Return'}
+              </button>
+            </div>
           </div>
         </div>
       )}

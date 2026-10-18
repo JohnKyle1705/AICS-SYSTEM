@@ -62,11 +62,15 @@ function FuneralHomeCombobox({
   )
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('touchstart', handler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('touchstart', handler)
+    }
   }, [])
 
   const select = (opt: string) => { onChange(opt); setQuery(''); setOpen(false) }
@@ -75,48 +79,50 @@ function FuneralHomeCombobox({
   return (
     <div ref={containerRef} className="relative">
       <div
-        className={`form-input flex items-center gap-2 cursor-pointer bg-slate-50/50 hover:bg-white transition-all select-none${hasError ? ' border-red-400 ring-2 ring-red-100 bg-red-50/30' : ''}`}
+        className={`form-input flex items-center gap-2 cursor-pointer bg-slate-50/50 hover:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-800 transition-all select-none${hasError ? ' border-red-400 ring-2 ring-red-100 dark:ring-red-950/40 bg-red-50/30 dark:bg-red-900/20' : ''}`}
         onClick={() => { setOpen(v => !v); setTimeout(() => (containerRef.current?.querySelector('input') as HTMLInputElement)?.focus(), 50) }}
       >
-        <Search size={14} className="text-slate-400 shrink-0" />
+        <Search size={14} className="text-slate-400 dark:text-slate-400 shrink-0" />
         {value
           ? <span className="truncate text-sm font-medium text-[var(--color-text)] flex-1">{value}</span>
-          : <span className="text-sm text-slate-400 flex-1">Search or select a funeral home…</span>
+          : <span className="text-sm text-slate-400 dark:text-slate-400 flex-1">Search or select a funeral home…</span>
         }
         {value && (
-          <button type="button" onClick={e => { e.stopPropagation(); clear() }} className="text-slate-400 hover:text-slate-600 shrink-0">
+          <button type="button" onClick={e => { e.stopPropagation(); clear() }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0">
             <X size={14} />
           </button>
         )}
       </div>
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden">
-          <div className="p-2 border-b border-slate-100">
+        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden backdrop-blur-md">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
             <input
               autoFocus type="text" value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Type to filter…"
-              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
-          <ul className="max-h-56 overflow-y-auto py-1">
+          <ul className="max-h-56 overflow-y-auto py-1 divide-y divide-slate-100/50 dark:divide-slate-800/50">
             {filtered.length === 0
-              ? <li className="px-4 py-3 text-sm text-slate-400 text-center">No funeral homes match your search.</li>
+              ? <li className="px-4 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">No funeral homes match your search.</li>
               : filtered.map(opt => (
                 <li
                   key={opt} onClick={() => select(opt)}
                   className={`px-4 py-2.5 text-sm cursor-pointer transition-colors flex items-center gap-2 ${
-                    value === opt ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-[var(--color-text)] hover:bg-slate-50'
+                    value === opt 
+                      ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold' 
+                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  {value === opt ? <Check size={13} className="shrink-0 text-blue-600" /> : <span className="w-[13px] shrink-0" />}
+                  {value === opt ? <Check size={13} className="shrink-0 text-blue-600 dark:text-blue-400" /> : <span className="w-[13px] shrink-0" />}
                   {opt}
                 </li>
               ))
             }
           </ul>
           {filtered.length > 0 && (
-            <p className="px-4 py-2 text-[10px] text-slate-400 border-t border-slate-100">
+            <p className="px-4 py-2 text-[10px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30">
               {filtered.length} of {FUNERAL_HOMES_BOGO_TO_DAANBANTAYAN.length} funeral homes · Bogo to Daanbantayan area only
             </p>
           )}
