@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { createClient, clearAllSupabaseAuth } from '@/lib/supabase/client'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import type { Profile } from '@/types'
@@ -13,7 +13,7 @@ import {
   LayoutDashboard, Users, FileText, ClipboardList, Wallet,
   Banknote, BarChart2, Bell, UserCog, LogOut, Menu, X,
   ChevronRight, Sun, Moon, Settings, ScrollText, Pin, PinOff, Info, MessageSquare,
-  Clock, CalendarDays, Megaphone
+  Clock, CalendarDays, Megaphone, CheckCircle, CheckCircle2, XCircle
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -72,8 +72,9 @@ function SidebarBrandClock() {
   )
 }
 
-export default function Sidebar() {
+function SidebarContent() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
   const { theme, setTheme } = useTheme()
@@ -195,40 +196,37 @@ export default function Sidebar() {
   // Role-based Menu Items
   const menuItems = {
     admin: [
-      { href: '/admin/dashboard', label: t('nav_adminDashboard'), icon: LayoutDashboard },
-      { href: '/users', label: t('nav_userManagement'), icon: UserCog },
-      { href: '/beneficiaries', label: t('nav_beneficiaries'), icon: Users },
-      { href: '/requests', label: t('nav_allRequests'), icon: FileText },
-      { href: '/assessments', label: t('nav_assessments'), icon: ClipboardList },
-      { href: '/payouts', label: t('nav_payouts'), icon: Banknote },
-      { href: '/admin/funds', label: 'Fund Tracking', icon: Wallet },
-      { href: '/reports', label: t('nav_systemReports'), icon: BarChart2 },
-      { href: '/logs', label: t('nav_auditLogs'), icon: ScrollText },
-      { href: '/settings/requirements', label: t('nav_requirementsSetup'), icon: ClipboardList },
-      { href: '/notifications', label: t('nav_notifications'), icon: Bell },
-      { href: '/about', label: t('nav_aboutAICS'), icon: Info },
-      { href: '/admin/announcements', label: t('nav_announcements'), icon: Megaphone },
-      { href: '/feedbacks', label: t('nav_systemFeedback'), icon: MessageSquare },
-      { href: '/settings', label: t('nav_settings'), icon: Settings },
+      { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/beneficiaries', label: 'Beneficiaries', icon: Users },
+      { href: '/requests', label: 'All Requests', icon: FileText },
+      { href: '/requests?status=Pending', label: 'Pending Requests', icon: Clock },
+      { href: '/requests?status=Approved', label: 'Approved Requests', icon: CheckCircle },
+      { href: '/requests?release_status=Ready+for+Release', label: 'Ready for Release', icon: Banknote },
+      { href: '/requests?status=Released', label: 'Released Requests', icon: CheckCircle2 },
+      { href: '/requests?status=Declined', label: 'Declined Requests', icon: XCircle },
+      { href: '/notifications', label: 'Notifications', icon: Bell },
+      { href: '/reports', label: 'Reports', icon: BarChart2 },
+      { href: '/logs', label: 'Audit Logs', icon: ScrollText },
+      { href: '/users', label: 'User Management', icon: UserCog },
+      { href: '/settings', label: 'Settings', icon: Settings },
     ],
     resident: [
-      { href: '/resident/dashboard', label: t('nav_myDashboard'), icon: LayoutDashboard },
-      { href: '/requests', label: t('nav_myRequests'), icon: FileText },
-      { href: '/notifications', label: t('nav_notifications'), icon: Bell },
-      { href: '/about', label: t('nav_aboutAICS'), icon: Info },
-      { href: '/settings', label: t('nav_accountSettings'), icon: Settings },
+      { href: '/resident/dashboard', label: t('nav_myDashboard') || 'Dashboard', icon: LayoutDashboard },
+      { href: '/requests', label: t('nav_myRequests') || 'My Requests', icon: FileText },
+      { href: '/notifications', label: t('nav_notifications') || 'Notifications', icon: Bell },
+      { href: '/about', label: t('nav_aboutAICS') || 'About AICS', icon: Info },
+      { href: '/settings', label: t('nav_accountSettings') || 'Settings', icon: Settings },
     ],
     treasurer: [
-      { href: '/treasurer', label: t('nav_treasurerDashboard'), icon: LayoutDashboard },
-      { href: '/requests', label: t('nav_allRequests'), icon: ClipboardList },
-      { href: '/treasurer/requests', label: 'Approved Releases', icon: Banknote },
+      { href: '/treasurer', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/requests', label: 'All Requests', icon: FileText },
+      { href: '/treasurer/requests?release_status=Pending+Release', label: 'Pending Release', icon: Clock },
+      { href: '/treasurer/requests?release_status=Ready+for+Release', label: 'Ready for Release', icon: Banknote },
+      { href: '/treasurer/requests?release_status=Released', label: 'Released Requests', icon: CheckCircle2 },
+      { href: '/notifications', label: 'Notifications', icon: Bell },
+      { href: '/treasurer/requests', label: 'Request History', icon: ClipboardList },
       { href: '/treasurer/funds', label: 'Fund Tracking', icon: Wallet },
-      { href: '/treasurer/transactions', label: 'Financial Ledger', icon: ScrollText },
-      { href: '/payouts', label: t('nav_payouts'), icon: Banknote },
       { href: '/treasurer/reports', label: 'Financial Reports', icon: BarChart2 },
-      { href: '/notifications', label: t('nav_notifications'), icon: Bell },
-      { href: '/about', label: t('nav_aboutAICS'), icon: Info },
-      { href: '/settings', label: t('nav_settings'), icon: Settings },
     ]
   }
 
@@ -323,7 +321,18 @@ export default function Sidebar() {
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-1">
             {filtered.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(href + '/')
+              const active = (() => {
+                const [basePath, queryString] = href.split('?')
+                if (queryString) {
+                  if (pathname !== basePath) return false
+                  const params = new URLSearchParams(queryString)
+                  for (const [key, val] of params.entries()) {
+                    if (searchParams.get(key) !== val) return false
+                  }
+                  return true
+                }
+                return pathname === basePath && (!searchParams.get('status') && !searchParams.get('release_status'))
+              })()
               return (
                 <Link
                   key={href}
@@ -398,5 +407,13 @@ export default function Sidebar() {
         </div>
       </aside>
     </>
+  )
+}
+
+export default function Sidebar() {
+  return (
+    <Suspense fallback={<aside className="sidebar fixed top-0 left-0 h-full w-[280px] sm:w-[260px] lg:w-[80px] bg-[var(--sidebar-bg)] border-r border-[var(--color-border)]" />}>
+      <SidebarContent />
+    </Suspense>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import Sidebar from '@/components/layout/Sidebar'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { Clock, Calendar } from 'lucide-react'
 
 function LiveClock() {
@@ -36,7 +36,9 @@ function LiveClock() {
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-abstract bg-overlay overflow-x-hidden">
-      <Sidebar />
+      <Suspense fallback={<aside className="sidebar fixed top-0 left-0 h-full w-[280px] sm:w-[260px] lg:w-[80px] bg-[var(--sidebar-bg)] border-r border-[var(--color-border)]" />}>
+        <Sidebar />
+      </Suspense>
       {/*
         Mobile: no left margin (sidebar slides in as overlay), pt-[90px] clears the fixed mobile header+date bar.
         lg+: left margin equals the sidebar width CSS variable; top padding resets to normal.

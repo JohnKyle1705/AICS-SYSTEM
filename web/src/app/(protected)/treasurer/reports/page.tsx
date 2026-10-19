@@ -112,11 +112,9 @@ export default function TreasurerReportsPage() {
       'Barangay': r.beneficiaries?.barangay || '—',
       'Assistance Type': r.assistance_type,
       'Approved Amount (PHP)': Number(r.amount_approved || 0),
-      'Disbursement Voucher #': r.voucher_number || r.extra_fields?.voucher_number || '—',
-      'Check / Ref #': r.check_number || r.extra_fields?.check_number || '—',
-      'Payment Method': r.payment_method || r.extra_fields?.payment_method || 'Cash',
+      'Reference #': `#${r.id.slice(0, 8).toUpperCase()}`,
       'Date Released': format(new Date(r.updated_at || r.created_at), 'yyyy-MM-dd'),
-      'Disbursing Officer': r.disbursing_officer || 'Municipal Treasurer'
+      'Disbursing Officer': r.disbursing_officer || 'Municipal Administration'
     }))
 
     const wb = XLSX.utils.book_new()
@@ -183,14 +181,13 @@ export default function TreasurerReportsPage() {
 
     autoTable(doc, {
       startY: finalY + 11,
-      head: [['DV / Ref #', 'Beneficiary Name', 'Barangay', 'Assistance', 'Amount (PHP)', 'Method', 'Date Released']],
+      head: [['Reference #', 'Beneficiary Name', 'Barangay', 'Assistance', 'Amount (PHP)', 'Date Released']],
       body: releasedDisbursements.map(r => [
-        r.voucher_number || r.extra_fields?.voucher_number || `#${r.id.slice(0, 8).toUpperCase()}`,
+        `#${r.id.slice(0, 8).toUpperCase()}`,
         `${r.beneficiaries?.last_name || ''}, ${r.beneficiaries?.first_name || ''}`,
         r.beneficiaries?.barangay || '—',
         r.assistance_type,
         `PHP ${Number(r.amount_approved || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-        r.payment_method || r.extra_fields?.payment_method || 'Cash',
         format(new Date(r.updated_at || r.created_at), 'yyyy-MM-dd')
       ]),
       theme: 'striped',
@@ -429,7 +426,7 @@ export default function TreasurerReportsPage() {
               Beneficiary Financial Assistance Disbursement List
             </h2>
             <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-              Verified released vouchers with official check numbers and disbursing officer logs.
+              Official records of assistance disbursed to beneficiaries with release logs.
             </p>
           </div>
           <span className="text-xs font-bold text-slate-500">
@@ -441,12 +438,11 @@ export default function TreasurerReportsPage() {
           <table className="data-table text-xs">
             <thead>
               <tr>
-                <th>Voucher / Ref #</th>
+                <th>Reference #</th>
                 <th>Beneficiary Name</th>
                 <th>Barangay</th>
                 <th>Assistance Type</th>
                 <th>Amount Released</th>
-                <th>Payment Method</th>
                 <th>Release Date</th>
                 <th>Disbursing Officer</th>
               </tr>
@@ -454,18 +450,18 @@ export default function TreasurerReportsPage() {
             <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>{Array.from({ length: 8 }).map((_, j) => <td key={j}><div className="skeleton h-5 w-full" /></td>)}</tr>
+                  <tr key={i}>{Array.from({ length: 7 }).map((_, j) => <td key={j}><div className="skeleton h-5 w-full" /></td>)}</tr>
                 ))
               ) : releasedDisbursements.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
                     No released assistance records match the specified filters.
                   </td>
                 </tr>
               ) : releasedDisbursements.map((r: any) => (
                 <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                   <td className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">
-                    {r.voucher_number || r.extra_fields?.voucher_number || `#${r.id.slice(0, 8).toUpperCase()}`}
+                    #{r.id.slice(0, 8).toUpperCase()}
                   </td>
                   <td className="font-bold text-[var(--color-text)]">
                     {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
@@ -481,14 +477,11 @@ export default function TreasurerReportsPage() {
                   <td className="font-bold text-emerald-600 dark:text-emerald-400">
                     {formatPHP(Number(r.amount_approved || 0))}
                   </td>
-                  <td className="font-medium text-slate-600 dark:text-slate-300">
-                    {r.payment_method || r.extra_fields?.payment_method || 'Cash'}
-                  </td>
                   <td className="text-slate-500">
                     {format(new Date(r.updated_at || r.created_at), 'MMM d, yyyy')}
                   </td>
                   <td className="text-slate-600 dark:text-slate-300">
-                    {r.disbursing_officer || 'Municipal Treasurer'}
+                    {r.disbursing_officer || 'Municipal Administration'}
                   </td>
                 </tr>
               ))}

@@ -45,14 +45,8 @@ export default function TreasurerDashboardPage() {
   const [showTooltip, setShowTooltip]     = useState(false)
   const tooltipRef                        = useRef<HTMLDivElement>(null)
 
-  // Voucher modal state
-  const [voucherModalOpen, setVoucherModalOpen] = useState(false)
+  // Action processing state
   const [selectedRequest, setSelectedRequest]   = useState<any>(null)
-  const [voucherNo, setVoucherNo]               = useState('')
-  const [checkNo, setCheckNo]                   = useState('')
-  const [paymentMethod, setPaymentMethod]       = useState('Cash')
-  const [disbursingOfficer, setDisbursingOfficer] = useState('')
-  const [voucherNotes, setVoucherNotes]         = useState('')
   const [processingAction, setProcessingAction] = useState(false)
 
   // Return to Admin modal state
@@ -69,8 +63,11 @@ export default function TreasurerDashboardPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user && !profile) {
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (p && p.role !== 'treasurer') {
+        window.location.replace(p.role === 'admin' ? '/admin/dashboard' : '/resident/dashboard')
+        return
+      }
       setProfile(p)
-      if (p?.full_name) setDisbursingOfficer(p.full_name)
     }
 
     // Fetch approved requests
@@ -203,63 +200,15 @@ export default function TreasurerDashboardPage() {
     setShowTooltip(false)
   }
 
-  /* ── voucher processing ───────────────────────────────────────── */
-  const openVoucherModal = (req: any) => {
-    setSelectedRequest(req)
-    setVoucherNo(req.voucher_number || `DV-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`)
-    setCheckNo(req.check_number || '')
-    setPaymentMethod(req.payment_method || 'Cash')
-    setDisbursingOfficer(req.disbursing_officer || profile?.full_name || 'Municipal Treasurer')
-    setVoucherNotes(req.notes || '')
-    setVoucherModalOpen(true)
-  }
-
-  const handleSaveVoucher = async () => {
-    if (!selectedRequest) return
-    if (!voucherNo.trim()) {
-      alert('Disbursement Voucher (DV) Number is required')
-      return
-    }
-
-    setProcessingAction(true)
-    try {
-      const res = await fetch('/api/treasury', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'process_voucher',
-          userId: profile?.id,
-          requestId: selectedRequest.id,
-          voucherNumber: voucherNo.trim(),
-          checkNumber: checkNo.trim() || null,
-          paymentMethod,
-          disbursingOfficer: disbursingOfficer.trim() || profile?.full_name || 'Municipal Treasurer',
-          notes: voucherNotes.trim() || null
-        })
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to process voucher')
-
-      alert('Disbursement Voucher processed! Request is now Ready for Release.')
-      setVoucherModalOpen(false)
-      load()
-    } catch (err: any) {
-      alert(err.message)
-    } finally {
-      setProcessingAction(false)
-    }
-  }
-
-  /* ── confirm release ──────────────────────────────────────────── */
-  const handleConfirmRelease = async (req: any) => {
+  /* ── readiness confirmation ─────────────────────────────────────── */
+  const handleConfirmReadiness = async (req: any) => {
     if (!req.amount_approved || Number(req.amount_approved) <= 0) {
-      alert('Cannot release: Approved amount is missing or zero.')
+      alert('Cannot confirm readiness: Approved amount is missing or zero.')
       return
     }
 
     const benName = req.beneficiaries ? `${req.beneficiaries.first_name} ${req.beneficiaries.last_name}` : 'the beneficiary'
-    if (!confirm(`Confirm disbursement of ${formatPHP(Number(req.amount_approved))} to ${benName}? This will deduct the fund balance and create payout and ledger records.`)) {
+    if (!confirm(`Confirm readiness for release of ${formatPHP(Number(req.amount_approved))} for ${benName}? This verifies fund allocation and notifies Admin.`)) {
       return
     }
 
@@ -269,17 +218,15 @@ export default function TreasurerDashboardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'confirm_release',
-          userId: profile?.id,
-          requestId: req.id,
-          notes: 'Disbursed and confirmed via Treasurer Dashboard'
+          action: 'confirm_readiness',
+          requestId: req.id
         })
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to confirm release')
+      if (!res.ok) throw new Error(data.error || 'Failed to confirm readiness')
 
-      alert('Assistance released and recorded successfully!')
+      alert('Request verified! Status is now Ready for Release.')
       load()
     } catch (err: any) {
       alert(err.message)
@@ -287,6 +234,8 @@ export default function TreasurerDashboardPage() {
       setProcessingAction(false)
     }
   }
+
+
 
   /* ── return to admin ──────────────────────────────────────────── */
   const openReturnModal = (req: any) => {
@@ -309,7 +258,6 @@ export default function TreasurerDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'return_request',
-          userId: profile?.id,
           requestId: selectedRequest.id,
           remarks: returnRemarks.trim()
         })
@@ -334,7 +282,7 @@ export default function TreasurerDashboardPage() {
     const matchRelease = releaseFilter ? rStatus === releaseFilter : true
     const matchType    = type ? r.assistance_type === type : true
     const matchSearch  = search
-      ? `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name} ${r.id} ${r.voucher_number || ''}`
+      ? `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name} ${r.id}`
           .toLowerCase().includes(search.toLowerCase())
       : true
     return matchRelease && matchType && matchSearch
@@ -371,7 +319,7 @@ export default function TreasurerDashboardPage() {
             </span>
           </div>
           <p className="text-[var(--color-text-secondary)] text-sm mt-0.5">
-            Financial clearance, fund tracking, voucher processing, and assistance disbursements.
+            Financial clearance, fund tracking, readiness verification, and assistance disbursements.
           </p>
         </div>
 
@@ -558,7 +506,7 @@ export default function TreasurerDashboardPage() {
           </div>
           <p className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{pendingCount}</p>
           <p className="text-[11px] font-semibold text-blue-600/80 dark:text-blue-400/80 mt-0.5">Pending Releases</p>
-          <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Waiting for Voucher/Release</span>
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1">Waiting for Readiness/Release</span>
         </button>
 
         {/* 6. Total Requests */}
@@ -775,7 +723,7 @@ export default function TreasurerDashboardPage() {
                 <th>Assistance Type</th>
                 <th>Approved Amount</th>
                 <th>Release Status</th>
-                <th>Voucher / Check #</th>
+                <th>Reference #</th>
                 <th>Date Approved</th>
                 <th>Actions</th>
               </tr>
@@ -847,28 +795,25 @@ export default function TreasurerDashboardPage() {
                       </span>
                     </td>
                     <td className="text-xs text-[var(--color-text-secondary)] font-mono">
-                      {r.voucher_number || r.extra_fields?.voucher_number || '—'}
+                      #{r.id.slice(0, 8).toUpperCase()}
                     </td>
                     <td className="text-slate-500 text-xs">{format(new Date(r.created_at), 'MMM d, yyyy')}</td>
                     <td>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {rStatus !== 'Released' && (
                           <button
-                            onClick={() => openVoucherModal(r)}
-                            title="Process Disbursement Voucher"
-                            className="px-2 py-1 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors"
+                            onClick={() => handleConfirmReadiness(r)}
+                            title="Confirm Readiness for Release"
+                            disabled={rStatus === 'Ready for Release'}
+                            className="px-2 py-1 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 disabled:opacity-50 transition-colors"
                           >
-                            Voucher
+                            {rStatus === 'Ready for Release' ? 'Ready' : 'Mark Ready'}
                           </button>
                         )}
-                        {rStatus !== 'Released' && (
-                          <button
-                            onClick={() => handleConfirmRelease(r)}
-                            title="Confirm physical disbursement"
-                            className="px-2 py-1 text-xs font-medium rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 transition-colors"
-                          >
-                            Release
-                          </button>
+                        {rStatus === 'Released' && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/20">
+                            Assistance Given
+                          </span>
                         )}
                         {rStatus !== 'Released' && (
                           <button
@@ -973,114 +918,7 @@ export default function TreasurerDashboardPage() {
         </div>
       </div>
 
-      {/* ── Voucher Processing Modal ──────────────────────────────── */}
-      {voucherModalOpen && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[var(--color-border)]">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
-              <div>
-                <h3 className="text-lg font-bold text-[var(--color-text)]">Process Disbursement Voucher</h3>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Beneficiary: {selectedRequest.beneficiaries?.first_name} {selectedRequest.beneficiaries?.last_name} · Approved Amount: {formatPHP(Number(selectedRequest.amount_approved || 0))}
-                </p>
-              </div>
-              <button onClick={() => setVoucherModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <XCircle size={20} />
-              </button>
-            </div>
 
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                  Disbursement Voucher (DV) Number *
-                </label>
-                <input
-                  type="text"
-                  className="form-input w-full"
-                  placeholder="e.g. DV-2026-10-0089"
-                  value={voucherNo}
-                  onChange={(e) => setVoucherNo(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                  Check / Reference Number (Optional)
-                </label>
-                <input
-                  type="text"
-                  className="form-input w-full"
-                  placeholder="e.g. CHK-554219"
-                  value={checkNo}
-                  onChange={(e) => setCheckNo(e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    className="form-input w-full"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  >
-                    <option value="Cash">Cash</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Digital Wallet">Digital Wallet</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                    Disbursing Officer
-                  </label>
-                  <input
-                    type="text"
-                    className="form-input w-full"
-                    placeholder="Officer Name"
-                    value={disbursingOfficer}
-                    onChange={(e) => setDisbursingOfficer(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                  Notes / Instructions
-                </label>
-                <textarea
-                  className="form-input w-full h-20 text-xs"
-                  placeholder="Voucher prepared, ready for beneficiary release..."
-                  value={voucherNotes}
-                  onChange={(e) => setVoucherNotes(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-[var(--color-border)]">
-              <button
-                type="button"
-                onClick={() => setVoucherModalOpen(false)}
-                className="btn btn-secondary text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveVoucher}
-                disabled={processingAction}
-                className="btn btn-primary text-sm flex items-center gap-1.5"
-              >
-                <CheckCircle size={15} />
-                {processingAction ? 'Saving...' : 'Save & Mark Ready for Release'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Return to Admin Modal ─────────────────────────────────── */}
       {returnModalOpen && selectedRequest && (

@@ -306,9 +306,19 @@ export default function LoginPage() {
           })
         } catch { /* don't block login if logging fails */ }
 
-        // Redirect to dashboard
-        router.push('/dashboard')
-        router.refresh()
+        // Retrieve user role to route directly to their role-specific dashboard
+        const { data: prof } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).single()
+
+        let destination = '/resident/dashboard'
+        if (!prof || !prof.is_active) {
+          destination = '/pending'
+        } else if (prof.role === 'admin') {
+          destination = '/admin/dashboard'
+        } else if (prof.role === 'treasurer') {
+          destination = '/treasurer'
+        }
+
+        window.location.replace(destination)
       }
     } catch (err: any) {
       setError('An unexpected error occurred. Please try again.')

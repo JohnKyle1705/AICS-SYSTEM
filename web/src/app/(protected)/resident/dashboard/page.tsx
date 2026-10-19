@@ -40,7 +40,13 @@ export default function ResidentDashboard() {
         supabase.from('announcements').select('*').eq('is_published', true).order('created_at', { ascending: false }).limit(3)
       ])
 
-      setProfile(p.data)
+      const prof = p.data
+      if (prof && prof.role !== 'resident') {
+        window.location.replace(prof.role === 'admin' ? '/admin/dashboard' : '/treasurer')
+        return
+      }
+
+      setProfile(prof)
       setRequests(reqs.data ?? [])
       setHasBeneficiaryRecord(!!b.data)
       setBeneficiary(b.data ?? null)

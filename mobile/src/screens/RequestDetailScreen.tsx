@@ -35,23 +35,18 @@ export default function RequestDetailScreen({ route, navigation }: any) {
   const [submittingApproval, setSubmittingApproval] = useState(false)
 
   // Treasurer Action States
-  const [voucherModalOpen, setVoucherModalOpen]       = useState(false)
-  const [voucherNo, setVoucherNo]                     = useState('')
-  const [checkNo, setCheckNo]                         = useState('')
-  const [paymentMethod, setPaymentMethod]             = useState('Cash')
-  const [disbursingOfficer, setDisbursingOfficer]     = useState('')
-  const [voucherNotes, setVoucherNotes]               = useState('')
   const [returnModalOpen, setReturnModalOpen]         = useState(false)
   const [returnRemarks, setReturnRemarks]             = useState('')
   const [submittingTreasurer, setSubmittingTreasurer] = useState(false)
+  const [submittingAdminRelease, setSubmittingAdminRelease] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
       const [{ data: req }, { data: docs }, { data: assess }, { data: pay }] = await Promise.all([
-        supabase.from('requests').select('*, beneficiaries(*)').eq('id', id).single(),
+        supabase.from('requests').select('*, beneficiaries(*), approver:approved_by(full_name)').eq('id', id).single(),
         supabase.from('request_documents').select('*').eq('request_id', id),
         supabase.from('assessments').select('*').eq('request_id', id).maybeSingle(),
-        supabase.from('payouts').select('*').eq('request_id', id).maybeSingle(),
+        supabase.from('payouts').select('*, profiles:released_by(full_name)').eq('request_id', id).maybeSingle(),
       ])
 
       setRequest(req)
@@ -129,14 +124,14 @@ export default function RequestDetailScreen({ route, navigation }: any) {
         })
       }
 
-      // 4. Notify treasurers
+      // 4. Notify treasurers: Pending Release
       const { data: treasurers } = await supabase.from('profiles').select('id').eq('role', 'treasurer')
       if (treasurers && treasurers.length > 0) {
         const benName = request.beneficiaries ? `${request.beneficiaries.first_name} ${request.beneficiaries.last_name}` : 'Unknown'
         const notifications = treasurers.map(t => ({
           user_id: t.id,
-          title: 'Ready for Processing',
-          message: `New approved request ready for processing: ${benName} – ${request.assistance_type} Assistance – ₱${amt.toLocaleString()}.`,
+          title: 'Pending Release',
+          message: `Request for ${benName} (${request.assistance_type} – ₱${amt.toLocaleString()}) has been approved and is Pending Release.`,
           type: 'info',
           request_id: id,
         }))
@@ -145,7 +140,7 @@ export default function RequestDetailScreen({ route, navigation }: any) {
 
       setApprovalModalOpen(false)
       setRequest((prev: any) => ({ ...prev, status: 'Approved', amount_approved: amt, release_status: 'Pending Release' }))
-      Alert.alert('Success', 'Request approved successfully!')
+      Alert.alert('Success', 'Request approved successfully! Treasurers have been notified of Pending Release.')
     } catch (e: any) {
       Alert.alert('Error', e.message)
     } finally {
@@ -153,124 +148,22 @@ export default function RequestDetailScreen({ route, navigation }: any) {
     }
   }
 
-  const updateStatus = async (status: string) => {
-    if (status === 'Approved') {
-      setApprovalModalOpen(true)
-      return
-    }
-
-    Alert.alert('Confirm', `Mark request as ${status}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          const { data: { user } } = await supabase.auth.getUser()
-          const updatePayload: any = { status }
-          if (status === 'Released') {
-            updatePayload.release_status = 'Released'
-          }
-          const { error } = await supabase.from('requests').update(updatePayload).eq('id', id)
-          if (error) {
-            Alert.alert('Error', error.message)
-            return
-          }
-
-          if (status === 'Released' && request.amount_approved) {
-            const { data: existingPayout } = await supabase.from('payouts').select('id').eq('request_id', id).maybeSingle()
-            if (!existingPayout) {
-              await supabase.from('payouts').insert({
-                request_id: id,
-                amount_released: Number(request.amount_approved),
-                release_date: new Date().toISOString().split('T')[0],
-                released_by: user?.id ?? null,
-                acknowledgment_notes: 'Released via Request Details',
-              })
-            }
-          }
-
-          if (user) {
-            await supabase.from('system_logs').insert({
-              user_id: user.id,
-              action: `UPDATE_STATUS_${status.toUpperCase()}`,
-              table_name: 'requests',
-              record_id: id,
-              details: { new_status: status }
-            })
-          }
-
-          if (request.encoded_by) {
-            await supabase.from('notifications').insert({
-              user_id: request.encoded_by,
-              title: `Request ${status}`,
-              message: `Your assistance request status has been updated to ${status}.`,
-              type: status === 'Released' ? 'info' : 'pending',
-              request_id: id,
-            })
-          }
-
-          setRequest((prev: any) => ({ ...prev, status, ...(status === 'Released' ? { release_status: 'Released' } : {}) }))
-        },
-      },
-    ])
-  }
-
-  const handleSaveVoucher = async () => {
-    if (!voucherNo.trim()) {
-      Alert.alert('Required', 'Please enter a Disbursement Voucher (DV) Number.')
-      return
-    }
-    setSubmittingTreasurer(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const { error } = await supabase.from('requests').update({
-        release_status: 'Ready for Release',
-        extra_fields: {
-          ...(request.extra_fields || {}),
-          voucher_number: voucherNo.trim(),
-          check_number: checkNo.trim() || null,
-          payment_method: paymentMethod,
-          disbursing_officer: disbursingOfficer.trim() || profile?.full_name || 'Municipal Treasurer',
-          voucher_notes: voucherNotes.trim() || null,
-        }
-      }).eq('id', id)
-
-      if (error) throw error
-
-      if (user) {
-        await supabase.from('system_logs').insert({
-          user_id: user.id,
-          action: 'PROCESS_VOUCHER',
-          table_name: 'requests',
-          record_id: id,
-          details: { voucher_number: voucherNo.trim(), release_status: 'Ready for Release' }
-        })
-      }
-
-      setVoucherModalOpen(false)
-      loadData()
-      Alert.alert('Success', 'Voucher details recorded! Request is now Ready for Release.')
-    } catch (e: any) {
-      Alert.alert('Error', e.message)
-    } finally {
-      setSubmittingTreasurer(false)
-    }
-  }
-
-  const handleConfirmRelease = async () => {
+  const handleAdminConfirmRelease = async () => {
     if (!request.amount_approved || Number(request.amount_approved) <= 0) {
       Alert.alert('Cannot Release', 'Approved amount is missing or zero.')
       return
     }
 
+    const benName = b ? `${b.first_name} ${b.last_name}` : 'the beneficiary'
     Alert.alert(
-      'Confirm Disbursement',
-      `Release ₱${Number(request.amount_approved).toLocaleString()} to ${b?.first_name} ${b?.last_name}?`,
+      'Official Release Confirmation',
+      `Confirm that ₱${Number(request.amount_approved).toLocaleString()} has actually been given to ${benName}? This will permanently record the payout and update municipal fund balances.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm',
+          text: 'Confirm Release',
           onPress: async () => {
-            setSubmittingTreasurer(true)
+            setSubmittingAdminRelease(true)
             try {
               const { data: { user } } = await supabase.auth.getUser()
               const amt = Number(request.amount_approved)
@@ -281,15 +174,17 @@ export default function RequestDetailScreen({ route, navigation }: any) {
                 amount_released: amt,
                 release_date: new Date().toISOString().split('T')[0],
                 released_by: user?.id,
-                acknowledgment_notes: 'Disbursed via Mobile Treasurer Actions'
+                acknowledgment_notes: 'This assistance has been given to the beneficiary.'
               })
               if (payErr) throw payErr
 
               // 2. Update Request
-              await supabase.from('requests').update({
+              const { error: reqErr } = await supabase.from('requests').update({
                 status: 'Released',
-                release_status: 'Released'
+                release_status: 'Released',
+                updated_at: new Date().toISOString()
               }).eq('id', id)
+              if (reqErr) throw reqErr
 
               // 3. Deduct Fund
               if (request.assistance_type) {
@@ -309,7 +204,7 @@ export default function RequestDetailScreen({ route, navigation }: any) {
                     amount: amt,
                     balance_after: newBalance,
                     processed_by: user?.id,
-                    remarks: `Mobile Disbursement for Request #${id.slice(0, 8).toUpperCase()}`
+                    remarks: `Official Release for Request #${id.slice(0, 8).toUpperCase()}`
                   })
                 }
               }
@@ -321,7 +216,7 @@ export default function RequestDetailScreen({ route, navigation }: any) {
                   action: 'CONFIRM_RELEASE',
                   table_name: 'requests',
                   record_id: id,
-                  details: { amount_released: amt, release_status: 'Released' }
+                  details: { amount_released: amt, release_status: 'Released', notes: 'This assistance has been given to the beneficiary.' }
                 })
               }
 
@@ -330,14 +225,91 @@ export default function RequestDetailScreen({ route, navigation }: any) {
                 await supabase.from('notifications').insert({
                   user_id: request.encoded_by,
                   title: 'Assistance Released',
-                  message: `Your ${request.assistance_type} assistance payout of ₱${amt.toLocaleString()} has been disbursed.`,
+                  message: `This assistance has been given to the beneficiary (${request.assistance_type} – ₱${amt.toLocaleString()}).`,
                   type: 'info',
                   request_id: id
                 })
               }
 
+              // 6. Notify Treasurers
+              const { data: treasurers } = await supabase.from('profiles').select('id').eq('role', 'treasurer')
+              if (treasurers && treasurers.length > 0) {
+                await supabase.from('notifications').insert(
+                  treasurers.map((t: any) => ({
+                    user_id: t.id,
+                    title: 'Assistance Given to Beneficiary',
+                    message: `This assistance has been given to the beneficiary (${benName} – ₱${amt.toLocaleString()}).`,
+                    type: 'info',
+                    request_id: id
+                  }))
+                )
+              }
+
+              Alert.alert('Assistance Released', 'This assistance has been given to the beneficiary.')
               loadData()
-              Alert.alert('Success', 'Assistance payout released and recorded successfully!')
+            } catch (e: any) {
+              Alert.alert('Error', e.message)
+            } finally {
+              setSubmittingAdminRelease(false)
+            }
+          }
+        }
+      ]
+    )
+  }
+
+  const handleConfirmReadiness = async () => {
+    if (!request.amount_approved || Number(request.amount_approved) <= 0) {
+      Alert.alert('Cannot Confirm', 'Approved amount is missing or zero.')
+      return
+    }
+
+    const benName = b ? `${b.first_name} ${b.last_name}` : 'the beneficiary'
+    Alert.alert(
+      'Confirm Readiness',
+      `Confirm that assistance request for ${benName} (₱${Number(request.amount_approved).toLocaleString()}) has been verified and is ready for release?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            setSubmittingTreasurer(true)
+            try {
+              const { data: { user } } = await supabase.auth.getUser()
+
+              const { error: updErr } = await supabase.from('requests').update({
+                release_status: 'Ready for Release',
+                updated_at: new Date().toISOString()
+              }).eq('id', id)
+
+              if (updErr) throw updErr
+
+              if (user) {
+                await supabase.from('system_logs').insert({
+                  user_id: user.id,
+                  action: 'TREASURY_CONFIRM_READINESS',
+                  table_name: 'requests',
+                  record_id: id,
+                  details: { release_status: 'Ready for Release' }
+                })
+              }
+
+              // Notify Admins
+              const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin')
+              if (admins && admins.length > 0) {
+                await supabase.from('notifications').insert(
+                  admins.map((a: any) => ({
+                    user_id: a.id,
+                    title: 'Request Ready for Release',
+                    message: `Assistance request for ${benName} has been verified by the Treasurer and is ready for release.`,
+                    type: 'info',
+                    request_id: id,
+                  }))
+                )
+              }
+
+              Alert.alert('Success', 'Readiness confirmed! Request is now Ready for Release.')
+              loadData()
             } catch (e: any) {
               Alert.alert('Error', e.message)
             } finally {
@@ -347,6 +319,55 @@ export default function RequestDetailScreen({ route, navigation }: any) {
         }
       ]
     )
+  }
+
+  const updateStatus = async (status: string) => {
+    if (status === 'Approved') {
+      setApprovalModalOpen(true)
+      return
+    }
+    if (status === 'Released') {
+      handleAdminConfirmRelease()
+      return
+    }
+
+    Alert.alert('Confirm', `Mark request as ${status}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Confirm',
+        onPress: async () => {
+          const { data: { user } } = await supabase.auth.getUser()
+          const updatePayload: any = { status }
+          const { error } = await supabase.from('requests').update(updatePayload).eq('id', id)
+          if (error) {
+            Alert.alert('Error', error.message)
+            return
+          }
+
+          if (user) {
+            await supabase.from('system_logs').insert({
+              user_id: user.id,
+              action: `UPDATE_STATUS_${status.toUpperCase()}`,
+              table_name: 'requests',
+              record_id: id,
+              details: { new_status: status }
+            })
+          }
+
+          if (request.encoded_by) {
+            await supabase.from('notifications').insert({
+              user_id: request.encoded_by,
+              title: `Request ${status}`,
+              message: `Your assistance request status has been updated to ${status}.`,
+              type: 'info',
+              request_id: id,
+            })
+          }
+
+          loadData()
+        },
+      },
+    ])
   }
 
   const handleReturnToAdmin = async () => {
@@ -418,6 +439,67 @@ export default function RequestDetailScreen({ route, navigation }: any) {
           STATUS: {request.status.toUpperCase()}
         </Text>
       </View>
+
+      {/* Section 5: Official Release Confirmation Banner */}
+      {(request.status === 'Released' || request.release_status === 'Released') && (
+        <View style={s.releaseConfirmedCard}>
+          <View style={s.releaseConfirmedHeader}>
+            <View style={s.releaseIconBox}>
+              <Feather name="check-circle" size={22} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={s.releaseBadge}>
+                <Text style={s.releaseBadgeText}>OFFICIAL RELEASE COMPLETED</Text>
+              </View>
+              <Text style={s.releaseConfirmedTitle}>
+                This assistance has been given to the beneficiary.
+              </Text>
+              <Text style={s.releaseConfirmedSub}>
+                The authorized municipal administrator has officially disbursed the assistance grant. The transaction is permanently recorded.
+              </Text>
+            </View>
+          </View>
+
+          <View style={s.releaseDivider} />
+
+          <View style={s.releaseMetaGrid}>
+            <View style={s.releaseMetaCol}>
+              <Text style={s.releaseMetaLabel}>Beneficiary Name</Text>
+              <Text style={s.releaseMetaVal}>{b?.first_name} {b?.last_name}</Text>
+            </View>
+            <View style={s.releaseMetaCol}>
+              <Text style={s.releaseMetaLabel}>Request Reference</Text>
+              <Text style={[s.releaseMetaVal, { fontFamily: 'monospace' }]}>#{id.slice(0, 8).toUpperCase()}</Text>
+            </View>
+            <View style={s.releaseMetaCol}>
+              <Text style={s.releaseMetaLabel}>Assistance Type</Text>
+              <Text style={s.releaseMetaVal}>{request.assistance_type} Assistance</Text>
+            </View>
+            <View style={s.releaseMetaCol}>
+              <Text style={s.releaseMetaLabel}>Final Approved Amount</Text>
+              <Text style={[s.releaseMetaVal, { color: '#10b981', fontWeight: 'bold' }]}>
+                ₱{Number(request.amount_approved || payout?.amount_released || 0).toLocaleString()}
+              </Text>
+            </View>
+            <View style={s.releaseMetaCol}>
+              <Text style={s.releaseMetaLabel}>Official Release Date</Text>
+              <Text style={s.releaseMetaVal}>
+                {payout?.release_date
+                  ? format(new Date(payout.release_date), 'MMMM d, yyyy')
+                  : request.release_date
+                  ? format(new Date(request.release_date), 'MMMM d, yyyy')
+                  : format(new Date(request.updated_at || request.created_at), 'MMMM d, yyyy')}
+              </Text>
+            </View>
+            <View style={s.releaseMetaCol}>
+              <Text style={s.releaseMetaLabel}>Authorized Releaser</Text>
+              <Text style={s.releaseMetaVal}>
+                {payout?.profiles?.full_name || request.approver?.full_name || 'Authorized MSWDO Admin'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Beneficiary Info */}
       <View style={s.section}>
@@ -536,19 +618,51 @@ export default function RequestDetailScreen({ route, navigation }: any) {
         <View style={s.section}>
           <Text style={s.sectionTitle}>Admin Actions</Text>
           <View style={s.actions}>
-            {['Pending', 'Approved', 'Released', 'Declined'].filter(st => st !== request.status).map(st => {
-              const sc = STATUS_COLORS[st]
-              return (
+            {request.status === 'Pending' && (
+              <>
                 <TouchableOpacity 
-                  key={st} 
-                  style={[s.actionBtn, { borderColor: isDark ? sc.darkText : sc.text }]}
-                  onPress={() => updateStatus(st)} 
+                  style={[s.actionBtn, { borderColor: '#2563eb', backgroundColor: '#eff6ff' }]}
+                  onPress={() => setApprovalModalOpen(true)} 
                   activeOpacity={0.7}
                 >
-                  <Text style={[s.actionText, { color: isDark ? sc.darkText : sc.text }]}>Mark {st}</Text>
+                  <Text style={[s.actionText, { color: '#1e40af' }]}>Approve Request</Text>
                 </TouchableOpacity>
-              )
-            })}
+                <TouchableOpacity 
+                  style={[s.actionBtn, { borderColor: '#dc2626', backgroundColor: '#fef2f2' }]}
+                  onPress={() => updateStatus('Declined')} 
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.actionText, { color: '#991b1b' }]}>Decline Request</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {request.status === 'Approved' && request.release_status !== 'Released' && (
+              <TouchableOpacity 
+                style={[s.actionBtn, { borderColor: '#059669', backgroundColor: '#ecfdf5', flexGrow: 1 }]}
+                onPress={handleAdminConfirmRelease} 
+                disabled={submittingAdminRelease}
+                activeOpacity={0.7}
+              >
+                {submittingAdminRelease ? (
+                  <ActivityIndicator size="small" color="#059669" />
+                ) : (
+                  <Text style={[s.actionText, { color: '#065f46', textAlign: 'center' }]}>
+                    ✓ Mark as Released (Assistance Given)
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {request.status === 'Declined' && (
+              <TouchableOpacity 
+                style={[s.actionBtn, { borderColor: '#d97706', backgroundColor: '#fffbeb' }]}
+                onPress={() => updateStatus('Pending')} 
+                activeOpacity={0.7}
+              >
+                <Text style={[s.actionText, { color: '#b45309' }]}>Reopen Request</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {!assessment && (
@@ -569,14 +683,14 @@ export default function RequestDetailScreen({ route, navigation }: any) {
       {profile?.role === 'treasurer' && (
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Treasurer Financial Processing</Text>
-            <Feather name="briefcase" size={16} color={colors.primary} />
+            <Text style={s.sectionTitle}>Treasurer Review & Readiness</Text>
+            <Feather name="shield" size={16} color={colors.primary} />
           </View>
 
           {request.status === 'Approved' ? (
             <View style={{ gap: 10, marginTop: 4 }}>
               <Text style={{ fontSize: 13, color: colors.textSecondary }}>
-                Approved Amount: <Text style={{ fontWeight: 'bold', color: '#10b981' }}>₱{Number(request.amount_approved || 0).toLocaleString()}</Text>
+                Admin-Approved Amount: <Text style={{ fontWeight: 'bold', color: '#10b981' }}>₱{Number(request.amount_approved || 0).toLocaleString()}</Text>
               </Text>
               <Text style={{ fontSize: 12, color: colors.textSecondary }}>
                 Release Status: <Text style={{ fontWeight: 'bold', color: colors.text }}>{request.release_status || 'Pending Release'}</Text>
@@ -584,26 +698,25 @@ export default function RequestDetailScreen({ route, navigation }: any) {
 
               {request.release_status !== 'Released' && (
                 <View style={{ gap: 8, marginTop: 6 }}>
-                  <TouchableOpacity
-                    style={{ backgroundColor: colors.primary, padding: 12, borderRadius: 10, alignItems: 'center' }}
-                    onPress={() => {
-                      setVoucherNo(request.extra_fields?.voucher_number || `DV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`)
-                      setCheckNo(request.extra_fields?.check_number || '')
-                      setPaymentMethod(request.extra_fields?.payment_method || 'Cash')
-                      setDisbursingOfficer(request.extra_fields?.disbursing_officer || profile?.full_name || 'Municipal Treasurer')
-                      setVoucherNotes(request.extra_fields?.voucher_notes || '')
-                      setVoucherModalOpen(true)
-                    }}
-                  >
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Process Disbursement Voucher</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 10, alignItems: 'center' }}
-                    onPress={handleConfirmRelease}
-                  >
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Confirm Payout & Release</Text>
-                  </TouchableOpacity>
+                  {request.release_status !== 'Ready for Release' ? (
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 10, alignItems: 'center' }}
+                      onPress={handleConfirmReadiness}
+                      disabled={submittingTreasurer}
+                    >
+                      {submittingTreasurer ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Confirm Ready for Release</Text>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ padding: 10, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 8 }}>
+                      <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 12 }}>
+                        ✓ Checked & Ready for Release (Awaiting Admin release to beneficiary)
+                      </Text>
+                    </View>
+                  )}
 
                   <TouchableOpacity
                     style={{ backgroundColor: '#ef4444', padding: 12, borderRadius: 10, alignItems: 'center' }}
@@ -620,7 +733,7 @@ export default function RequestDetailScreen({ route, navigation }: any) {
               {request.release_status === 'Released' && (
                 <View style={{ padding: 10, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 8, marginTop: 4 }}>
                   <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 12 }}>
-                    ✓ Financial release complete and ledger updated.
+                    ✓ This assistance has been given to the beneficiary.
                   </Text>
                 </View>
               )}
@@ -628,7 +741,7 @@ export default function RequestDetailScreen({ route, navigation }: any) {
           ) : (
             <View style={{ padding: 10, backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 8, marginTop: 6 }}>
               <Text style={{ fontSize: 12, color: '#b45309' }}>
-                Application approval and decline is restricted to Admin. Treasurers disburse assistance once approved.
+                Only requests approved by Admin can be checked for release. Treasurers monitor requests and confirm readiness.
               </Text>
             </View>
           )}
@@ -647,7 +760,7 @@ export default function RequestDetailScreen({ route, navigation }: any) {
             </View>
 
             <Text style={s.modalSub}>
-              Set the assistance amount approved for {b?.first_name} {b?.last_name}. Treasurers will disburse this amount.
+              Set the assistance amount approved for {b?.first_name} {b?.last_name}. Treasurers will check and monitor this release.
             </Text>
 
             <Text style={s.inputLabel}>Approved Amount (₱)</Text>
@@ -674,69 +787,6 @@ export default function RequestDetailScreen({ route, navigation }: any) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <Text style={s.confirmApproveBtnText}>Confirm Approval</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Treasurer Voucher Processing Modal */}
-      <Modal visible={voucherModalOpen} animationType="fade" transparent>
-        <View style={s.modalOverlay}>
-          <View style={s.modalBox}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Process Disbursement Voucher</Text>
-              <TouchableOpacity onPress={() => setVoucherModalOpen(false)}>
-                <Feather name="x" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={s.modalSub}>
-              Record disbursement voucher for {b?.first_name} {b?.last_name} (₱{Number(request.amount_approved || 0).toLocaleString()}).
-            </Text>
-
-            <Text style={s.inputLabel}>Disbursement Voucher (DV) # *</Text>
-            <TextInput
-              style={s.amountInput}
-              placeholder="e.g. DV-2026-10-0089"
-              placeholderTextColor={colors.textSecondary}
-              value={voucherNo}
-              onChangeText={setVoucherNo}
-            />
-
-            <Text style={s.inputLabel}>Check / Reference # (Optional)</Text>
-            <TextInput
-              style={s.amountInput}
-              placeholder="e.g. CHK-554219"
-              placeholderTextColor={colors.textSecondary}
-              value={checkNo}
-              onChangeText={setCheckNo}
-            />
-
-            <Text style={s.inputLabel}>Payment Method</Text>
-            <TextInput
-              style={s.amountInput}
-              placeholder="Cash / Cheque / Bank Transfer"
-              placeholderTextColor={colors.textSecondary}
-              value={paymentMethod}
-              onChangeText={setPaymentMethod}
-            />
-
-            <View style={s.modalBtnRow}>
-              <TouchableOpacity style={s.cancelBtn} onPress={() => setVoucherModalOpen(false)}>
-                <Text style={s.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.confirmApproveBtn, { backgroundColor: colors.primary }]}
-                activeOpacity={0.8}
-                onPress={handleSaveVoucher}
-                disabled={submittingTreasurer}
-              >
-                {submittingTreasurer ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={s.confirmApproveBtnText}>Save & Ready</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -800,6 +850,79 @@ const styles = (colors: any, isDark: boolean) => StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   statusBar: { borderRadius: 12, padding: 12, alignItems: 'center', marginBottom: 16 },
   statusText: { fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
+  releaseConfirmedCard: {
+    backgroundColor: isDark ? '#06281e' : '#ecfdf5',
+    borderColor: '#10b981',
+    borderWidth: 2,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#10b981',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  releaseConfirmedHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  releaseIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  releaseBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#059669',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  releaseBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  releaseConfirmedTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: isDark ? '#a7f3d0' : '#064e3b',
+    marginBottom: 4,
+  },
+  releaseConfirmedSub: {
+    fontSize: 12,
+    color: isDark ? '#6ee7b7' : '#047857',
+    lineHeight: 16,
+  },
+  releaseDivider: {
+    height: 1,
+    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#a7f3d0',
+    marginVertical: 14,
+  },
+  releaseMetaGrid: {
+    gap: 10,
+  },
+  releaseMetaCol: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  releaseMetaLabel: {
+    fontSize: 12,
+    color: isDark ? '#6ee7b7' : '#065f46',
+    fontWeight: '600',
+  },
+  releaseMetaVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#ecfdf5' : '#022c22',
+  },
   section: {
     backgroundColor: colors.card,
     borderRadius: 16,

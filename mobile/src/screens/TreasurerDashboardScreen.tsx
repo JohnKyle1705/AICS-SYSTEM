@@ -37,19 +37,12 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
   const [activeCard, setActiveCard]     = useState<ActiveCard>(null)
   const [activeFund, setActiveFund]     = useState<string | null>(null)
 
-  // Voucher Modal State
-  const [voucherModalOpen, setVoucherModalOpen]   = useState(false)
   const [selectedReq, setSelectedReq]             = useState<any>(null)
-  const [voucherNo, setVoucherNo]                 = useState('')
-  const [checkNo, setCheckNo]                     = useState('')
-  const [paymentMethod, setPaymentMethod]         = useState('Cash')
-  const [disbursingOfficer, setDisbursingOfficer] = useState('')
-  const [voucherNotes, setVoucherNotes]           = useState('')
-  const [processingModal, setProcessingModal]     = useState(false)
 
   // Return to Admin Modal State
   const [returnModalOpen, setReturnModalOpen]     = useState(false)
   const [returnRemarks, setReturnRemarks]         = useState('')
+  const [processingModal, setProcessingModal]     = useState(false)
 
   const { colors, isDark } = useTheme()
   const { t } = useLanguage()
@@ -65,7 +58,6 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user?.id).single()
       if (p) {
         setProfile(p)
-        if (p.full_name) setDisbursingOfficer(p.full_name)
       }
     }
 
@@ -177,143 +169,57 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
     setSearch('')
   }
 
-  /* ── voucher processing ───────────────────────────────────────── */
-  const openVoucherModal = (req: any) => {
-    setSelectedReq(req)
-    setVoucherNo(req.extra_fields?.voucher_number || `DV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`)
-    setCheckNo(req.extra_fields?.check_number || '')
-    setPaymentMethod(req.extra_fields?.payment_method || 'Cash')
-    setDisbursingOfficer(req.extra_fields?.disbursing_officer || profile?.full_name || 'Municipal Treasurer')
-    setVoucherNotes(req.extra_fields?.voucher_notes || '')
-    setVoucherModalOpen(true)
-  }
-
-  const handleSaveVoucher = async () => {
-    if (!voucherNo.trim()) {
-      Alert.alert('Required', 'Please enter a Disbursement Voucher (DV) Number.')
-      return
-    }
-
-    setProcessingModal(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const { error } = await supabase.from('requests').update({
-        release_status: 'Ready for Release',
-        extra_fields: {
-          ...(selectedReq.extra_fields || {}),
-          voucher_number: voucherNo.trim(),
-          check_number: checkNo.trim() || null,
-          payment_method: paymentMethod,
-          disbursing_officer: disbursingOfficer.trim() || profile?.full_name || 'Municipal Treasurer',
-          voucher_notes: voucherNotes.trim() || null,
-        }
-      }).eq('id', selectedReq.id)
-
-      if (error) throw error
-
-      if (user) {
-        await supabase.from('system_logs').insert({
-          user_id: user.id,
-          action: 'PROCESS_VOUCHER',
-          table_name: 'requests',
-          record_id: selectedReq.id,
-          details: { voucher_number: voucherNo.trim(), release_status: 'Ready for Release' }
-        })
-      }
-
-      setVoucherModalOpen(false)
-      load(true)
-      Alert.alert('Success', 'Voucher details recorded! Status is now Ready for Release.')
-    } catch (e: any) {
-      Alert.alert('Error', e.message)
-    } finally {
-      setProcessingModal(false)
-    }
-  }
-
-  /* ── confirm release ──────────────────────────────────────────── */
-  const handleConfirmRelease = (req: any) => {
+  /* ── confirm readiness ────────────────────────────────────────── */
+  const handleConfirmReadiness = (req: any) => {
     if (!req.amount_approved || Number(req.amount_approved) <= 0) {
-      Alert.alert('Cannot Release', 'Approved amount is missing or zero.')
+      Alert.alert('Cannot Confirm', 'Approved amount is missing or zero.')
       return
     }
 
     const benName = req.beneficiaries ? `${req.beneficiaries.first_name} ${req.beneficiaries.last_name}` : 'the beneficiary'
     Alert.alert(
-      'Confirm Disbursement',
-      `Release ₱${Number(req.amount_approved).toLocaleString()} to ${benName}?`,
+      'Confirm Readiness',
+      `Confirm that ₱${Number(req.amount_approved).toLocaleString()} for ${benName} has been checked and is ready for release?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm Release',
+          text: 'Confirm Ready',
           onPress: async () => {
             try {
               const { data: { user } } = await supabase.auth.getUser()
-              const amt = Number(req.amount_approved)
-
-              // 1. Payout
-              const { error: payErr } = await supabase.from('payouts').insert({
-                request_id: req.id,
-                amount_released: amt,
-                release_date: new Date().toISOString().split('T')[0],
-                released_by: user?.id,
-                acknowledgment_notes: 'Released via Mobile Treasurer Dashboard'
-              })
-              if (payErr) throw payErr
-
-              // 2. Request status
-              await supabase.from('requests').update({
-                status: 'Released',
-                release_status: 'Released'
+              const { error } = await supabase.from('requests').update({
+                release_status: 'Ready for Release',
+                updated_at: new Date().toISOString()
               }).eq('id', req.id)
 
-              // 3. Fund deduction & transaction
-              if (req.assistance_type) {
-                const { data: fund } = await supabase.from('funds').select('*').eq('assistance_type', req.assistance_type).single()
-                if (fund) {
-                  const newBalance = Math.max(0, Number(fund.current_balance) - amt)
-                  const newReleased = Number(fund.total_released || 0) + amt
-                  await supabase.from('funds').update({
-                    current_balance: newBalance,
-                    total_released: newReleased
-                  }).eq('id', fund.id)
+              if (error) throw error
 
-                  await supabase.from('fund_transactions').insert({
-                    fund_id: fund.id,
-                    request_id: req.id,
-                    transaction_type: 'Release',
-                    amount: amt,
-                    balance_after: newBalance,
-                    processed_by: user?.id,
-                    remarks: `Disbursement to ${benName}`
-                  })
-                }
-              }
-
-              // 4. Log
               if (user) {
                 await supabase.from('system_logs').insert({
                   user_id: user.id,
-                  action: 'CONFIRM_RELEASE',
+                  action: 'TREASURY_CONFIRM_READINESS',
                   table_name: 'requests',
                   record_id: req.id,
-                  details: { amount_released: amt, release_status: 'Released' }
+                  details: { release_status: 'Ready for Release', amount: req.amount_approved }
                 })
-              }
 
-              // 5. Notify resident
-              if (req.encoded_by) {
-                await supabase.from('notifications').insert({
-                  user_id: req.encoded_by,
-                  title: 'Assistance Released',
-                  message: `Your ${req.assistance_type} assistance payout of ₱${amt.toLocaleString()} has been released.`,
-                  type: 'info',
-                  request_id: req.id
-                })
+                // Notify Admins
+                const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin')
+                if (admins && admins.length > 0) {
+                  await supabase.from('notifications').insert(
+                    admins.map((a: any) => ({
+                      user_id: a.id,
+                      title: 'Ready for Release Confirmation',
+                      message: `Treasurer ${profile?.full_name || 'Officer'} confirmed readiness for ${benName} (₱${Number(req.amount_approved).toLocaleString()}). Ready for official release.`,
+                      type: 'info',
+                      request_id: req.id,
+                    }))
+                  )
+                }
               }
 
               load(true)
-              Alert.alert('Success', 'Assistance payout released and recorded successfully!')
+              Alert.alert('Success', 'Request verified and marked Ready for Release.')
             } catch (e: any) {
               Alert.alert('Error', e.message)
             }
@@ -378,7 +284,7 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
     const matchesTab    = activeFilter === 'All' || rStatus === activeFilter
     const matchesType   = typeFilter ? r.assistance_type === typeFilter : true
     const matchesSearch = search
-      ? `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name} ${r.id} ${r.extra_fields?.voucher_number || ''}`.toLowerCase().includes(search.toLowerCase())
+      ? `${r.beneficiaries?.first_name} ${r.beneficiaries?.last_name} ${r.id}`.toLowerCase().includes(search.toLowerCase())
       : true
     return matchesTab && matchesType && matchesSearch
   })
@@ -622,9 +528,9 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
             </Text>
           </View>
           <View style={s.detailCol}>
-            <Text style={s.detailLabel}>Voucher #</Text>
-            <Text style={[s.detailVal, { fontSize: 11 }]}>
-              {r.extra_fields?.voucher_number || '—'}
+            <Text style={s.detailLabel}>Ref #</Text>
+            <Text style={[s.detailVal, { fontSize: 11, fontFamily: 'monospace' }]}>
+              #{r.id?.slice(0, 8).toUpperCase()}
             </Text>
           </View>
         </View>
@@ -639,24 +545,26 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
             <Text style={[s.rowBtnText, { color: colors.textSecondary }]}>View</Text>
           </TouchableOpacity>
 
-          {rStatus !== 'Released' && (
+          {rStatus !== 'Released' && rStatus !== 'Ready for Release' && (
             <TouchableOpacity
               style={[s.rowBtn, { backgroundColor: isDark ? '#1e3a5f' : '#eff6ff' }]}
-              onPress={() => openVoucherModal(r)}
+              onPress={() => handleConfirmReadiness(r)}
             >
-              <Feather name="file-text" size={13} color={colors.primary} />
-              <Text style={[s.rowBtnText, { color: colors.primary }]}>Voucher</Text>
+              <Feather name="check-circle" size={13} color={colors.primary} />
+              <Text style={[s.rowBtnText, { color: colors.primary }]}>Mark Ready</Text>
             </TouchableOpacity>
           )}
 
-          {rStatus !== 'Released' && (
-            <TouchableOpacity
-              style={[s.rowBtn, { backgroundColor: isDark ? '#064e3b' : '#ecfdf5' }]}
-              onPress={() => handleConfirmRelease(r)}
-            >
-              <Feather name="check-circle" size={13} color="#10b981" />
-              <Text style={[s.rowBtnText, { color: '#10b981' }]}>Release</Text>
-            </TouchableOpacity>
+          {rStatus === 'Ready for Release' && (
+            <View style={[s.rowBtn, { backgroundColor: isDark ? '#3d2b00' : '#fef3c7' }]}>
+              <Text style={[s.rowBtnText, { color: '#d97706' }]}>Ready</Text>
+            </View>
+          )}
+
+          {rStatus === 'Released' && (
+            <View style={[s.rowBtn, { backgroundColor: isDark ? '#064e3b' : '#ecfdf5' }]}>
+              <Text style={[s.rowBtnText, { color: '#10b981' }]}>Assistance Given</Text>
+            </View>
           )}
 
           {rStatus !== 'Released' && (
@@ -695,66 +603,7 @@ export default function TreasurerDashboardScreen({ navigation }: any) {
         }
       />
 
-      {/* Voucher Modal */}
-      <Modal visible={voucherModalOpen} animationType="fade" transparent>
-        <View style={s.modalOverlay}>
-          <View style={s.modalBox}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Process Voucher</Text>
-              <TouchableOpacity onPress={() => setVoucherModalOpen(false)}>
-                <Feather name="x" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={s.modalSub}>
-              Beneficiary: {selectedReq?.beneficiaries?.first_name} {selectedReq?.beneficiaries?.last_name} · ₱{Number(selectedReq?.amount_approved || 0).toLocaleString()}
-            </Text>
 
-            <Text style={s.inputLabel}>Disbursement Voucher (DV) # *</Text>
-            <TextInput
-              style={s.modalInput}
-              placeholder="e.g. DV-2026-10-0089"
-              placeholderTextColor={colors.textSecondary}
-              value={voucherNo}
-              onChangeText={setVoucherNo}
-            />
-
-            <Text style={s.inputLabel}>Check / Ref # (Optional)</Text>
-            <TextInput
-              style={s.modalInput}
-              placeholder="e.g. CHK-554219"
-              placeholderTextColor={colors.textSecondary}
-              value={checkNo}
-              onChangeText={setCheckNo}
-            />
-
-            <Text style={s.inputLabel}>Payment Method</Text>
-            <TextInput
-              style={s.modalInput}
-              placeholder="Cash / Cheque / Bank Transfer"
-              placeholderTextColor={colors.textSecondary}
-              value={paymentMethod}
-              onChangeText={setPaymentMethod}
-            />
-
-            <View style={s.modalBtnRow}>
-              <TouchableOpacity style={s.modalCancelBtn} onPress={() => setVoucherModalOpen(false)}>
-                <Text style={s.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.modalConfirmBtn}
-                onPress={handleSaveVoucher}
-                disabled={processingModal}
-              >
-                {processingModal ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={s.modalConfirmText}>Save & Ready</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Return Modal */}
       <Modal visible={returnModalOpen} animationType="fade" transparent>

@@ -353,7 +353,7 @@ function PayoutForm() {
             {...register('acknowledgment_notes')}
             rows={3}
             className="form-input"
-            placeholder="Beneficiary acknowledgment, signature reference, voucher number, etc."
+            placeholder="Beneficiary acknowledgment, signature reference, official release notes, etc."
           />
         </div>
 

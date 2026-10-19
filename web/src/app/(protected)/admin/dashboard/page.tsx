@@ -23,6 +23,25 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
+  // Role Guard: Ensure only Administrator accounts can view this dashboard
+  useEffect(() => {
+    const verifyRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: p } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).single()
+      if (p) {
+        if (!p.is_active) {
+          window.location.replace('/pending')
+        } else if (p.role === 'treasurer') {
+          window.location.replace('/treasurer')
+        } else if (p.role === 'resident') {
+          window.location.replace('/resident/dashboard')
+        }
+      }
+    }
+    verifyRole()
+  }, [])
+
 
   const loadPendingUsers = async () => {
     const { data } = await supabase.from('profiles').select('*').eq('is_active', false).order('created_at', { ascending: false })

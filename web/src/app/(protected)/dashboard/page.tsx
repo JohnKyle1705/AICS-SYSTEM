@@ -35,22 +35,22 @@ export default function DashboardRouter() {
 
       // If profile exists but is not active, go to pending
       if (!profile.is_active) {
-        router.replace('/pending')
+        window.location.replace('/pending')
         return
       }
 
       switch (profile.role) {
         case 'admin':
-          router.replace('/admin/dashboard')
+          window.location.replace('/admin/dashboard')
           break
         case 'resident':
-          router.replace('/resident/dashboard')
+          window.location.replace('/resident/dashboard')
           break
         case 'treasurer':
-          router.replace('/treasurer')
+          window.location.replace('/treasurer')
           break
         default:
-          router.replace('/login')
+          window.location.replace('/login')
       }
     }
 

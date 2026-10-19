@@ -41,6 +41,34 @@ async function verifyCacheCookie(value: string | undefined): Promise<{ userId: s
   }
 }
 
+// Safely extract JWT sub (user ID) from request cookies without full DB roundtrip
+function getUserIdFromRequestCookies(request: NextRequest): string | null {
+  const allCookies = request.cookies.getAll()
+  const authChunks = allCookies
+    .filter((c) => c.name.startsWith('sb-') && c.name.includes('-auth-token'))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  if (authChunks.length === 0) return null
+
+  try {
+    let raw = authChunks.map((c) => c.value).join('')
+    if (raw.startsWith('base64-')) {
+      raw = atob(raw.slice(7))
+    }
+    const parsed = JSON.parse(raw)
+    const token = Array.isArray(parsed) ? parsed[0] : (parsed.access_token || parsed)
+    if (typeof token === 'string' && token.includes('.')) {
+      const payloadBase64 = token.split('.')[1]
+      const decoded = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'))
+      const payload = JSON.parse(decoded)
+      return payload.sub || null
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -149,8 +177,11 @@ export async function proxy(request: NextRequest) {
   }
 
   // Fast-path: Check cached authenticated session & profile
+  const currentTokenUserId = getUserIdFromRequestCookies(request)
   const cached = await verifyCacheCookie(request.cookies.get(CACHE_COOKIE_NAME)?.value)
-  if (cached) {
+
+  // Only use fast-path if cached profile strictly matches the active token user ID
+  if (cached && currentTokenUserId && cached.userId === currentTokenUserId) {
     if (isResetPasswordPage) {
       return supabaseResponse
     }

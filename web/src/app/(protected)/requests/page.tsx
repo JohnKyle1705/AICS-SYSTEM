@@ -19,6 +19,7 @@ function RequestsContent() {
   const [rawRequests, setRawRequests] = useState<any[]>([])
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [status, setStatus] = useState(initialStatus === 'All' ? '' : initialStatus)
+  const [releaseStatus, setReleaseStatus] = useState(searchParams.get('release_status') || '')
   const [type, setType] = useState(searchParams.get('type') || '')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -34,6 +35,10 @@ function RequestsContent() {
     if (s !== null) {
       setStatus(s === 'All' ? '' : s)
     }
+    const rs = searchParams.get('release_status')
+    if (rs !== null) {
+      setReleaseStatus(rs === 'All' ? '' : rs)
+    }
     const q = searchParams.get('search')
     if (q !== null) {
       setSearch(q)
@@ -47,7 +52,7 @@ function RequestsContent() {
   // Reset pagination when any filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, status, type, dateFrom, dateTo])
+  }, [search, status, releaseStatus, type, dateFrom, dateTo])
 
   // Load profile first
   useEffect(() => {
@@ -77,6 +82,9 @@ function RequestsContent() {
     if (status && status !== 'All') {
       query = query.eq('status', status)
     }
+    if (releaseStatus && releaseStatus !== 'All') {
+      query = query.eq('release_status', releaseStatus)
+    }
     if (type && type !== 'All') {
       query = query.eq('assistance_type', type)
     }
@@ -93,7 +101,7 @@ function RequestsContent() {
     }
     setRawRequests(data ?? [])
     setLoading(false)
-  }, [status, type, dateFrom, dateTo, profile])
+  }, [status, releaseStatus, type, dateFrom, dateTo, profile])
 
   useEffect(() => { load() }, [load])
 
@@ -169,12 +177,13 @@ function RequestsContent() {
   const clearFilters = () => {
     setSearch('')
     setStatus('')
+    setReleaseStatus('')
     setType('')
     setDateFrom('')
     setDateTo('')
   }
 
-  const hasActiveFilters = Boolean(search || status || type || dateFrom || dateTo)
+  const hasActiveFilters = Boolean(search || status || releaseStatus || type || dateFrom || dateTo)
 
   // Title formatting based on role
   const getPageTitle = () => {
@@ -229,17 +238,21 @@ function RequestsContent() {
       {/* Status Quick Filter Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         {[
-          { key: '', label: 'All Requests', count: rawRequests.length },
-          { key: 'Pending', label: 'Pending', count: statusCounts.Pending },
-          { key: 'Approved', label: 'Approved', count: statusCounts.Approved },
-          { key: 'Released', label: 'Released', count: statusCounts.Released },
-          { key: 'Declined', label: 'Declined', count: statusCounts.Declined },
+          { key: '', releaseKey: '', label: 'All Requests', count: rawRequests.length },
+          { key: 'Pending', releaseKey: '', label: 'Pending', count: statusCounts.Pending },
+          { key: 'Approved', releaseKey: '', label: 'Approved', count: statusCounts.Approved },
+          { key: 'Approved', releaseKey: 'Ready for Release', label: 'Ready for Release', count: rawRequests.filter(r => r.release_status === 'Ready for Release').length },
+          { key: 'Released', releaseKey: '', label: 'Released', count: statusCounts.Released },
+          { key: 'Declined', releaseKey: '', label: 'Declined', count: statusCounts.Declined },
         ].map((tab) => {
-          const isActive = status === tab.key
+          const isActive = (status === tab.key) && (releaseStatus === tab.releaseKey)
           return (
             <button
-              key={tab.key}
-              onClick={() => setStatus(tab.key)}
+              key={tab.label}
+              onClick={() => {
+                setStatus(tab.key)
+                setReleaseStatus(tab.releaseKey)
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 border ${
                 isActive
                   ? 'bg-blue-600 text-white border-blue-600 shadow-sm'

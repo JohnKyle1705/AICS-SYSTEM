@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_COLORS, REQUEST_STATUSES } from '@/lib/constants'
 import { format } from 'date-fns'
-import { FileText, Download, CheckCircle, AlertCircle, Clock, XCircle, ClipboardCheck, Banknote, Wallet, RotateCcw } from 'lucide-react'
+import { FileText, Download, CheckCircle, CheckCircle2, AlertCircle, Clock, XCircle, ClipboardCheck, Banknote, Wallet, RotateCcw } from 'lucide-react'
 import AssessmentForm from '@/components/assessments/AssessmentForm'
 import { useLanguage } from '@/lib/LanguageContext'
 
@@ -14,7 +14,7 @@ const STATUS_ICONS: Record<string, any> = {
   Pending: Clock, Approved: CheckCircle, Released: AlertCircle, Declined: XCircle,
 }
 
-export default function RequestDetailPage() {
+function RequestDetailContent() {
   const { t } = useLanguage()
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -29,43 +29,40 @@ export default function RequestDetailPage() {
   const searchParams = useSearchParams()
   const [highlight, setHighlight] = useState(false)
 
-  // Treasurer Modal States
-  const [voucherModalOpen, setVoucherModalOpen] = useState(false)
-  const [voucherNo, setVoucherNo] = useState('')
-  const [checkNo, setCheckNo] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('Cash')
-  const [disbursingOfficer, setDisbursingOfficer] = useState('')
-  const [voucherNotes, setVoucherNotes] = useState('')
-
   const [returnModalOpen, setReturnModalOpen] = useState(false)
   const [returnRemarks, setReturnRemarks] = useState('')
 
-  const handleSaveVoucher = async () => {
-    if (!voucherNo.trim()) {
-      alert('Disbursement Voucher (DV) Number is required')
+  // Admin Approval Modal State
+  const [approveModalOpen, setApproveModalOpen] = useState(false)
+  const [approvedAmountInput, setApprovedAmountInput] = useState('')
+  const [approvalRemarks, setApprovalRemarks] = useState('')
+
+  const handleConfirmReadiness = async () => {
+    if (!request.amount_approved || Number(request.amount_approved) <= 0) {
+      alert('Approved amount is missing or zero.')
       return
     }
+
+    const benName = request.beneficiaries ? `${request.beneficiaries.first_name} ${request.beneficiaries.last_name}` : 'the beneficiary'
+    if (!confirm(`Confirm readiness for release of ₱${Number(request.amount_approved).toLocaleString()} to ${benName}? This verifies fund allocation and marks the request Ready for Release.`)) {
+      return
+    }
+
     setUpdating(true)
     try {
       const res = await fetch('/api/treasury', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'process_voucher',
-          userId: profile?.id,
+          action: 'confirm_readiness',
           requestId: id,
-          voucherNumber: voucherNo.trim(),
-          checkNumber: checkNo.trim() || null,
-          paymentMethod,
-          disbursingOfficer: disbursingOfficer.trim() || profile?.full_name || 'Municipal Treasurer',
-          notes: voucherNotes.trim() || null
+          disbursingOfficer: profile?.full_name || 'Municipal Treasurer',
         })
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to process voucher')
+      if (!res.ok) throw new Error(data.error || 'Failed to confirm readiness')
 
-      alert('Voucher details recorded and request marked Ready for Release!')
-      setVoucherModalOpen(false)
+      alert('Readiness confirmed! Request is now Ready for Release.')
       loadData()
     } catch (err: any) {
       alert(err.message)
@@ -75,7 +72,7 @@ export default function RequestDetailPage() {
   }
 
   const handleConfirmRelease = async () => {
-    if (!confirm('Confirm disbursement and mark this assistance request as Released? This will deduct the fund balance and create official payout records.')) {
+    if (!confirm('Confirm disbursement and mark this assistance request as Released? This will record that assistance has been given to the beneficiary, deduct the municipal fund balance, and create payout records.')) {
       return
     }
     setUpdating(true)
@@ -85,15 +82,128 @@ export default function RequestDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'confirm_release',
-          userId: profile?.id,
           requestId: id,
-          notes: 'Released via Treasurer Request Details'
+          notes: 'This assistance has been given to the beneficiary.'
         })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to confirm release')
 
-      alert('Disbursement successfully confirmed and recorded!')
+      alert('Assistance officially released! The transaction is permanently recorded in the municipal ledger.')
+      loadData()
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleOpenApproveModal = () => {
+    setApprovedAmountInput(String(request.amount_approved || request.amount_requested || ''))
+    setApprovalRemarks(request.remarks || '')
+    setApproveModalOpen(true)
+  }
+
+  const handleConfirmApproval = async () => {
+    const numAmt = parseFloat(approvedAmountInput)
+    if (isNaN(numAmt) || numAmt <= 0) {
+      alert('Please enter a valid approved assistance amount greater than ₱0.')
+      return
+    }
+
+    setUpdating(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+
+      const { error: updErr } = await supabase.from('requests').update({
+        status: 'Approved',
+        release_status: 'Pending Release',
+        amount_approved: numAmt,
+        approved_by: user?.id,
+        remarks: approvalRemarks.trim() || request.remarks || null,
+        updated_at: new Date().toISOString()
+      }).eq('id', id)
+
+      if (updErr) throw updErr
+
+      // Audit Log
+      await supabase.from('system_logs').insert({
+        user_id: user?.id,
+        action: 'APPROVE_REQUEST',
+        table_name: 'requests',
+        record_id: id,
+        details: { amount_approved: numAmt, release_status: 'Pending Release' }
+      })
+
+      // Notify Treasurers: "Pending Release"
+      const { data: treasurers } = await supabase.from('profiles').select('id').eq('role', 'treasurer')
+      if (treasurers && treasurers.length > 0) {
+        const benName = request.beneficiaries ? `${request.beneficiaries.first_name} ${request.beneficiaries.last_name}` : 'Beneficiary'
+        await supabase.from('notifications').insert(
+          treasurers.map((t: any) => ({
+            user_id: t.id,
+            title: 'Request Approved (Pending Release)',
+            message: `New approved request pending release: ${benName} – ${request.assistance_type} Assistance (₱${numAmt.toLocaleString()}). Request #${id.slice(0, 8).toUpperCase()}.`,
+            type: 'info',
+            request_id: id,
+          }))
+        )
+      }
+
+      // Notify Resident
+      if (request.encoded_by) {
+        await supabase.from('notifications').insert({
+          user_id: request.encoded_by,
+          title: 'Assistance Request Approved',
+          message: `Your ${request.assistance_type} assistance request has been approved for ₱${numAmt.toLocaleString()}. Awaiting Treasury release clearance.`,
+          type: 'info',
+          request_id: id,
+        })
+      }
+
+      alert('Request approved! Amount recorded and Treasurer notified that request is Pending Release.')
+      setApproveModalOpen(false)
+      loadData()
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleDeclineRequest = async () => {
+    const reason = prompt('Please enter remarks/reason for declining this request:')
+    if (reason === null) return
+    setUpdating(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+
+      await supabase.from('requests').update({
+        status: 'Declined',
+        remarks: reason.trim() ? `${request.remarks ? request.remarks + ' | ' : ''}Declined: ${reason.trim()}` : request.remarks,
+        updated_at: new Date().toISOString()
+      }).eq('id', id)
+
+      await supabase.from('system_logs').insert({
+        user_id: user?.id,
+        action: 'DECLINE_REQUEST',
+        table_name: 'requests',
+        record_id: id,
+        details: { reason: reason.trim() }
+      })
+
+      // Notify Resident (Treasurer is NOT notified)
+      if (request.encoded_by) {
+        await supabase.from('notifications').insert({
+          user_id: request.encoded_by,
+          title: 'Request Declined',
+          message: `Your ${request.assistance_type} assistance request has been declined. ${reason.trim() ? `Reason: ${reason.trim()}` : ''}`,
+          type: 'pending',
+          request_id: id,
+        })
+      }
+
+      alert('Request has been declined.')
       loadData()
     } catch (err: any) {
       alert(err.message)
@@ -114,7 +224,6 @@ export default function RequestDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'return_request',
-          userId: profile?.id,
           requestId: id,
           remarks: returnRemarks.trim()
         })
@@ -152,10 +261,10 @@ export default function RequestDetailPage() {
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     const [{ data: req }, { data: docs }, { data: assess }, { data: pay }] = await Promise.all([
-      supabase.from('requests').select('*, beneficiaries(*)').eq('id', id).single(),
+      supabase.from('requests').select('*, beneficiaries(*), approver:approved_by(full_name)').eq('id', id).single(),
       supabase.from('request_documents').select('*').eq('request_id', id),
       supabase.from('assessments').select('*').eq('request_id', id).maybeSingle(),
-      supabase.from('payouts').select('*').eq('request_id', id).maybeSingle(),
+      supabase.from('payouts').select('*, profiles:released_by(full_name)').eq('request_id', id).maybeSingle(),
     ])
 
     if (user) {
@@ -405,12 +514,77 @@ export default function RequestDetailPage() {
         </div>
       ) : null}
 
-      {/* Financial Processing & Payout Details */}
-      {(payout || request.release_status || request.voucher_number) && (
+      {/* ── Section 5: Official Release Confirmation Banner ───────── */}
+      {(request.status === 'Released' || request.release_status === 'Released') && (
+        <div className="card p-6 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border-2 border-emerald-500 shadow-sm animate-fade-in">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md">
+              <CheckCircle2 size={26} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-emerald-600 text-white mb-1.5">
+                Official Release Completed
+              </span>
+              <h2 className="text-xl font-bold text-emerald-900 dark:text-emerald-200">
+                This assistance has been given to the beneficiary.
+              </h2>
+              <p className="text-xs sm:text-sm text-emerald-800/80 dark:text-emerald-300/80 mt-1">
+                The authorized municipal administrator has officially disbursed the assistance grant. The transaction is sealed and permanently recorded in the municipal ledger.
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 mt-4 pt-4 border-t border-emerald-200 dark:border-emerald-800/50 text-xs">
+                <div>
+                  <span className="text-emerald-700 dark:text-emerald-400 block font-medium">Beneficiary Name</span>
+                  <strong className="text-emerald-950 dark:text-emerald-100 text-sm">
+                    {b?.first_name} {b?.last_name}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-emerald-700 dark:text-emerald-400 block font-medium">Request Reference</span>
+                  <strong className="text-emerald-950 dark:text-emerald-100 font-mono text-sm">
+                    #{id.slice(0, 8).toUpperCase()}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-emerald-700 dark:text-emerald-400 block font-medium">Assistance Type</span>
+                  <strong className="text-emerald-950 dark:text-emerald-100 text-sm">
+                    {request.assistance_type} Assistance
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-emerald-700 dark:text-emerald-400 block font-medium">Final Approved Amount</span>
+                  <strong className="text-emerald-600 dark:text-emerald-400 text-base font-extrabold">
+                    ₱{Number(request.amount_approved || payout?.amount_released || 0).toLocaleString()}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-emerald-700 dark:text-emerald-400 block font-medium">Official Release Date</span>
+                  <strong className="text-emerald-950 dark:text-emerald-100">
+                    {payout?.release_date
+                      ? format(new Date(payout.release_date), 'MMMM d, yyyy')
+                      : request.release_date
+                      ? format(new Date(request.release_date), 'MMMM d, yyyy')
+                      : format(new Date(request.updated_at || request.created_at), 'MMMM d, yyyy')}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-emerald-700 dark:text-emerald-400 block font-medium">Authorized Release Officer</span>
+                  <strong className="text-emerald-950 dark:text-emerald-100">
+                    {payout?.profiles?.full_name || request.approver?.full_name || 'Authorized MSWDO Admin'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Financial Processing & Status Details */}
+      {(payout || request.release_status || request.amount_approved) && (
         <div className="card p-6 border-l-4 border-emerald-500">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-[var(--color-text)] text-[15px] flex items-center gap-2">
-              <Banknote className="text-emerald-500" size={18} /> Financial & Disbursement Details
+              <Banknote className="text-emerald-500" size={18} /> Financial & Clearance Details
             </h2>
             <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
               request.release_status === 'Released' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
@@ -429,43 +603,35 @@ export default function RequestDetailPage() {
               </span>
             </div>
             <div>
-              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Disbursement Voucher (DV) #</span>
-              <span className="font-medium text-[var(--color-text)]">
-                {request.voucher_number || request.extra_fields?.voucher_number || payout?.acknowledgment_notes?.match(/DV-?[A-Z0-9-]+/i)?.[0] || '—'}
-              </span>
-            </div>
-            <div>
-              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Check / Ref #</span>
-              <span className="font-medium text-[var(--color-text)]">
-                {request.check_number || request.extra_fields?.check_number || '—'}
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Reference Number</span>
+              <span className="font-mono text-[var(--color-text)]">
+                #{id.slice(0, 8).toUpperCase()}
               </span>
             </div>
             <div>
               <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Payment Method</span>
               <span className="font-medium text-[var(--color-text)]">
-                {request.payment_method || request.extra_fields?.payment_method || 'Cash'}
+                Cash / Physical Disbursement
               </span>
             </div>
             <div>
-              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Disbursing Officer</span>
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Approved By</span>
               <span className="font-medium text-[var(--color-text)]">
-                {request.disbursing_officer || request.extra_fields?.disbursing_officer || 'Municipal Treasurer Office'}
+                {request.approver?.full_name || 'MSWDO Admin'}
               </span>
             </div>
             <div>
-              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Release / Payout Date</span>
-              <span className="text-[var(--color-text)]">
-                {payout?.release_date ? format(new Date(payout.release_date), 'MMM d, yyyy') : request.release_date ? format(new Date(request.release_date), 'MMM d, yyyy') : '—'}
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Release Status</span>
+              <span className="font-medium text-[var(--color-text)]">
+                {request.release_status || 'Pending Release'}
               </span>
             </div>
-            {payout?.acknowledgment_notes && (
-              <div className="col-span-2 sm:col-span-3">
-                <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Disbursement Notes</span>
-                <p className="text-[var(--color-text)] text-xs bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-[var(--color-border)]">
-                  {payout.acknowledgment_notes}
-                </p>
-              </div>
-            )}
+            <div>
+              <span className="text-[var(--color-text-secondary)] text-xs block mb-0.5">Release Date</span>
+              <span className="text-[var(--color-text)]">
+                {payout?.release_date ? format(new Date(payout.release_date), 'MMM d, yyyy') : request.release_date ? format(new Date(request.release_date), 'MMM d, yyyy') : 'Awaiting Release'}
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -474,14 +640,49 @@ export default function RequestDetailPage() {
       {(profile?.role === 'admin') && (
         <div className="card p-6">
           <h2 className="font-semibold text-[var(--color-text)] mb-4 text-[15px]">{t('actions')}</h2>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-            {REQUEST_STATUSES.filter(s => s !== request.status).map(s => (
-              <button key={s} onClick={() => updateStatus(s)} disabled={updating}
-                className={`btn text-sm w-full sm:w-auto disabled:opacity-50
-                  ${s === 'Approved' ? 'btn-primary' : s === 'Released' ? 'btn-success' : s === 'Declined' ? 'btn-danger' : 'btn-secondary'}`}>
-                {t('markAs')} {s}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2.5 items-center">
+            {request.status === 'Pending' && (
+              <>
+                <button
+                  onClick={handleOpenApproveModal}
+                  disabled={updating}
+                  className="btn btn-primary text-sm w-full sm:w-auto flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle size={15} /> Approve Request
+                </button>
+                <button
+                  onClick={handleDeclineRequest}
+                  disabled={updating}
+                  className="btn btn-danger text-sm w-full sm:w-auto flex items-center justify-center gap-1.5"
+                >
+                  <XCircle size={15} /> Decline Request
+                </button>
+              </>
+            )}
+
+            {/* Admin Official Release Confirmation */}
+            {request.status === 'Approved' && request.release_status !== 'Released' && (
+              <button
+                onClick={handleConfirmRelease}
+                disabled={updating}
+                className="btn btn-success text-sm w-full sm:w-auto flex items-center justify-center gap-1.5"
+                title="Confirm official release and disburse funds to beneficiary"
+              >
+                <CheckCircle size={15} /> Confirm Official Release
               </button>
-            ))}
+            )}
+
+            {request.status === 'Approved' && request.release_status === 'Ready for Release' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800">
+                <CheckCircle size={13} /> Treasurer Confirmed Ready for Release
+              </span>
+            )}
+
+            {request.status === 'Approved' && request.release_status === 'Pending Release' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 font-semibold text-xs border border-blue-200 dark:border-blue-800">
+                <Clock size={13} /> Awaiting Treasurer Readiness Check
+              </span>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 mt-4">
@@ -489,12 +690,6 @@ export default function RequestDetailPage() {
               <button onClick={() => setIsAssessing(true)}
                 className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors text-center w-full sm:w-auto">
                 + {t('assessment_start')}
-              </button>
-            )}
-            {request.status === 'Approved' && !payout && (
-              <button onClick={() => router.push(`/payouts/new?request_id=${id}`)}
-                className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 font-semibold bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2.5 rounded-xl hover:bg-emerald-100 transition-colors text-center w-full sm:w-auto">
-                + {t('payout_record')}
               </button>
             )}
           </div>
@@ -506,7 +701,7 @@ export default function RequestDetailPage() {
         <div className="card p-6 border-l-4 border-amber-500">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold text-[var(--color-text)] text-[15px] flex items-center gap-2">
-              <Wallet className="text-amber-500" size={18} /> Treasurer Financial Actions
+              <Wallet className="text-amber-500" size={18} /> Treasurer Monitoring &amp; Readiness
             </h2>
             <span className="text-xs text-[var(--color-text-secondary)]">Municipal Treasury</span>
           </div>
@@ -514,28 +709,25 @@ export default function RequestDetailPage() {
           {request.status === 'Approved' ? (
             <div className="space-y-4 mt-3">
               <p className="text-sm text-[var(--color-text-secondary)]">
-                This request was approved by the Admin for <strong className="text-emerald-600 dark:text-emerald-400">₱{Number(request.amount_approved || 0).toLocaleString()}</strong>.
-                You can prepare the disbursement voucher, mark it ready for release, confirm physical disbursement, or return to Admin if there is an issue.
+                This request was approved by the MSWDO Admin for <strong className="text-emerald-600 dark:text-emerald-400">₱{Number(request.amount_approved || 0).toLocaleString()}</strong>.
+                Verify fund allocation and confirm readiness for the beneficiary to receive assistance.
               </p>
 
-              <div className="flex flex-wrap gap-3 pt-2">
-                {request.release_status !== 'Released' && (
+              <div className="flex flex-wrap gap-3 pt-2 items-center">
+                {request.release_status !== 'Ready for Release' && request.release_status !== 'Released' && (
                   <button
-                    onClick={() => setVoucherModalOpen(true)}
+                    onClick={handleConfirmReadiness}
+                    disabled={updating}
                     className="btn btn-primary text-sm flex items-center gap-1.5"
                   >
-                    <FileText size={15} /> Process Voucher / Release Info
+                    <CheckCircle size={15} /> Confirm Readiness for Release
                   </button>
                 )}
 
-                {request.release_status !== 'Released' && (
-                  <button
-                    onClick={handleConfirmRelease}
-                    disabled={updating}
-                    className="btn btn-success text-sm flex items-center gap-1.5"
-                  >
-                    <CheckCircle size={15} /> Confirm Disbursement & Release
-                  </button>
+                {request.release_status === 'Ready for Release' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800">
+                    <CheckCircle size={13} /> Readiness Confirmed · Waiting for Admin to Give Assistance
+                  </span>
                 )}
 
                 {request.release_status !== 'Released' && (
@@ -550,100 +742,69 @@ export default function RequestDetailPage() {
 
                 {request.release_status === 'Released' && (
                   <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold text-sm">
-                    <CheckCircle size={18} /> Assistance has been released and recorded in Treasury ledger.
+                    <CheckCircle size={18} /> Assistance has been given to the beneficiary and logged in the Treasury ledger.
                   </div>
                 )}
               </div>
             </div>
           ) : (
             <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300 mt-2">
-              <p className="font-medium">Initial Application Status: {request.status}</p>
+              <p className="font-medium">Application Status: {request.status}</p>
               <p className="text-xs mt-1 text-amber-700 dark:text-amber-400">
-                Treasurers only process financial disbursements after the Municipal Social Worker / Admin has officially approved the request. Application approvals and declines are restricted to Admin.
+                Treasurers only verify readiness after the MSWDO Admin has officially approved the assistance. Applications can only be approved, declined, or officially released by an Admin.
               </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Voucher Preparation Modal */}
-      {voucherModalOpen && (
+      {/* Admin Approve Request Modal */}
+      {approveModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[var(--color-border)]">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[var(--color-border)]">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
-              <h3 className="text-lg font-bold text-[var(--color-text)]">Process Disbursement Voucher</h3>
-              <button onClick={() => setVoucherModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <div>
+                <h3 className="text-lg font-bold text-emerald-600">Approve Assistance Request</h3>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Beneficiary: {b?.first_name} {b?.last_name} · Requested: ₱{Number(request.amount_requested || 0).toLocaleString()}
+                </p>
+              </div>
+              <button onClick={() => setApproveModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <XCircle size={20} />
               </button>
             </div>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-4">
               <div>
                 <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                  Disbursement Voucher (DV) Number *
+                  Final Approved Assistance Amount (₱) *
                 </label>
-                <input
-                  type="text"
-                  className="form-input w-full"
-                  placeholder="e.g. DV-2026-10-0089"
-                  value={voucherNo}
-                  onChange={(e) => setVoucherNo(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                  Check / Reference Number (Optional)
-                </label>
-                <input
-                  type="text"
-                  className="form-input w-full"
-                  placeholder="e.g. CHK-554219"
-                  value={checkNo}
-                  onChange={(e) => setCheckNo(e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    className="form-input w-full"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  >
-                    <option value="Cash">Cash</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Digital Wallet">Digital Wallet</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                    Disbursing Officer
-                  </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">₱</span>
                   <input
-                    type="text"
-                    className="form-input w-full"
-                    placeholder="Officer Name"
-                    value={disbursingOfficer}
-                    onChange={(e) => setDisbursingOfficer(e.target.value)}
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    className="form-input w-full pl-8 font-bold text-base text-emerald-600 dark:text-emerald-400"
+                    placeholder="Enter approved amount"
+                    value={approvedAmountInput}
+                    onChange={(e) => setApprovedAmountInput(e.target.value)}
                   />
                 </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Once approved, the Treasurer will be notified that the request is Pending Release.
+                </p>
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
-                  Notes / Instructions
+                  Approval Remarks / Casework Notes (Optional)
                 </label>
                 <textarea
                   className="form-input w-full h-20 text-xs"
-                  placeholder="Voucher prepared, ready for beneficiary pickup..."
-                  value={voucherNotes}
-                  onChange={(e) => setVoucherNotes(e.target.value)}
+                  placeholder="Notes regarding assessment, medical diagnosis, funeral costs, etc."
+                  value={approvalRemarks}
+                  onChange={(e) => setApprovalRemarks(e.target.value)}
                 />
               </div>
             </div>
@@ -651,18 +812,19 @@ export default function RequestDetailPage() {
             <div className="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-[var(--color-border)]">
               <button
                 type="button"
-                onClick={() => setVoucherModalOpen(false)}
+                onClick={() => setApproveModalOpen(false)}
                 className="btn btn-secondary text-sm"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleSaveVoucher}
-                disabled={updating}
-                className="btn btn-primary text-sm"
+                onClick={handleConfirmApproval}
+                disabled={updating || !approvedAmountInput}
+                className="btn btn-primary text-sm flex items-center gap-1.5"
               >
-                {updating ? 'Saving...' : 'Save & Mark Ready for Release'}
+                <CheckCircle size={15} />
+                {updating ? 'Approving...' : 'Confirm Approval'}
               </button>
             </div>
           </div>
@@ -718,5 +880,13 @@ export default function RequestDetailPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function RequestDetailPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-[var(--color-text-secondary)]">Loading request details...</div>}>
+      <RequestDetailContent />
+    </Suspense>
   )
 }
