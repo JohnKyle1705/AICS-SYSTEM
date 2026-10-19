@@ -174,7 +174,7 @@ export default function ResidentDashboard() {
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center 
                       ${r.status === 'Released' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
-                      {r.status === 'Released' ? <CheckCircle size={20}/> : <Clock size={20}/>}
+                      {r.status === 'Released' ? <CheckCircle size={20} /> : <Clock size={20} />}
                     </div>
                     <div>
                       <h4 className="font-bold text-[var(--color-text)] text-sm">{r.assistance_type} {t('assistance')}</h4>
@@ -184,10 +184,10 @@ export default function ResidentDashboard() {
                   </div>
                   <div className="text-right">
                     <span className={`badge text-[10px] uppercase font-bold
-                      ${r.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 
+                      ${r.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
                         r.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
-                        r.status === 'Released' ? 'bg-emerald-100 text-emerald-700' :
-                        'bg-red-100 text-red-700'}`}>
+                          r.status === 'Released' ? 'bg-emerald-100 text-emerald-700' :
+                            'bg-red-100 text-red-700'}`}>
                       {r.status}
                     </span>
                     <p className="text-xs font-semibold text-[var(--color-text)] mt-1 group-hover:text-blue-600 transition-colors">{t('details')} →</p>
@@ -204,7 +204,7 @@ export default function ResidentDashboard() {
             <h2 className="font-bold text-[var(--color-text)] text-lg">{t('dashboard_latestUpdates')}</h2>
           </div>
 
-          
+
           <div className="space-y-4">
             {loading ? (
               Array.from({ length: 2 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)
@@ -215,18 +215,18 @@ export default function ResidentDashboard() {
 
             ) : (
               announcements.map(ann => (
-                <button 
-                  key={ann.id} 
+                <button
+                  key={ann.id}
                   onClick={() => setSelectedAnnouncement(ann)}
                   className="card p-4 text-left hover:border-indigo-300 transition-all group w-full"
                 >
                   <div className="flex gap-4">
                     {ann.image_url && (
                       <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 shadow-sm border border-[var(--color-border)]">
-                        <img 
-                          src={ann.image_url} 
-                          alt="" 
-                          className="w-full h-full object-cover" 
+                        <img
+                          src={ann.image_url}
+                          alt=""
+                          className="w-full h-full object-cover"
                           onError={(e) => {
                             (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
                           }}
@@ -262,14 +262,14 @@ export default function ResidentDashboard() {
 
       {/* Announcement Detail Modal */}
       {mounted && selectedAnnouncement && createPortal(
-        <div 
+        <div
           className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 backdrop-blur-sm p-3 sm:p-4 animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setSelectedAnnouncement(null)
           }}
         >
           <div className="min-h-full flex items-center justify-center py-4 sm:py-6">
-            <div 
+            <div
               className="card w-full max-w-2xl shadow-2xl p-0 overflow-hidden max-h-[calc(100dvh-2rem)] flex flex-col my-auto border border-[var(--color-border)] bg-[var(--color-surface)]"
               onClick={(e) => e.stopPropagation()}
             >
@@ -278,22 +278,22 @@ export default function ResidentDashboard() {
                   <Megaphone size={18} className="text-indigo-500" />
                   <h2 className="font-bold text-lg text-[var(--color-text)]">{t('dashboard_systemUpdate')}</h2>
                 </div>
-                <button 
-                  onClick={() => setSelectedAnnouncement(null)} 
+                <button
+                  onClick={() => setSelectedAnnouncement(null)}
                   className="p-1 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-secondary)]"
                   aria-label="Close"
                 >
                   <X size={20} />
                 </button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto">
                 {selectedAnnouncement.image_url && (
                   <div className="w-full aspect-video border-b border-[var(--color-border)]">
-                    <img 
-                      src={selectedAnnouncement.image_url} 
-                      alt="" 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={selectedAnnouncement.image_url}
+                      alt=""
+                      className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
                       }}
@@ -313,9 +313,9 @@ export default function ResidentDashboard() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface)] flex justify-end shrink-0">
-                <button 
+                <button
                   onClick={() => setSelectedAnnouncement(null)}
                   className="btn bg-slate-100 dark:bg-slate-800 text-[var(--color-text)] px-8 py-2.5 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
                 >
@@ -330,14 +330,14 @@ export default function ResidentDashboard() {
 
       {/* Beneficiary Registration Required Modal */}
       {mounted && showRegModal && createPortal(
-        <div 
+        <div
           className="fixed inset-0 z-[100] overflow-y-auto bg-black/75 backdrop-blur-sm p-4 animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowRegModal(false)
           }}
         >
           <div className="min-h-full flex items-center justify-center py-4">
-            <div 
+            <div
               className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 animate-scale-in my-auto"
               onClick={(e) => e.stopPropagation()}
             >

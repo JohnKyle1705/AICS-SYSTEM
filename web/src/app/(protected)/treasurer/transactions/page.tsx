@@ -72,6 +72,7 @@ export default function TreasurerTransactionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'reverse_transaction',
+          userId: profile?.id,
           transactionId: selectedTx.id,
           reason: reversalReason.trim()
         })

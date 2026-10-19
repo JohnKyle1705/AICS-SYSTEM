@@ -1,0 +1,266 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 920" width="100%" height="100%" style="background:#ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow" x="-8%" y="-8%" width="120%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.12" />
+    </filter>
+    <filter id="shadow-sm" x="-5%" y="-5%" width="115%" height="120%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.08" />
+    </filter>
+
+    <!-- Arrowhead Marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2b2d42" />
+    </marker>
+  </defs>
+
+  <!-- Title Header -->
+  <g id="header">
+    <text x="590" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1e293b" letter-spacing="0.5">MUNICIPAL TREASURER OPERATIONAL FLOW CHART</text>
+    <text x="590" y="50" text-anchor="middle" font-size="12" font-weight="500" fill="#64748b">AICS Request Management &amp; Disbursement System — Municipality of Daanbantayan</text>
+  </g>
+
+  <!-- ==================== CONNECTORS & LABELS ==================== -->
+  <g id="connectors" stroke="#2b2d42" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Start -> Decision 1 & Decision a -->
+    <path d="M 540 120 L 540 145 L 250 145 L 250 180" marker-end="url(#arrow)" />
+    <path d="M 540 120 L 540 145 L 830 145 L 830 180" marker-end="url(#arrow)" />
+
+    <!-- Decision 1 -> Step 1 (YES) & Decision 2 (NO) -->
+    <path d="M 250 290 L 250 330 L 105 330 L 105 385" marker-end="url(#arrow)" />
+    <path d="M 250 290 L 250 330 L 390 330 L 390 385" marker-end="url(#arrow)" />
+
+    <!-- Decision 2 -> Decision 3 (YES) & Decision 4 (NO) -->
+    <path d="M 390 500 L 390 545 L 250 545 L 250 600" marker-end="url(#arrow)" />
+    <path d="M 390 500 L 390 600" marker-end="url(#arrow)" />
+
+    <!-- Decision 3 -> Step 4 (YES) & Step 3 (NO) -->
+    <path d="M 180 655 L 105 655 L 105 785" marker-end="url(#arrow)" />
+    <path d="M 250 710 L 250 785" marker-end="url(#arrow)" />
+
+    <!-- Decision 4 -> Step 2 (YES) -->
+    <path d="M 390 710 L 390 785" marker-end="url(#arrow)" />
+
+    <!-- Decision a -> Decision b (YES) & Decision c (NO) -->
+    <path d="M 830 290 L 830 330 L 680 330 L 680 385" marker-end="url(#arrow)" />
+    <path d="M 830 290 L 830 330 L 980 330 L 980 385" marker-end="url(#arrow)" />
+
+    <!-- Decision b -> Step a (YES) & Decision d (NO) -->
+    <path d="M 680 500 L 680 565" marker-end="url(#arrow)" />
+    <path d="M 750 445 L 830 445 L 830 600" marker-end="url(#arrow)" />
+
+    <!-- Step a -> Step c -->
+    <path d="M 680 645 L 680 785" marker-end="url(#arrow)" />
+
+    <!-- Decision d -> Step d (YES) -->
+    <path d="M 830 710 L 830 785" marker-end="url(#arrow)" />
+
+    <!-- Decision c -> Step b (YES) & Decision e (NO) -->
+    <path d="M 980 500 L 980 565" marker-end="url(#arrow)" />
+    <path d="M 1050 445 L 1100 445 L 1100 600" marker-end="url(#arrow)" />
+
+    <!-- Step b -> Step e -->
+    <path d="M 980 645 L 980 785" marker-end="url(#arrow)" />
+
+    <!-- Decision e -> Step e (YES) & Step f (NO) -->
+    <path d="M 1100 710 L 1100 750 L 1045 750 L 1045 825 L 1040 825" marker-end="url(#arrow)" />
+    <path d="M 1100 710 L 1100 785" marker-end="url(#arrow)" />
+  </g>
+
+  <!-- ==================== YES / NO LABELS ==================== -->
+  <g id="branch-labels" font-size="12" font-weight="700" fill="#1e293b" text-anchor="middle">
+    <!-- From Start -->
+    <rect x="365" y="134" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="387" y="148">YES</text>
+    <rect x="670" y="134" width="40" height="20" rx="4" fill="#ffffff" />
+    <text x="690" y="148">NO</text>
+
+    <!-- From Decision 1 -->
+    <rect x="150" y="320" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="172" y="334">YES</text>
+    <rect x="300" y="320" width="40" height="20" rx="4" fill="#ffffff" />
+    <text x="320" y="334">NO</text>
+
+    <!-- From Decision 2 -->
+    <rect x="290" y="535" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="312" y="549">YES</text>
+    <rect x="395" y="540" width="36" height="20" rx="4" fill="#ffffff" />
+    <text x="413" y="554">NO</text>
+
+    <!-- From Decision 3 -->
+    <rect x="120" y="645" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="142" y="659">YES</text>
+    <rect x="255" y="735" width="36" height="20" rx="4" fill="#ffffff" />
+    <text x="273" y="749">NO</text>
+
+    <!-- From Decision 4 -->
+    <rect x="395" y="735" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="417" y="749">YES</text>
+
+    <!-- From Decision a -->
+    <rect x="730" y="320" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="752" y="334">YES</text>
+    <rect x="890" y="320" width="40" height="20" rx="4" fill="#ffffff" />
+    <text x="910" y="334">NO</text>
+
+    <!-- From Decision b -->
+    <rect x="640" y="525" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="662" y="539">YES</text>
+    <rect x="770" y="435" width="40" height="20" rx="4" fill="#ffffff" />
+    <text x="790" y="449">NO</text>
+
+    <!-- From Decision d -->
+    <rect x="835" y="735" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="857" y="749">YES</text>
+
+    <!-- From Decision c -->
+    <rect x="940" y="525" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="962" y="539">YES</text>
+    <rect x="1055" y="435" width="40" height="20" rx="4" fill="#ffffff" />
+    <text x="1075" y="449">NO</text>
+
+    <!-- From Decision e -->
+    <rect x="1045" y="738" width="44" height="20" rx="4" fill="#ffffff" />
+    <text x="1067" y="752">YES</text>
+    <rect x="1105" y="738" width="40" height="20" rx="4" fill="#ffffff" />
+    <text x="1125" y="752">NO</text>
+  </g>
+
+  <!-- ==================== NODES ==================== -->
+
+  <!-- START NODE (Red Pill) -->
+  <g id="node-start" filter="url(#shadow)">
+    <rect x="460" y="72" width="160" height="48" rx="24" fill="#ea4335" stroke="#c5221f" stroke-width="2" />
+    <text x="540" y="102" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">Start</text>
+  </g>
+
+  <!-- ==================== LEFT BRANCH (GREEN & ORANGE) ==================== -->
+
+  <!-- DECISION 1 (Green Diamond) -->
+  <g id="node-decision-1" filter="url(#shadow)">
+    <polygon points="250,180 320,235 250,290 180,235" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
+    <text x="250" y="231" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="250" y="248" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">1</text>
+  </g>
+
+  <!-- STEP 1 (Orange Box) -->
+  <g id="node-step-1" filter="url(#shadow-sm)">
+    <rect x="50" y="390" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
+    <text x="105" y="425" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 1</text>
+  </g>
+
+  <!-- DECISION 2 (Green Diamond) -->
+  <g id="node-decision-2" filter="url(#shadow)">
+    <polygon points="390,390 460,445 390,500 320,445" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
+    <text x="390" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="390" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">2</text>
+  </g>
+
+  <!-- DECISION 3 (Green Diamond) -->
+  <g id="node-decision-3" filter="url(#shadow)">
+    <polygon points="250,600 320,655 250,710 180,655" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
+    <text x="250" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="250" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">3</text>
+  </g>
+
+  <!-- DECISION 4 (Green Diamond) -->
+  <g id="node-decision-4" filter="url(#shadow)">
+    <polygon points="390,600 460,655 390,710 320,655" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
+    <text x="390" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="390" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">4</text>
+  </g>
+
+  <!-- STEP 4 (Orange Box) -->
+  <g id="node-step-4" filter="url(#shadow-sm)">
+    <rect x="50" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
+    <text x="105" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 4</text>
+  </g>
+
+  <!-- STEP 3 (Orange Box) -->
+  <g id="node-step-3" filter="url(#shadow-sm)">
+    <rect x="195" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
+    <text x="250" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 3</text>
+  </g>
+
+  <!-- STEP 2 (Orange Box) -->
+  <g id="node-step-2" filter="url(#shadow-sm)">
+    <rect x="335" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
+    <text x="390" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 2</text>
+  </g>
+
+
+  <!-- ==================== RIGHT BRANCH (LIME & PURPLE) ==================== -->
+
+  <!-- DECISION a (Olive Diamond) -->
+  <g id="node-decision-a" filter="url(#shadow)">
+    <polygon points="830,180 900,235 830,290 760,235" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+    <text x="830" y="231" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="830" y="248" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">a</text>
+  </g>
+
+  <!-- DECISION b (Olive Diamond) -->
+  <g id="node-decision-b" filter="url(#shadow)">
+    <polygon points="680,390 750,445 680,500 610,445" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+    <text x="680" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="680" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">b</text>
+  </g>
+
+  <!-- STEP a (Purple Box) -->
+  <g id="node-step-a" filter="url(#shadow-sm)">
+    <rect x="625" y="570" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+    <text x="680" y="605" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step a</text>
+  </g>
+
+  <!-- DECISION d (Olive Diamond) -->
+  <g id="node-decision-d" filter="url(#shadow)">
+    <polygon points="830,600 900,655 830,710 760,655" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+    <text x="830" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="830" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">d</text>
+  </g>
+
+  <!-- STEP c (Purple Box) -->
+  <g id="node-step-c" filter="url(#shadow-sm)">
+    <rect x="625" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+    <text x="680" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step c</text>
+  </g>
+
+  <!-- STEP d (Purple Box) -->
+  <g id="node-step-d" filter="url(#shadow-sm)">
+    <rect x="775" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+    <text x="830" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step d</text>
+  </g>
+
+  <!-- DECISION c (Olive Diamond) -->
+  <g id="node-decision-c" filter="url(#shadow)">
+    <polygon points="980,390 1050,445 980,500 910,445" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+    <text x="980" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="980" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">c</text>
+  </g>
+
+  <!-- STEP b (Purple Box) -->
+  <g id="node-step-b" filter="url(#shadow-sm)">
+    <rect x="925" y="570" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+    <text x="980" y="605" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step b</text>
+  </g>
+
+  <!-- DECISION e (Olive Diamond) -->
+  <g id="node-decision-e" filter="url(#shadow)">
+    <polygon points="1100,600 1170,655 1100,710 1030,655" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+    <text x="1100" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+    <text x="1100" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">e</text>
+  </g>
+
+  <!-- STEP e (Purple Box) -->
+  <g id="node-step-e" filter="url(#shadow-sm)">
+    <rect x="925" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+    <text x="980" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step e</text>
+  </g>
+
+  <!-- STEP f (Purple Box) -->
+  <g id="node-step-f" filter="url(#shadow-sm)">
+    <rect x="1045" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+    <text x="1100" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step f</text>
+  </g>
+
+</svg>

@@ -101,12 +101,20 @@ export default function TreasurerRequestsPage() {
 
   /* ── voucher processing ───────────────────────────────────────── */
   const openVoucherModal = (req: any) => {
+    if (req.status !== 'Approved') {
+      alert(`Cannot process voucher: This request is currently "${req.status}". An Administrator must approve it first.`)
+      return
+    }
+    if (!req.amount_approved || Number(req.amount_approved) <= 0) {
+      alert('Cannot process voucher: Approved amount is missing or ₱0. The request must be approved with a valid grant amount by MSWDO.')
+      return
+    }
     setSelectedRequest(req)
-    setVoucherNo(req.voucher_number || `DV-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`)
-    setCheckNo(req.check_number || '')
-    setPaymentMethod(req.payment_method || 'Cash')
-    setDisbursingOfficer(req.disbursing_officer || profile?.full_name || 'Municipal Treasurer')
-    setVoucherNotes(req.notes || '')
+    setVoucherNo(req.voucher_number || req.extra_fields?.voucher_number || `DV-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`)
+    setCheckNo(req.check_number || req.extra_fields?.check_number || '')
+    setPaymentMethod(req.payment_method || req.extra_fields?.payment_method || 'Cash')
+    setDisbursingOfficer(req.disbursing_officer || req.extra_fields?.disbursing_officer || profile?.full_name || 'Municipal Treasurer')
+    setVoucherNotes(req.notes || req.extra_fields?.voucher_notes || '')
     setVoucherModalOpen(true)
   }
 
@@ -124,6 +132,7 @@ export default function TreasurerRequestsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'process_voucher',
+          userId: profile?.id,
           requestId: selectedRequest.id,
           voucherNumber: voucherNo.trim(),
           checkNumber: checkNo.trim() || null,
@@ -168,6 +177,7 @@ export default function TreasurerRequestsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'confirm_release',
+          userId: profile?.id,
           requestId: req.id,
           notes: 'Disbursed and confirmed via Treasurer Requests View'
         })
@@ -209,6 +219,7 @@ export default function TreasurerRequestsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'return_request',
+          userId: profile?.id,
           requestId: selectedRequest.id,
           remarks: returnRemarks.trim()
         })
@@ -675,7 +686,7 @@ export default function TreasurerRequestsPage() {
                 >
                   Close
                 </button>
-                {drawerRequest.release_status !== 'Released' && (
+                {drawerRequest.status === 'Approved' && drawerRequest.release_status !== 'Released' && (
                   <button
                     type="button"
                     onClick={() => {
@@ -688,7 +699,7 @@ export default function TreasurerRequestsPage() {
                     Process Voucher
                   </button>
                 )}
-                {drawerRequest.release_status !== 'Released' && (
+                {drawerRequest.status === 'Approved' && drawerRequest.release_status !== 'Released' && (
                   <button
                     type="button"
                     onClick={() => {
@@ -700,6 +711,16 @@ export default function TreasurerRequestsPage() {
                   >
                     Confirm Release
                   </button>
+                )}
+                {drawerRequest.status === 'Pending' && (
+                  <span className="text-xs px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium border border-amber-200 dark:border-amber-800">
+                    Awaiting MSWDO Approval
+                  </span>
+                )}
+                {drawerRequest.status === 'Declined' && (
+                  <span className="text-xs px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium border border-red-200 dark:border-red-800">
+                    Declined by Admin
+                  </span>
                 )}
               </div>
             </div>

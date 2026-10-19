@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin, getTreasuryStats } from '@/lib/treasury'
+import { createClient as createServerSupabase } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
   try {
@@ -51,31 +52,57 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { action, userId, payload } = body
+    const { action } = body
 
-    if (!userId) {
-      return NextResponse.json({ ok: false, error: 'Unauthorized: Missing user identifier' }, { status: 401 })
+    // 1. Resolve calling user ID from Supabase Auth session OR body.userId
+    let callerId = body.userId || body.user_id
+    if (!callerId) {
+      try {
+        const supabase = await createServerSupabase()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          callerId = user.id
+        }
+      } catch (authErr) {
+        // Fallback
+      }
+    }
+
+    if (!callerId) {
+      return NextResponse.json({
+        ok: false,
+        error: 'Unauthorized: Missing user identifier. Please log in or refresh your session.'
+      }, { status: 401 })
     }
 
     // Verify caller role from profiles
     const { data: caller } = await supabaseAdmin
       .from('profiles')
       .select('id, full_name, role, is_active')
-      .eq('id', userId)
+      .eq('id', callerId)
       .single()
 
     if (!caller || !caller.is_active || !['admin', 'treasurer'].includes(caller.role)) {
       return NextResponse.json({ ok: false, error: 'Forbidden: Treasurer or Admin role required' }, { status: 403 })
     }
 
+    // Support properties passed either directly on body or nested in body.payload
+    const p = body.payload || body
+
     // ──────────────────────────────────────────────────────────────────────────
     // 1. PROCESS VOUCHER (Treasurer processes an approved request)
     // ──────────────────────────────────────────────────────────────────────────
     if (action === 'process_voucher') {
-      const { requestId, voucherNo, remarks } = payload
+      const requestId = p.requestId || p.id
+      const voucherNo = (p.voucherNumber || p.voucherNo || '').trim()
+      const checkNo = (p.checkNumber || p.checkNo || '').trim()
+      const paymentMethod = p.paymentMethod || 'Cash'
+      const disbursingOfficer = (p.disbursingOfficer || caller.full_name || 'Municipal Treasurer').trim()
+      const remarks = (p.notes || p.remarks || '').trim()
+
       if (!requestId) return NextResponse.json({ ok: false, error: 'Request ID is required' }, { status: 400 })
-      if (!voucherNo || !voucherNo.trim()) {
-        return NextResponse.json({ ok: false, error: 'Disbursement voucher number is required' }, { status: 400 })
+      if (!voucherNo) {
+        return NextResponse.json({ ok: false, error: 'Disbursement Voucher (DV) Number is required' }, { status: 400 })
       }
 
       const { data: req, error: reqErr } = await supabaseAdmin
@@ -89,11 +116,17 @@ export async function POST(request: Request) {
       }
 
       if (req.status !== 'Approved') {
-        return NextResponse.json({ ok: false, error: `Only approved requests can be processed (current status: ${req.status})` }, { status: 400 })
+        return NextResponse.json({
+          ok: false,
+          error: `Cannot process voucher: Request is currently "${req.status}". An Administrator must approve this request before a disbursement voucher can be issued.`
+        }, { status: 400 })
       }
 
       if (!req.amount_approved || Number(req.amount_approved) <= 0) {
-        return NextResponse.json({ ok: false, error: 'Request approved amount must be greater than ₱0' }, { status: 400 })
+        return NextResponse.json({
+          ok: false,
+          error: 'Cannot process voucher: Approved amount is ₱0 or unassigned. The request must have a valid approved grant amount (> ₱0).'
+        }, { status: 400 })
       }
 
       // Check fund liquidity
@@ -122,12 +155,29 @@ export async function POST(request: Request) {
         }, { status: 400 })
       }
 
+      // Update extra_fields with full voucher metadata
+      const updatedExtra = {
+        ...(req.extra_fields || {}),
+        voucher_number: voucherNo,
+        check_number: checkNo || null,
+        payment_method: paymentMethod,
+        disbursing_officer: disbursingOfficer,
+        voucher_notes: remarks || null,
+        voucher_processed_at: new Date().toISOString(),
+        voucher_processed_by: caller.id,
+      }
+
+      const remarksText = remarks 
+        ? `${req.remarks && req.remarks !== 'None' ? req.remarks + ' | ' : ''}Voucher: ${voucherNo} (${remarks})`
+        : (req.remarks && req.remarks !== 'None' ? `${req.remarks} | Voucher: ${voucherNo}` : `Voucher: ${voucherNo}`)
+
       // Update request to Ready for Release
       const { error: updErr } = await supabaseAdmin
         .from('requests')
         .update({
           release_status: 'Ready for Release',
-          remarks: remarks ? `${req.remarks ? req.remarks + ' | ' : ''}Voucher: ${voucherNo.trim()} (${remarks.trim()})` : req.remarks,
+          extra_fields: updatedExtra,
+          remarks: remarksText,
           updated_at: new Date().toISOString(),
         })
         .eq('id', requestId)
@@ -141,8 +191,11 @@ export async function POST(request: Request) {
         table_name: 'requests',
         record_id: requestId,
         details: {
-          voucher_no: voucherNo.trim(),
-          remarks: remarks?.trim() || null,
+          voucher_no: voucherNo,
+          check_no: checkNo || null,
+          payment_method: paymentMethod,
+          disbursing_officer: disbursingOfficer,
+          remarks: remarks || null,
           amount: Number(req.amount_approved),
           assistance_type: req.assistance_type,
           previous_release_status: req.release_status || 'Pending Release',
@@ -158,7 +211,7 @@ export async function POST(request: Request) {
           admins.map((a: any) => ({
             user_id: a.id,
             title: 'Ready for Release Confirmation',
-            message: `Treasurer ${caller.full_name} processed Voucher #${voucherNo.trim()} for ${benName} (₱${Number(req.amount_approved).toLocaleString()}). Ready for official release.`,
+            message: `Treasurer ${caller.full_name} processed Voucher #${voucherNo} for ${benName} (₱${Number(req.amount_approved).toLocaleString()}). Ready for official release.`,
             type: 'info',
             request_id: requestId,
           }))
@@ -172,9 +225,11 @@ export async function POST(request: Request) {
     // 2. RETURN REQUEST (Treasurer returns request to Admin with correction notes)
     // ──────────────────────────────────────────────────────────────────────────
     if (action === 'return_request') {
-      const { requestId, reason } = payload
+      const requestId = p.requestId || p.id
+      const reason = (p.reason || p.remarks || '').trim()
+
       if (!requestId) return NextResponse.json({ ok: false, error: 'Request ID is required' }, { status: 400 })
-      if (!reason || !reason.trim()) {
+      if (!reason) {
         return NextResponse.json({ ok: false, error: 'A reason for returning the request is required' }, { status: 400 })
       }
 
@@ -190,7 +245,7 @@ export async function POST(request: Request) {
         .from('requests')
         .update({
           release_status: 'Pending Release',
-          remarks: `${req.remarks ? req.remarks + ' | ' : ''}Returned by Treasurer: ${reason.trim()}`,
+          remarks: `${req.remarks ? req.remarks + ' | ' : ''}Returned by Treasurer: ${reason}`,
           updated_at: new Date().toISOString(),
         })
         .eq('id', requestId)
@@ -200,7 +255,7 @@ export async function POST(request: Request) {
         action: 'TREASURY_RETURN_REQUEST',
         table_name: 'requests',
         record_id: requestId,
-        details: { reason: reason.trim() },
+        details: { reason },
       })
 
       // Notify Admins
@@ -211,7 +266,7 @@ export async function POST(request: Request) {
           admins.map((a: any) => ({
             user_id: a.id,
             title: 'Financial Review / Correction Required',
-            message: `Treasurer ${caller.full_name} returned request for ${benName}: "${reason.trim()}".`,
+            message: `Treasurer ${caller.full_name} returned request for ${benName}: "${reason}".`,
             type: 'incomplete',
             request_id: requestId,
           }))
@@ -225,7 +280,10 @@ export async function POST(request: Request) {
     // 3. CONFIRM OFFICIAL RELEASE (Disburse & deduct fund balance)
     // ──────────────────────────────────────────────────────────────────────────
     if (action === 'confirm_release') {
-      const { requestId, releaseDate, notes } = payload
+      const requestId = p.requestId || p.id
+      const releaseDate = p.releaseDate
+      const notes = p.notes || p.remarks
+
       if (!requestId) return NextResponse.json({ ok: false, error: 'Request ID is required' }, { status: 400 })
 
       const { data: req } = await supabaseAdmin
@@ -378,18 +436,28 @@ export async function POST(request: Request) {
     // 4. RECORD FUND TRANSACTION (Allocation, Funds Received, Adjustment)
     // ──────────────────────────────────────────────────────────────────────────
     if (action === 'record_fund_transaction') {
-      const { assistanceType, transactionType, amount, remarks } = payload
+      const fundId = p.fundId
+      const assistanceType = p.assistanceType
+      const transactionType = p.transactionType || p.type || 'Allocation'
+      const amount = p.amount
+      const remarks = p.remarks
+      const newThreshold = p.newThreshold
+
       const numAmount = parseFloat(amount)
       if (isNaN(numAmount) || numAmount <= 0) {
         return NextResponse.json({ ok: false, error: 'Please enter a valid amount greater than ₱0' }, { status: 400 })
       }
 
-      const { data: fund } = await supabaseAdmin
-        .from('funds')
-        .select('*')
-        .eq('assistance_type', assistanceType)
-        .single()
+      let fundQuery = supabaseAdmin.from('funds').select('*')
+      if (fundId) {
+        fundQuery = fundQuery.eq('id', fundId)
+      } else if (assistanceType) {
+        fundQuery = fundQuery.eq('assistance_type', assistanceType)
+      } else {
+        return NextResponse.json({ ok: false, error: 'Fund identifier is required' }, { status: 400 })
+      }
 
+      const { data: fund } = await fundQuery.single()
       if (!fund) return NextResponse.json({ ok: false, error: 'Fund not found' }, { status: 404 })
 
       let newBalance = Number(fund.current_balance)
@@ -408,14 +476,19 @@ export async function POST(request: Request) {
       }
 
       // Update fund
+      const fundUpdates: any = {
+        current_balance: newBalance,
+        total_allocated: newTotalAllocated,
+        updated_at: new Date().toISOString(),
+        updated_by: caller.id,
+      }
+      if (newThreshold !== undefined && !isNaN(Number(newThreshold))) {
+        fundUpdates.low_balance_threshold = Number(newThreshold)
+      }
+
       await supabaseAdmin
         .from('funds')
-        .update({
-          current_balance: newBalance,
-          total_allocated: newTotalAllocated,
-          updated_at: new Date().toISOString(),
-          updated_by: caller.id,
-        })
+        .update(fundUpdates)
         .eq('id', fund.id)
 
       // Insert transaction ledger entry
@@ -443,7 +516,7 @@ export async function POST(request: Request) {
         details: {
           type: transactionType,
           amount: numAmount,
-          fund: assistanceType,
+          fund: fund.assistance_type,
           balance_after: newBalance,
         },
       })
@@ -455,11 +528,8 @@ export async function POST(request: Request) {
     // 5. REVERSE FUND TRANSACTION (Authorized correction)
     // ──────────────────────────────────────────────────────────────────────────
     if (action === 'reverse_transaction') {
-      const { transactionId, reason } = payload
-      if (!transactionId) return NextResponse.json({ ok: false, error: 'Transaction ID is required' }, { status: 400 })
-      if (!reason || !reason.trim()) {
-        return NextResponse.json({ ok: false, error: 'Reversal reason is required' }, { status: 400 })
-      }
+      const transactionId = p.transactionId || p.id
+      const reason = (p.reason || p.remarks || '').trim()
 
       const { data: tx } = await supabaseAdmin
         .from('fund_transactions')

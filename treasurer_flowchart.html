@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AICS Municipal Treasurer Operational Flow Chart</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --primary: #3b82f6;
+      --coral-red: #ea4335;
+      --forest-green: #1b7f4b;
+      --tangerine-orange: #e67e22;
+      --olive-lime: #8cb811;
+      --violet-purple: #7e57c2;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: white;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header-titles h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .header-titles p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toggle-group {
+      display: inline-flex;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: #3b82f6;
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .chart-wrapper {
+      padding: 30px 20px;
+      background: #fafaf9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+      overflow-x: auto;
+    }
+
+    svg {
+      max-width: 100%;
+      height: auto;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.03));
+    }
+
+    /* Node interaction */
+    .interactive-node {
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .interactive-node:hover {
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25)) brightness(1.08);
+      transform: translateY(-2px);
+    }
+
+    /* Info Drawer / Details */
+    .details-panel {
+      padding: 24px 32px;
+      background: #ffffff;
+    }
+
+    .info-card {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px 24px;
+      border-left: 5px solid #3b82f6;
+      border-top: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .info-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-red { background: #fee2e2; color: #b91c1c; }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-orange { background: #ffedd5; color: #c2410c; }
+    .badge-lime { background: #ecfccb; color: #4d7c0f; }
+    .badge-purple { background: #f3e8ff; color: #6b21a8; }
+
+    .info-desc {
+      font-size: 14px;
+      color: #475569;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #cbd5e1;
+    }
+
+    .meta-item {
+      font-size: 12px;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .meta-val {
+      color: #1e293b;
+      font-weight: 600;
+      margin-top: 2px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* Specifications Table */
+    .specs-section h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 700;
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+    }
+
+    td {
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    @media print {
+      body { padding: 0; background: white; }
+      .container { box-shadow: none; border: none; max-width: 100%; }
+      header, .toolbar, .details-panel { display: none; }
+      .chart-wrapper { padding: 0; background: white; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="header-titles">
+        <h1>MUNICIPAL TREASURER OPERATIONAL FLOW CHART</h1>
+        <p>AICS Request Management &amp; Beneficiary Information System • Municipality of Daanbantayan, Cebu</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="btn-schematic" onclick="setViewMode('schematic')">Schematic Mode</button>
+          <button class="toggle-btn" id="btn-treasurer" onclick="setViewMode('treasurer')">Treasurer Labels</button>
+        </div>
+        <button class="action-btn" onclick="downloadSVG()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download SVG
+        </button>
+        <button class="action-btn" onclick="downloadPNG()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Export PNG
+        </button>
+        <button class="action-btn" onclick="window.print()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print
+        </button>
+      </div>
+    </header>
+
+    <div class="chart-wrapper">
+      <svg id="flowchart-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 920" width="1180" height="920">
+        <defs>
+          <filter id="shadow" x="-8%" y="-8%" width="120%" height="125%" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.14" />
+          </filter>
+          <filter id="shadow-sm" x="-5%" y="-5%" width="115%" height="120%" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.10" />
+          </filter>
+
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2b2d42" />
+          </marker>
+        </defs>
+
+        <!-- Connectors -->
+        <g id="connectors" stroke="#2b2d42" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Start -> Decision 1 & Decision a -->
+          <path d="M 540 120 L 540 145 L 250 145 L 250 180" marker-end="url(#arrow)" />
+          <path d="M 540 120 L 540 145 L 830 145 L 830 180" marker-end="url(#arrow)" />
+
+          <!-- Decision 1 -> Step 1 (YES) & Decision 2 (NO) -->
+          <path d="M 250 290 L 250 330 L 105 330 L 105 385" marker-end="url(#arrow)" />
+          <path d="M 250 290 L 250 330 L 390 330 L 390 385" marker-end="url(#arrow)" />
+
+          <!-- Decision 2 -> Decision 3 (YES) & Decision 4 (NO) -->
+          <path d="M 390 500 L 390 545 L 250 545 L 250 600" marker-end="url(#arrow)" />
+          <path d="M 390 500 L 390 600" marker-end="url(#arrow)" />
+
+          <!-- Decision 3 -> Step 4 (YES) & Step 3 (NO) -->
+          <path d="M 180 655 L 105 655 L 105 785" marker-end="url(#arrow)" />
+          <path d="M 250 710 L 250 785" marker-end="url(#arrow)" />
+
+          <!-- Decision 4 -> Step 2 (YES) -->
+          <path d="M 390 710 L 390 785" marker-end="url(#arrow)" />
+
+          <!-- Decision a -> Decision b (YES) & Decision c (NO) -->
+          <path d="M 830 290 L 830 330 L 680 330 L 680 385" marker-end="url(#arrow)" />
+          <path d="M 830 290 L 830 330 L 980 330 L 980 385" marker-end="url(#arrow)" />
+
+          <!-- Decision b -> Step a (YES) & Decision d (NO) -->
+          <path d="M 680 500 L 680 565" marker-end="url(#arrow)" />
+          <path d="M 750 445 L 830 445 L 830 600" marker-end="url(#arrow)" />
+
+          <!-- Step a -> Step c -->
+          <path d="M 680 635 L 680 785" marker-end="url(#arrow)" />
+
+          <!-- Decision d -> Step d (YES) -->
+          <path d="M 830 710 L 830 785" marker-end="url(#arrow)" />
+
+          <!-- Decision c -> Step b (YES) & Decision e (NO) -->
+          <path d="M 980 500 L 980 565" marker-end="url(#arrow)" />
+          <path d="M 1050 445 L 1100 445 L 1100 600" marker-end="url(#arrow)" />
+
+          <!-- Step b -> Step e -->
+          <path d="M 980 635 L 980 785" marker-end="url(#arrow)" />
+
+          <!-- Decision e -> Step e (YES) & Step f (NO) -->
+          <path d="M 1100 710 L 1100 750 L 1045 750 L 1045 825 L 1040 825" marker-end="url(#arrow)" />
+          <path d="M 1100 710 L 1100 785" marker-end="url(#arrow)" />
+        </g>
+
+        <!-- YES / NO Labels -->
+        <g id="branch-labels" font-size="12" font-weight="700" fill="#1e293b" text-anchor="middle">
+          <!-- From Start -->
+          <rect x="365" y="134" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="387" y="148">YES</text>
+          <rect x="670" y="134" width="40" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="690" y="148">NO</text>
+
+          <!-- From Decision 1 -->
+          <rect x="150" y="320" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="172" y="334">YES</text>
+          <rect x="300" y="320" width="40" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="320" y="334">NO</text>
+
+          <!-- From Decision 2 -->
+          <rect x="290" y="535" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="312" y="549">YES</text>
+          <rect x="395" y="540" width="36" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="413" y="554">NO</text>
+
+          <!-- From Decision 3 -->
+          <rect x="120" y="645" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="142" y="659">YES</text>
+          <rect x="255" y="735" width="36" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="273" y="749">NO</text>
+
+          <!-- From Decision 4 -->
+          <rect x="395" y="735" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="417" y="749">YES</text>
+
+          <!-- From Decision a -->
+          <rect x="730" y="320" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="752" y="334">YES</text>
+          <rect x="890" y="320" width="40" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="910" y="334">NO</text>
+
+          <!-- From Decision b -->
+          <rect x="640" y="525" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="662" y="539">YES</text>
+          <rect x="770" y="435" width="40" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="790" y="449">NO</text>
+
+          <!-- From Decision d -->
+          <rect x="835" y="735" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="857" y="749">YES</text>
+
+          <!-- From Decision c -->
+          <rect x="940" y="525" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="962" y="539">YES</text>
+          <rect x="1055" y="435" width="40" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="1075" y="449">NO</text>
+
+          <!-- From Decision e -->
+          <rect x="1045" y="738" width="44" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="1067" y="752">YES</text>
+          <rect x="1105" y="738" width="40" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <text x="1125" y="752">NO</text>
+        </g>
+
+        <!-- ==================== NODES ==================== -->
+
+        <!-- START NODE (Red Pill) -->
+        <g id="node-start" class="interactive-node" onclick="selectNode('start')" filter="url(#shadow)">
+          <rect x="460" y="72" width="160" height="48" rx="24" fill="#ea4335" stroke="#c5221f" stroke-width="2" />
+          <text id="lbl-start" x="540" y="102" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">Start</text>
+        </g>
+
+        <!-- ==================== LEFT BRANCH (GREEN & ORANGE) ==================== -->
+
+        <!-- DECISION 1 (Green Diamond) -->
+        <g id="node-decision-1" class="interactive-node" onclick="selectNode('decision-1')" filter="url(#shadow)">
+          <polygon points="250,180 320,235 250,290 180,235" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
+          <text id="lbl-d1-a" x="250" y="231" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-d1-b" x="250" y="248" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">1</text>
+        </g>
+
+        <!-- STEP 1 (Orange Box) -->
+        <g id="node-step-1" class="interactive-node" onclick="selectNode('step-1')" filter="url(#shadow-sm)">
+          <rect x="50" y="390" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
+          <text id="lbl-s1" x="105" y="425" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 1</text>
+        </g>
+
+        <!-- DECISION 2 (Green Diamond) -->
+        <g id="node-decision-2" class="interactive-node" onclick="selectNode('decision-2')" filter="url(#shadow)">
+          <polygon points="390,390 460,445 390,500 320,445" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
+          <text id="lbl-d2-a" x="390" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-d2-b" x="390" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">2</text>
+        </g>
+
+        <!-- DECISION 3 (Green Diamond) -->
+        <g id="node-decision-3" class="interactive-node" onclick="selectNode('decision-3')" filter="url(#shadow)">
+          <polygon points="250,600 320,655 250,710 180,655" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
+          <text id="lbl-d3-a" x="250" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-d3-b" x="250" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">3</text>
+        </g>
+
+        <!-- DECISION 4 (Green Diamond) -->
+        <g id="node-decision-4" class="interactive-node" onclick="selectNode('decision-4')" filter="url(#shadow)">
+          <polygon points="390,600 460,655 390,710 320,655" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
+          <text id="lbl-d4-a" x="390" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-d4-b" x="390" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">4</text>
+        </g>
+
+        <!-- STEP 4 (Orange Box) -->
+        <g id="node-step-4" class="interactive-node" onclick="selectNode('step-4')" filter="url(#shadow-sm)">
+          <rect x="50" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
+          <text id="lbl-s4" x="105" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 4</text>
+        </g>
+
+        <!-- STEP 3 (Orange Box) -->
+        <g id="node-step-3" class="interactive-node" onclick="selectNode('step-3')" filter="url(#shadow-sm)">
+          <rect x="195" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
+          <text id="lbl-s3" x="250" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 3</text>
+        </g>
+
+        <!-- STEP 2 (Orange Box) -->
+        <g id="node-step-2" class="interactive-node" onclick="selectNode('step-2')" filter="url(#shadow-sm)">
+          <rect x="335" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
+          <text id="lbl-s2" x="390" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 2</text>
+        </g>
+
+
+        <!-- ==================== RIGHT BRANCH (LIME & PURPLE) ==================== -->
+
+        <!-- DECISION a (Olive Diamond) -->
+        <g id="node-decision-a" class="interactive-node" onclick="selectNode('decision-a')" filter="url(#shadow)">
+          <polygon points="830,180 900,235 830,290 760,235" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+          <text id="lbl-da-a" x="830" y="231" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-da-b" x="830" y="248" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">a</text>
+        </g>
+
+        <!-- DECISION b (Olive Diamond) -->
+        <g id="node-decision-b" class="interactive-node" onclick="selectNode('decision-b')" filter="url(#shadow)">
+          <polygon points="680,390 750,445 680,500 610,445" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+          <text id="lbl-db-a" x="680" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-db-b" x="680" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">b</text>
+        </g>
+
+        <!-- STEP a (Purple Box) -->
+        <g id="node-step-a" class="interactive-node" onclick="selectNode('step-a')" filter="url(#shadow-sm)">
+          <rect x="625" y="570" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+          <text id="lbl-sa" x="680" y="605" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step a</text>
+        </g>
+
+        <!-- DECISION d (Olive Diamond) -->
+        <g id="node-decision-d" class="interactive-node" onclick="selectNode('decision-d')" filter="url(#shadow)">
+          <polygon points="830,600 900,655 830,710 760,655" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+          <text id="lbl-dd-a" x="830" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-dd-b" x="830" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">d</text>
+        </g>
+
+        <!-- STEP c (Purple Box) -->
+        <g id="node-step-c" class="interactive-node" onclick="selectNode('step-c')" filter="url(#shadow-sm)">
+          <rect x="625" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+          <text id="lbl-sc" x="680" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step c</text>
+        </g>
+
+        <!-- STEP d (Purple Box) -->
+        <g id="node-step-d" class="interactive-node" onclick="selectNode('step-d')" filter="url(#shadow-sm)">
+          <rect x="775" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+          <text id="lbl-sd" x="830" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step d</text>
+        </g>
+
+        <!-- DECISION c (Olive Diamond) -->
+        <g id="node-decision-c" class="interactive-node" onclick="selectNode('decision-c')" filter="url(#shadow)">
+          <polygon points="980,390 1050,445 980,500 910,445" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+          <text id="lbl-dc-a" x="980" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-dc-b" x="980" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">c</text>
+        </g>
+
+        <!-- STEP b (Purple Box) -->
+        <g id="node-step-b" class="interactive-node" onclick="selectNode('step-b')" filter="url(#shadow-sm)">
+          <rect x="925" y="570" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+          <text id="lbl-sb" x="980" y="605" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step b</text>
+        </g>
+
+        <!-- DECISION e (Olive Diamond) -->
+        <g id="node-decision-e" class="interactive-node" onclick="selectNode('decision-e')" filter="url(#shadow)">
+          <polygon points="1100,600 1170,655 1100,710 1030,655" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
+          <text id="lbl-de-a" x="1100" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
+          <text id="lbl-de-b" x="1100" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">e</text>
+        </g>
+
+        <!-- STEP e (Purple Box) -->
+        <g id="node-step-e" class="interactive-node" onclick="selectNode('step-e')" filter="url(#shadow-sm)">
+          <rect x="925" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+          <text id="lbl-se" x="980" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step e</text>
+        </g>
+
+        <!-- STEP f (Purple Box) -->
+        <g id="node-step-f" class="interactive-node" onclick="selectNode('step-f')" filter="url(#shadow-sm)">
+          <rect x="1045" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
+          <text id="lbl-sf" x="1100" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step f</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Inspector Details Drawer -->
+    <div class="details-panel">
+      <div id="inspector-card" class="info-card">
+        <div>
+          <div class="info-title">
+            <span id="card-badge" class="badge badge-red">Start Node</span>
+            <span id="card-name">Start: Treasurer Operational Lifecycle</span>
+          </div>
+          <p id="card-desc" class="info-desc">
+            The Municipal Treasurer authenticates at <code>/login</code>. The proxy middleware checks credentials and validates <code>profiles.role === 'treasurer'</code>. The system establishes an authenticated session and redirects to <code>/treasurer</code>.
+          </p>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="meta-label">Actor / Role</div>
+              <div class="meta-val" id="card-actor">Municipal Treasurer</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">System Module / URL</div>
+              <div class="meta-val" id="card-module">/treasurer</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Database Impact</div>
+              <div class="meta-val" id="card-db">profiles, auth.users</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reference Specifications Table -->
+      <div class="specs-section">
+        <h2>Municipal Treasurer Flowchart Node Cross-Reference</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Node ID</th>
+              <th>Type</th>
+              <th>Branch / Category</th>
+              <th>Condition / Decision Logic</th>
+              <th>Operational Action &amp; Database Effect</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Start</strong></td>
+              <td>Entry Point</td>
+              <td>Authentication</td>
+              <td><code>profiles.role === 'treasurer'</code> &amp;&amp; <code>is_active === true</code></td>
+              <td>Sign in via web portal, grant access to Treasury Dashboard (<code>/treasurer</code>).</td>
+            </tr>
+            <tr>
+              <td><strong>Decision 1</strong></td>
+              <td>Evaluation</td>
+              <td>Disbursement Queue</td>
+              <td>Document/Amount Discrepancy Found in Approved Request?</td>
+              <td>Cross-reference beneficiary ID, intake assessment, and approved grant amount.</td>
+            </tr>
+            <tr>
+              <td><strong>Step 1</strong></td>
+              <td>Process</td>
+              <td>Disbursement Queue</td>
+              <td>Triggered if Decision 1 = YES</td>
+              <td><strong>Return to Admin</strong> with written remarks. Request status updated, admin alerted.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision 2</strong></td>
+              <td>Evaluation</td>
+              <td>Fund Liquidity</td>
+              <td>Is <code>funds.current_balance &gt;= amount_approved</code>?</td>
+              <td>Validate municipal category cash reserves before creating financial commitment.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision 3</strong></td>
+              <td>Evaluation</td>
+              <td>Voucher Processing</td>
+              <td>Is Disbursement Voucher (DV) already processed?</td>
+              <td>Checks whether <code>release_status === 'Ready for Release'</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision 4</strong></td>
+              <td>Evaluation</td>
+              <td>Fund Replenishment</td>
+              <td>Can emergency reallocation or subsidy be requested?</td>
+              <td>Trigger budget request to Local Chief Executive / MSWDO.</td>
+            </tr>
+            <tr>
+              <td><strong>Step 2</strong></td>
+              <td>Process</td>
+              <td>Liquidity Alert</td>
+              <td>Triggered if Decision 4 = YES</td>
+              <td><strong>Hold in Queue</strong> &amp; send automated low-balance replenishment notification.</td>
+            </tr>
+            <tr>
+              <td><strong>Step 3</strong></td>
+              <td>Process</td>
+              <td>Voucher Preparation</td>
+              <td>Triggered if Decision 3 = NO</td>
+              <td><strong>Process Voucher (DV)</strong>: Assign DV#, payment method, officer. Status: <code>Ready for Release</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Step 4</strong></td>
+              <td>Process</td>
+              <td>Official Release</td>
+              <td>Triggered if Decision 3 = YES</td>
+              <td><strong>Confirm Official Release</strong>: Disburse cash/check, deduct <code>funds.current_balance</code>, record <code>payouts</code> &amp; <code>fund_transactions</code>. Status: <code>Released</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision a</strong></td>
+              <td>Evaluation</td>
+              <td>Treasury Oversight</td>
+              <td>Is task for Fund Allocation or Replenishment?</td>
+              <td>Diverges between capital appropriation and ledger/report review.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision b</strong></td>
+              <td>Evaluation</td>
+              <td>Appropriation Type</td>
+              <td>Is it a New Municipal Appropriation / Subsidies?</td>
+              <td>Differentiates between initial budget deposits and corrective reversals.</td>
+            </tr>
+            <tr>
+              <td><strong>Step a</strong></td>
+              <td>Process</td>
+              <td>Allocation Form</td>
+              <td>Triggered if Decision b = YES</td>
+              <td>Open Replenishment Modal, enter Ordinance/Reference No., Target Fund &amp; Amount.</td>
+            </tr>
+            <tr>
+              <td><strong>Step c</strong></td>
+              <td>Process</td>
+              <td>Ledger Credit</td>
+              <td>Flows directly from Step a</td>
+              <td>Atomic credit to <code>funds.current_balance</code> and <code>funds.total_allocated</code>; logs <code>Allocation</code> transaction.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision d</strong></td>
+              <td>Evaluation</td>
+              <td>Audit Correction</td>
+              <td>Is it an Authorized Ledger Reversal / Adjustment?</td>
+              <td>Verify justification for erroneous release or check cancellation.</td>
+            </tr>
+            <tr>
+              <td><strong>Step d</strong></td>
+              <td>Process</td>
+              <td>Ledger Adjustment</td>
+              <td>Triggered if Decision d = YES</td>
+              <td><strong>Reverse Transaction</strong>: Restore deducted fund balance, revert request to <code>Approved</code>, purge payout row.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision c</strong></td>
+              <td>Evaluation</td>
+              <td>Ledger Review</td>
+              <td>Is task for Financial Ledger Audit &amp; Reconciliation?</td>
+              <td>Review historical double-entry logs vs. regulatory liquidation reporting.</td>
+            </tr>
+            <tr>
+              <td><strong>Step b</strong></td>
+              <td>Process</td>
+              <td>Ledger Filtering</td>
+              <td>Triggered if Decision c = YES</td>
+              <td>Filter real-time ledger by date, assistance category, reference, or disburser.</td>
+            </tr>
+            <tr>
+              <td><strong>Step e</strong></td>
+              <td>Process</td>
+              <td>Financial Audit</td>
+              <td>Flows from Step b &amp; Decision e (YES)</td>
+              <td>Audit double-entry ledger entries, disburser signatures, and barangay totals.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision e</strong></td>
+              <td>Evaluation</td>
+              <td>Reporting Format</td>
+              <td>Generate Comprehensive Disbursement &amp; Liquidation Report?</td>
+              <td>Review totals before final export to COA/DSWD official files.</td>
+            </tr>
+            <tr>
+              <td><strong>Step f</strong></td>
+              <td>Process</td>
+              <td>Regulatory Export</td>
+              <td>Triggered if Decision e = NO</td>
+              <td>Export formal Statement of Disbursements to <strong>Excel (.xlsx)</strong> or <strong>Municipal Letterhead PDF</strong>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const nodeData = {
+      'start': {
+        badge: 'Start Node', badgeClass: 'badge-red',
+        name: 'Start: Authentication & Role Verification',
+        desc: 'Treasurer signs in via /login with encrypted credentials. Proxy middleware verifies profiles.role === "treasurer" and is_active === true. Lands on /treasurer dashboard.',
+        actor: 'Municipal Treasurer', module: '/treasurer (Dashboard)', db: 'profiles, auth.users'
+      },
+      'decision-1': {
+        badge: 'Decision 1', badgeClass: 'badge-green',
+        name: 'Decision 1: Document or Amount Discrepancy Found?',
+        desc: 'Treasurer inspects requests approved by MSWDO. Checks beneficiary ID, medical abstract / funeral contract, and approved PHP amount for errors or irregularities.',
+        actor: 'Municipal Treasurer', module: '/treasurer/requests', db: 'requests, beneficiaries'
+      },
+      'step-1': {
+        badge: 'Step 1', badgeClass: 'badge-orange',
+        name: 'Step 1: Return Request to Admin with Remarks',
+        desc: 'Treasurer clicks "Return to Admin" and inputs mandatory correction notes. Request release_status is set to Pending Release, remarks updated, and Admins are alerted.',
+        actor: 'Municipal Treasurer', module: 'POST /api/treasury (return_request)', db: 'requests, notifications, system_logs'
+      },
+      'decision-2': {
+        badge: 'Decision 2', badgeClass: 'badge-green',
+        name: 'Decision 2: Fund Liquidity Sufficient (funds.balance >= amount)?',
+        desc: 'Programmatic validation ensures target assistance category (Medical, Burial) has sufficient cash reserves to cover approved payout amount.',
+        actor: 'Treasury Core Engine', module: 'GET /api/treasury', db: 'funds.current_balance'
+      },
+      'decision-3': {
+        badge: 'Decision 3', badgeClass: 'badge-green',
+        name: 'Decision 3: Disbursement Voucher (DV) Already Prepared?',
+        desc: 'Checks if request already has an official DV Number and disbursing officer assigned (release_status === "Ready for Release").',
+        actor: 'Municipal Treasurer', module: '/treasurer/requests', db: 'requests.release_status'
+      },
+      'decision-4': {
+        badge: 'Decision 4', badgeClass: 'badge-green',
+        name: 'Decision 4: Emergency Budget Reallocation Available?',
+        desc: 'Checks if additional LGU appropriations, calamity funds, or national subsidies can be allocated to replenish depleted assistance pool.',
+        actor: 'Municipal Treasurer / Admin', module: '/treasurer/funds', db: 'funds.total_allocated'
+      },
+      'step-2': {
+        badge: 'Step 2', badgeClass: 'badge-orange',
+        name: 'Step 2: Hold in Queue & Trigger Insufficient Funds Alert',
+        desc: 'Request is placed on hold in the queue. Automated high-priority notification sent to MSWDO Admin and Local Chief Executive for urgent replenishment.',
+        actor: 'Treasury Notification Service', module: 'POST /api/treasury', db: 'notifications, system_logs'
+      },
+      'step-3': {
+        badge: 'Step 3', badgeClass: 'badge-orange',
+        name: 'Step 3: Process Disbursement Voucher (DV)',
+        desc: 'Treasurer opens Voucher modal, inputs official DV number (DV-YYYY-XXXX), check number (if applicable), payment method (Cash/Check), and disbursing officer.',
+        actor: 'Municipal Treasurer', module: 'POST /api/treasury (process_voucher)', db: 'requests.release_status, system_logs'
+      },
+      'step-4': {
+        badge: 'Step 4', badgeClass: 'badge-orange',
+        name: 'Step 4: Confirm Official Release & Disburse Funds',
+        desc: 'Beneficiary presents valid ID at Treasury counter. Treasurer executes atomic release: deducts funds.current_balance, creates payouts record, writes fund_transactions ledger debit, and updates request to "Released".',
+        actor: 'Municipal Treasurer', module: 'POST /api/treasury (confirm_release)', db: 'funds, payouts, fund_transactions, requests'
+      },
+      'decision-a': {
+        badge: 'Decision a', badgeClass: 'badge-lime',
+        name: 'Decision a: Operation is for Fund Allocation / Replenishment?',
+        desc: 'Determines whether the Treasurer is performing capital replenishment / ledger adjustment or auditing transactions and generating liquidation statements.',
+        actor: 'Municipal Treasurer', module: '/treasurer/funds', db: 'funds'
+      },
+      'decision-b': {
+        badge: 'Decision b', badgeClass: 'badge-lime',
+        name: 'Decision b: New Municipal Appropriation / Subsidies?',
+        desc: 'Differentiates between an incoming municipal budget allocation (deposit) and an adjustment/reversal.',
+        actor: 'Municipal Treasurer', module: '/treasurer/funds', db: 'funds'
+      },
+      'step-a': {
+        badge: 'Step a', badgeClass: 'badge-purple',
+        name: 'Step a: Input Ordinance Reference, Target Fund & Amount',
+        desc: 'Treasurer opens Allocation modal, enters Ordinance number (e.g. ORD-2026-001), source of fund, replenishment amount, and low-balance alert threshold.',
+        actor: 'Municipal Treasurer', module: '/treasurer/funds (AllocationModal)', db: 'Client state'
+      },
+      'step-c': {
+        badge: 'Step c', badgeClass: 'badge-purple',
+        name: 'Step c: Credit Fund Balance & Post Allocation to Ledger',
+        desc: 'Atomically increments funds.current_balance and funds.total_allocated. Records an immutable "Allocation" entry in fund_transactions with audit trail.',
+        actor: 'Municipal Treasurer', module: 'POST /api/treasury (record_fund_transaction)', db: 'funds, fund_transactions, system_logs'
+      },
+      'decision-d': {
+        badge: 'Decision d', badgeClass: 'badge-lime',
+        name: 'Decision d: Authorized Transaction Reversal Required?',
+        desc: 'Verifies whether a previously recorded disbursement or adjustment needs to be rolled back due to returned cash, canceled check, or administrative correction.',
+        actor: 'Municipal Treasurer', module: '/treasurer/transactions', db: 'fund_transactions'
+      },
+      'step-d': {
+        badge: 'Step d', badgeClass: 'badge-purple',
+        name: 'Step d: Execute Reversal & Restore Deducted Fund Balance',
+        desc: 'System restores deducted cash balance to funds.current_balance, reverses total_released, sets request status back to Approved, and purges the payout record.',
+        actor: 'Municipal Treasurer', module: 'POST /api/treasury (reverse_transaction)', db: 'funds, fund_transactions, requests, payouts'
+      },
+      'decision-c': {
+        badge: 'Decision c', badgeClass: 'badge-lime',
+        name: 'Decision c: Task is for Financial Ledger Audit & Verification?',
+        desc: 'Checks if the user intends to review the immutable double-entry ledger trail or generate formal liquidation reports for COA/DSWD.',
+        actor: 'Municipal Treasurer', module: '/treasurer/transactions', db: 'fund_transactions'
+      },
+      'step-b': {
+        badge: 'Step b', badgeClass: 'badge-purple',
+        name: 'Step b: Filter Real-Time Ledger by Date, Fund & Disburser',
+        desc: 'Treasurer queries real-time ledger records, filtering by date range, assistance category (Medical, Burial), disburser officer name, and transaction type.',
+        actor: 'Municipal Treasurer', module: '/treasurer/transactions', db: 'fund_transactions, profiles'
+      },
+      'step-e': {
+        badge: 'Step e', badgeClass: 'badge-purple',
+        name: 'Step e: Audit Ledger Entries & Compile Barangay Breakdown',
+        desc: 'Audits transaction signatures, reconciles physical cash drawers against digital ledger balance, and aggregates total grants by barangay.',
+        actor: 'Municipal Treasurer', module: '/treasurer/reports', db: 'fund_transactions, payouts, requests'
+      },
+      'decision-e': {
+        badge: 'Decision e', badgeClass: 'badge-lime',
+        name: 'Decision e: Generate Regulatory Liquidation Report?',
+        desc: 'Confirms whether to review the interactive analytics summary or export official signed document for government compliance.',
+        actor: 'Municipal Treasurer', module: '/treasurer/reports', db: 'payouts, requests'
+      },
+      'step-f': {
+        badge: 'Step f', badgeClass: 'badge-purple',
+        name: 'Step f: Export Statement to Excel (.xlsx) or COA PDF',
+        desc: 'Generates formal Statement of AICS Disbursements with municipal letterhead, certifying officers, barangay breakdowns, and disburser sign-offs.',
+        actor: 'Municipal Treasurer', module: '/treasurer/reports (jsPDF / XLSX)', db: 'Export document'
+      }
+    };
+
+    function selectNode(id) {
+      const data = nodeData[id];
+      if (!data) return;
+
+      const badgeEl = document.getElementById('card-badge');
+      badgeEl.className = 'badge ' + data.badgeClass;
+      badgeEl.textContent = data.badge;
+
+      document.getElementById('card-name').textContent = data.name;
+      document.getElementById('card-desc').textContent = data.desc;
+      document.getElementById('card-actor').textContent = data.actor;
+      document.getElementById('card-module').textContent = data.module;
+      document.getElementById('card-db').textContent = data.db;
+
+      // Scroll smoothly to inspector if off-screen
+      document.getElementById('inspector-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    let currentMode = 'schematic';
+    function setViewMode(mode) {
+      currentMode = mode;
+      document.getElementById('btn-schematic').classList.toggle('active', mode === 'schematic');
+      document.getElementById('btn-treasurer').classList.toggle('active', mode === 'treasurer');
+
+      if (mode === 'schematic') {
+        // Schematic Mode matching reference image exactly
+        document.getElementById('lbl-start').textContent = 'Start';
+        document.getElementById('lbl-d1-a').textContent = 'Decision'; document.getElementById('lbl-d1-b').textContent = '1';
+        document.getElementById('lbl-d2-a').textContent = 'Decision'; document.getElementById('lbl-d2-b').textContent = '2';
+        document.getElementById('lbl-d3-a').textContent = 'Decision'; document.getElementById('lbl-d3-b').textContent = '3';
+        document.getElementById('lbl-d4-a').textContent = 'Decision'; document.getElementById('lbl-d4-b').textContent = '4';
+        document.getElementById('lbl-s1').textContent = 'Step 1';
+        document.getElementById('lbl-s2').textContent = 'Step 2';
+        document.getElementById('lbl-s3').textContent = 'Step 3';
+        document.getElementById('lbl-s4').textContent = 'Step 4';
+
+        document.getElementById('lbl-da-a').textContent = 'Decision'; document.getElementById('lbl-da-b').textContent = 'a';
+        document.getElementById('lbl-db-a').textContent = 'Decision'; document.getElementById('lbl-db-b').textContent = 'b';
+        document.getElementById('lbl-dc-a').textContent = 'Decision'; document.getElementById('lbl-dc-b').textContent = 'c';
+        document.getElementById('lbl-dd-a').textContent = 'Decision'; document.getElementById('lbl-dd-b').textContent = 'd';
+        document.getElementById('lbl-de-a').textContent = 'Decision'; document.getElementById('lbl-de-b').textContent = 'e';
+        document.getElementById('lbl-sa').textContent = 'Step a';
+        document.getElementById('lbl-sb').textContent = 'Step b';
+        document.getElementById('lbl-sc').textContent = 'Step c';
+        document.getElementById('lbl-sd').textContent = 'Step d';
+        document.getElementById('lbl-se').textContent = 'Step e';
+        document.getElementById('lbl-sf').textContent = 'Step f';
+      } else {
+        // Detailed Treasurer Process Labels
+        document.getElementById('lbl-start').textContent = 'Treasurer Login';
+        document.getElementById('lbl-d1-a').textContent = 'Errors /'; document.getElementById('lbl-d1-b').textContent = 'Discrepancy?';
+        document.getElementById('lbl-d2-a').textContent = 'Liquidity'; document.getElementById('lbl-d2-b').textContent = 'Sufficient?';
+        document.getElementById('lbl-d3-a').textContent = 'Voucher (DV)'; document.getElementById('lbl-d3-b').textContent = 'Processed?';
+        document.getElementById('lbl-d4-a').textContent = 'Emergency'; document.getElementById('lbl-d4-b').textContent = 'Budget?';
+        document.getElementById('lbl-s1').textContent = 'Return to Admin';
+        document.getElementById('lbl-s2').textContent = 'Hold & Alert';
+        document.getElementById('lbl-s3').textContent = 'Process DV';
+        document.getElementById('lbl-s4').textContent = 'Confirm Release';
+
+        document.getElementById('lbl-da-a').textContent = 'Fund'; document.getElementById('lbl-da-b').textContent = 'Allocation?';
+        document.getElementById('lbl-db-a').textContent = 'Budget'; document.getElementById('lbl-db-b').textContent = 'Appropriation?';
+        document.getElementById('lbl-dc-a').textContent = 'Ledger'; document.getElementById('lbl-dc-b').textContent = 'Audit?';
+        document.getElementById('lbl-dd-a').textContent = 'Reversal /'; document.getElementById('lbl-dd-b').textContent = 'Adjust?';
+        document.getElementById('lbl-de-a').textContent = 'Liquidation'; document.getElementById('lbl-de-b').textContent = 'Report?';
+        document.getElementById('lbl-sa').textContent = 'Input Ref & Pool';
+        document.getElementById('lbl-sb').textContent = 'Filter Ledger';
+        document.getElementById('lbl-sc').textContent = 'Credit Balance';
+        document.getElementById('lbl-sd').textContent = 'Reverse Ledger';
+        document.getElementById('lbl-se').textContent = 'Audit Totals';
+        document.getElementById('lbl-sf').textContent = 'Export Report';
+      }
+    }
+
+    function downloadSVG() {
+      const svg = document.getElementById('flowchart-svg');
+      const serializer = new XMLSerializer();
+      const source = serializer.serializeToString(svg);
+      const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `AICS_Treasurer_Flowchart_${currentMode}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function downloadPNG() {
+      const svg = document.getElementById('flowchart-svg');
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      canvas.width = 2360; // 2x high-resolution
+      canvas.height = 1840;
+
+      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      img.onload = function() {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+
+        const pngUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = `AICS_Treasurer_Flowchart_${currentMode}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+      img.src = url;
+    }
+  </script>
+</body>
+</html>

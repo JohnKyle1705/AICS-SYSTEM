@@ -52,6 +52,7 @@ export default function RequestDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'process_voucher',
+          userId: profile?.id,
           requestId: id,
           voucherNumber: voucherNo.trim(),
           checkNumber: checkNo.trim() || null,
@@ -84,6 +85,7 @@ export default function RequestDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'confirm_release',
+          userId: profile?.id,
           requestId: id,
           notes: 'Released via Treasurer Request Details'
         })
@@ -112,6 +114,7 @@ export default function RequestDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'return_request',
+          userId: profile?.id,
           requestId: id,
           remarks: returnRemarks.trim()
         })

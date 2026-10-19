@@ -228,6 +228,7 @@ export default function TreasurerDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'process_voucher',
+          userId: profile?.id,
           requestId: selectedRequest.id,
           voucherNumber: voucherNo.trim(),
           checkNumber: checkNo.trim() || null,
@@ -269,6 +270,7 @@ export default function TreasurerDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'confirm_release',
+          userId: profile?.id,
           requestId: req.id,
           notes: 'Disbursed and confirmed via Treasurer Dashboard'
         })
@@ -307,6 +309,7 @@ export default function TreasurerDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'return_request',
+          userId: profile?.id,
           requestId: selectedRequest.id,
           remarks: returnRemarks.trim()
         })

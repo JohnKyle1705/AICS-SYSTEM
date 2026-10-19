@@ -108,6 +108,7 @@ export default function TreasurerFundsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'record_fund_transaction',
+          userId: profile?.id,
           fundId: selectedFundId,
           type: transactionType,
           amount: numAmount,
