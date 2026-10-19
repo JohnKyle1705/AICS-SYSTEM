@@ -96,6 +96,43 @@ body {
   background-attachment: fixed;
 }
 
+.bg-signup {
+  background-image: url('/images/bg_dswd_distribution.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+.bg-signup.bg-overlay::before {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.78) 0%,
+    rgba(248, 250, 252, 0.82) 50%,
+    rgba(241, 245, 249, 0.88) 100%
+  );
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+}
+
+.dark .bg-signup.bg-overlay::before {
+  background: linear-gradient(
+    135deg,
+    rgba(2, 6, 23, 0.88) 0%,
+    rgba(15, 23, 42, 0.92) 50%,
+    rgba(30, 41, 59, 0.95) 100%
+  );
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+}
+
+@media (max-width: 1023px) {
+  .bg-signup {
+    background-attachment: scroll;
+    background-position: center 30%;
+  }
+}
+
 .bg-abstract {
   background-image: url('/images/bg_abstract_blue.png');
   background-size: cover;

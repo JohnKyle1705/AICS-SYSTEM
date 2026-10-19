@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AICS Beneficiary Account Flow Chart • Municipality of Daanbantayan</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --accent: #3b82f6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: white;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header-titles h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .header-titles p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend-bar {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 32px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-icon {
+      display: inline-block;
+      width: 16px;
+      height: 12px;
+      background: #1d68d8;
+      border: 1px solid #1555b4;
+    }
+    .legend-pill { border-radius: 6px; width: 22px; }
+    .legend-rect { border-radius: 2px; }
+    .legend-diamond { transform: rotate(45deg); width: 10px; height: 10px; }
+    .legend-doc { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .chart-wrapper {
+      padding: 30px 20px;
+      background: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+      overflow-x: auto;
+    }
+
+    svg {
+      max-width: 100%;
+      height: auto;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.03));
+    }
+
+    /* Node interaction */
+    .interactive-node {
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .interactive-node:hover {
+      filter: drop-shadow(0 8px 16px rgba(29, 104, 216, 0.35)) brightness(1.08);
+      transform: translateY(-2px);
+    }
+
+    /* Info Panel */
+    .details-panel {
+      padding: 24px 32px;
+      background: #ffffff;
+    }
+
+    .info-card {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px 24px;
+      border-left: 5px solid #1d68d8;
+      border-top: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .info-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .info-desc {
+      font-size: 14px;
+      color: #475569;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #cbd5e1;
+    }
+
+    .meta-item {
+      font-size: 12px;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .meta-val {
+      color: #1e293b;
+      font-weight: 600;
+      margin-top: 2px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* Specifications Table */
+    .specs-section h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 700;
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+    }
+
+    td {
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    @media print {
+      body { padding: 0; background: white; }
+      .container { box-shadow: none; border: none; max-width: 100%; }
+      header, .toolbar, .legend-bar, .details-panel { display: none; }
+      .chart-wrapper { padding: 0; background: white; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="header-titles">
+        <h1>BENEFICIARY ACCOUNT OPERATIONAL FLOW CHART</h1>
+        <p>AICS Request Management &amp; Beneficiary Information System • Municipality of Daanbantayan, Cebu</p>
+      </div>
+
+      <div class="toolbar">
+        <button class="action-btn" onclick="downloadSVG()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download SVG
+        </button>
+        <button class="action-btn" onclick="downloadPNG()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Export PNG
+        </button>
+        <button class="action-btn" onclick="window.print()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print
+        </button>
+      </div>
+    </header>
+
+    <div class="legend-bar">
+      <span>Flowchart Notation Standard:</span>
+      <div class="legend-item"><span class="legend-icon legend-pill"></span> Terminal (Start / End)</div>
+      <div class="legend-item"><span class="legend-icon legend-rect"></span> Process / Action</div>
+      <div class="legend-item"><span class="legend-icon legend-diamond"></span> Decision Logic</div>
+      <div class="legend-item"><span class="legend-icon legend-doc"></span> Single Document</div>
+      <div class="legend-item"><span class="legend-icon legend-doc" style="box-shadow: 2px 2px 0 #1555b4, 4px 4px 0 #0d3878;"></span> Multi-Document Packet</div>
+    </div>
+
+    <div class="chart-wrapper">
+      <?xml version="1.0" encoding="UTF-8"?>
+<svg id="beneficiary-flowchart-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 2120" width="1400" height="2120">
+  <defs>
+    <!-- Soft shadow matching modern schematic cards -->
+    <filter id="node-shadow" x="-10%" y="-10%" width="125%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.16" />
+    </filter>
+    <filter id="stack-shadow" x="-10%" y="-10%" width="125%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.12" />
+    </filter>
+
+    <!-- Arrowhead marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#334155" />
+    </marker>
+  </defs>
+
+  <!-- Flowchart Canvas Background -->
+  <rect width="100%" height="100%" fill="#ffffff" />
+
+  <!-- Main Title matching Reference Image Format -->
+  <g id="chart-header">
+    <text x="700" y="48" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="28" font-weight="900" fill="#0f172a" text-anchor="middle" letter-spacing="0.5">BENEFICIARY ACCOUNT PROCESS</text>
+    <text x="700" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#64748b" text-anchor="middle">AICS Request Management &amp; Beneficiary Information System • Municipality of Daanbantayan, Cebu</text>
+  </g>
+
+  <!-- Connectors Group -->
+  <g id="connectors" stroke="#334155" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Start -> Register -->
+    <path d="M 700 148 L 700 188" marker-end="url(#arrow)" />
+
+    <!-- Register -> Decision 1 (Account Approved?) -->
+    <path d="M 700 253 L 700 305" marker-end="url(#arrow)" />
+
+    <!-- Decision 1 -> Under Review (NO - Right) -->
+    <path d="M 810 360 L 1000 360" marker-end="url(#arrow)" />
+
+    <!-- Decision 1 -> Dashboard (YES - Down) -->
+    <path d="M 700 415 L 700 465" marker-end="url(#arrow)" />
+
+    <!-- Dashboard -> Decision 2 (Beneficiary Profile?) -->
+    <path d="M 700 525 L 700 575" marker-end="url(#arrow)" />
+
+    <!-- Decision 2 -> Beneficiary Form (NO - Left) -->
+    <path d="M 585 630 L 410 630" marker-end="url(#arrow)" />
+
+    <!-- Beneficiary Form -> Beneficiary Record Doc -->
+    <path d="M 280 663 L 280 718" marker-end="url(#arrow)" />
+
+    <!-- Beneficiary Record Doc -> Loops back to Dashboard -->
+    <path d="M 280 793 L 280 825 L 500 825 L 500 495 L 560 495" marker-end="url(#arrow)" />
+
+    <!-- Decision 2 -> Decision 3 (Duplicate Check) (YES - Down) -->
+    <path d="M 700 685 L 700 745" marker-end="url(#arrow)" />
+
+    <!-- Decision 3 -> Blocked Notice (YES - Right) -->
+    <path d="M 820 800 L 1000 800" marker-end="url(#arrow)" />
+
+    <!-- Decision 3 -> Decision 4 (Assistance Type) (NO - Down) -->
+    <path d="M 700 855 L 700 915" marker-end="url(#arrow)" />
+
+    <!-- Decision 4 -> Medical Branch (Left) -->
+    <path d="M 580 970 L 380 970 L 380 1028" marker-end="url(#arrow)" />
+
+    <!-- Medical Form -> Medical Documents -->
+    <path d="M 380 1093 L 380 1135" marker-end="url(#arrow)" />
+
+    <!-- Decision 4 -> Burial Branch (Right) -->
+    <path d="M 820 970 L 1020 970 L 1020 1028" marker-end="url(#arrow)" />
+
+    <!-- Burial Form -> Burial Documents -->
+    <path d="M 1020 1093 L 1020 1135" marker-end="url(#arrow)" />
+
+    <!-- Medical Docs & Burial Docs converge to Upload ID -->
+    <path d="M 380 1215 L 380 1245 L 600 1245 L 600 1273" marker-end="url(#arrow)" />
+    <path d="M 1020 1215 L 1020 1245 L 800 1245 L 800 1273" marker-end="url(#arrow)" />
+
+    <!-- Upload ID -> Submit Application -->
+    <path d="M 700 1338 L 700 1370" marker-end="url(#arrow)" />
+
+    <!-- Submit Application -> Official Claim Packet -->
+    <path d="M 700 1430 L 700 1462" marker-end="url(#arrow)" />
+
+    <!-- Official Claim Packet -> Decision 5 (Social Worker Assessment) -->
+    <path d="M 700 1537 L 700 1575" marker-end="url(#arrow)" />
+
+    <!-- Decision 5 -> Declined Notice (Declined - Left) -->
+    <path d="M 580 1630 L 410 1630" marker-end="url(#arrow)" />
+
+    <!-- Decision 5 -> Grant Approved (Approved - Down) -->
+    <path d="M 700 1685 L 700 1715" marker-end="url(#arrow)" />
+
+    <!-- Grant Approved -> Disbursement Voucher & Payroll -->
+    <path d="M 700 1775 L 700 1807" marker-end="url(#arrow)" />
+
+    <!-- Voucher & Payroll -> In-Person Claiming -->
+    <path d="M 700 1882 L 700 1915" marker-end="url(#arrow)" />
+
+    <!-- In-Person Claiming -> Payout Complete -->
+    <path d="M 700 1975 L 700 2005" marker-end="url(#arrow)" />
+  </g>
+
+  <!-- Branch Decision Badges / Text Labels -->
+  <g id="branch-labels" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" text-anchor="middle">
+    <!-- Decision 1 (Is Account Approved?) -->
+    <rect x="880" y="347" width="46" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="903" y="362" fill="#e11d48">NO</text>
+
+    <rect x="710" y="425" width="46" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="733" y="440" fill="#16a34a">YES</text>
+
+    <!-- Decision 2 (Has Beneficiary Profile?) -->
+    <rect x="460" y="617" width="80" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="500" y="632" fill="#e11d48">NO (Gated)</text>
+
+    <rect x="710" y="698" width="46" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="733" y="713" fill="#16a34a">YES</text>
+
+    <!-- Loopback Label -->
+    <rect x="360" y="813" width="105" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="412" y="828" fill="#2563eb">Profile Created</text>
+
+    <!-- Decision 3 (Duplicate Check) -->
+    <rect x="880" y="787" width="56" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="908" y="802" fill="#e11d48">Active</text>
+
+    <rect x="710" y="870" width="56" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="738" y="885" fill="#16a34a">None</text>
+
+    <!-- Decision 4 (Assistance Type) -->
+    <rect x="430" y="957" width="70" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="465" y="972" fill="#1d4ed8">Medical</text>
+
+    <rect x="900" y="957" width="65" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="932" y="972" fill="#1d4ed8">Burial</text>
+
+    <!-- Decision 5 (Social Worker Assessment) -->
+    <rect x="460" y="1617" width="75" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="497" y="1632" fill="#e11d48">Declined</text>
+
+    <rect x="710" y="1687" width="75" height="22" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="747" y="1702" fill="#16a34a">Approved</text>
+  </g>
+
+  <!-- NODES GROUP -->
+  <g id="flowchart-nodes" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="700">
+
+    <!-- 1. START: Beneficiary Account Process (Terminal - Pill) -->
+    <g class="flow-node interactive-node" id="node-start" data-title="Start: Beneficiary Account Flow" data-type="Terminal (Start)" data-role="Resident / Beneficiary" data-table="profiles" data-route="/register" data-desc="The entry point for residents seeking municipal social assistance under the AICS Program in Daanbantayan.">
+      <rect x="555" y="95" width="290" height="53" rx="26.5" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="128" fill="#ffffff" font-size="15" letter-spacing="0.2">Beneficiary Account Process</text>
+    </g>
+
+    <!-- 2. Complete Resident Registration (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-register" data-title="Resident Account Registration" data-type="Process" data-role="Resident" data-table="profiles, auth.users" data-route="/register" data-desc="Resident provides Full Name, Email, Password (8+ chars, upper, lower, number, special), accepts Terms &amp; Conditions, and completes 6-digit OTP verification. Profile is created with is_active = false.">
+      <rect x="550" y="188" width="300" height="65" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="215" fill="#ffffff" font-size="14">Complete Resident Registration</text>
+      <text x="700" y="235" fill="#e0edff" font-size="11" font-weight="500">Sign Up, Agree to Terms &amp; Verify OTP</text>
+    </g>
+
+    <!-- 3. Decision: Is Account Approved? (Decision - Diamond) -->
+    <g class="flow-node interactive-node" id="node-dec-active" data-title="Admin Account Verification" data-type="Decision" data-role="MSWDO Admin" data-table="profiles" data-route="/users" data-desc="Admin reviews newly registered resident profile and confirms residency in Barangay Pajo before toggling is_active = true. Unapproved accounts cannot proceed.">
+      <polygon points="700,305 810,360 700,415 590,360" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="356" fill="#ffffff" font-size="13">Is Account</text>
+      <text x="700" y="374" fill="#ffffff" font-size="13">Approved?</text>
+    </g>
+
+    <!-- 4. Account Under Review (Document - Wavy Bottom) -->
+    <g class="flow-node interactive-node" id="node-pending" data-title="Account Under Review Notice" data-type="Document / Output" data-role="System / Resident" data-table="profiles" data-route="/pending" data-desc="Resident is redirected to /pending screen awaiting MSWDO Admin activation. Real-time polling/listening alerts the resident once their profile is verified.">
+      <!-- Wavy Document Path: width 240, height 75, x 1000, y 322 -->
+      <path d="M 1000 322 H 1240 V 382 C 1200 392, 1160 372, 1120 382 C 1080 392, 1040 372, 1000 382 Z" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="1120" y="348" fill="#ffffff" font-size="13">Account Under Review</text>
+      <text x="1120" y="367" fill="#e0edff" font-size="11" font-weight="500">(/pending - Awaiting Admin)</text>
+    </g>
+
+    <!-- 5. Access Resident Dashboard (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-dashboard" data-title="Resident Dashboard Hub" data-type="Process" data-role="Resident" data-table="profiles, beneficiaries, requests" data-route="/resident/dashboard" data-desc="Authenticated and approved resident logs into the portal. Dashboard inspects if the resident has an existing beneficiary registry record linked to their auth ID.">
+      <rect x="550" y="465" width="300" height="60" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="491" fill="#ffffff" font-size="14">Access Resident Dashboard</text>
+      <text x="700" y="510" fill="#e0edff" font-size="11" font-weight="500">View Requests, Status &amp; Bulletins</text>
+    </g>
+
+    <!-- 6. Decision: Has Beneficiary Profile? (Decision - Diamond) -->
+    <g class="flow-node interactive-node" id="node-dec-ben" data-title="Beneficiary Profile Check" data-type="Decision" data-role="System / Resident" data-table="beneficiaries" data-route="/resident/dashboard" data-desc="System queries beneficiaries table where created_by == auth.uid(). If null, AICS request creation is locked and user is directed to the registration form.">
+      <polygon points="700,575 815,630 700,685 585,630" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="625" fill="#ffffff" font-size="13">Has Beneficiary</text>
+      <text x="700" y="643" fill="#ffffff" font-size="13">Profile Registered?</text>
+    </g>
+
+    <!-- 7. Complete Beneficiary Registration (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-ben-form" data-title="Beneficiary Demographic Profiling" data-type="Process" data-role="Resident" data-table="beneficiaries" data-route="/beneficiaries/new" data-desc="Resident fills demographic registry: Full Name, Birthdate, Sex, Civil Status, Purok in Barangay Pajo, 11-digit Contact (09XXXXXXXXX), Monthly Income, Occupation, Family Size, and PWD/Senior/4Ps tags.">
+      <rect x="150" y="598" width="260" height="65" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="280" y="625" fill="#ffffff" font-size="13">Fill Beneficiary Profile</text>
+      <text x="280" y="645" fill="#e0edff" font-size="11" font-weight="500">(/beneficiaries/new - Demographics)</text>
+    </g>
+
+    <!-- 8. Beneficiary Master Record (Document - Wavy Bottom) -->
+    <g class="flow-node interactive-node" id="node-ben-doc" data-title="Beneficiary Master Record" data-type="Document / Output" data-role="System" data-table="beneficiaries, system_logs" data-route="/beneficiaries" data-desc="Beneficiary master record is inserted into database with audit action CREATE_BENEFICIARY. Dashboard capability is instantly unlocked.">
+      <!-- Wavy Document Path: width 250, height 75, x 155, y 718 -->
+      <path d="M 155 718 H 405 V 778 C 365 788, 325 768, 280 778 C 240 788, 200 768, 155 778 Z" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="280" y="744" fill="#ffffff" font-size="13">Beneficiary Record</text>
+      <text x="280" y="763" fill="#e0edff" font-size="11" font-weight="500">(Master Profile Verified)</text>
+    </g>
+
+    <!-- 9. Decision: Active Request in Queue or Within 30 Days? (Decision - Diamond) -->
+    <g class="flow-node interactive-node" id="node-dec-dup" data-title="Duplicate Prevention &amp; 30-Day Restriction" data-type="Decision" data-role="System Engine" data-table="requests, system_settings" data-route="/requests/new" data-desc="Enforces strict municipal anti-duplication policy: Checks if resident has an existing request in 'Pending' or 'Approved' status, or a recently closed grant within the 30-day restriction window.">
+      <polygon points="700,745 820,800 700,855 580,800" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="795" fill="#ffffff" font-size="13">Active Request</text>
+      <text x="700" y="813" fill="#ffffff" font-size="13">in Progress?</text>
+    </g>
+
+    <!-- 10. Application Blocked Notice (Document - Wavy Bottom) -->
+    <g class="flow-node interactive-node" id="node-dup-block" data-title="Duplicate Request Blocked" data-type="Document / Output" data-role="System Engine" data-table="system_logs" data-route="/requests/new" data-desc="User is prevented from filing multiple simultaneous assistance claims. Logs BLOCKED_DUPLICATE_REQUEST in immutable audit trail.">
+      <!-- Wavy Document Path: width 240, height 75, x 1000, y 762 -->
+      <path d="M 1000 762 H 1240 V 822 C 1200 832, 1160 812, 1120 822 C 1080 832, 1040 812, 1000 822 Z" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="1120" y="788" fill="#ffffff" font-size="13">Request Blocked</text>
+      <text x="1120" y="807" fill="#e0edff" font-size="11" font-weight="500">(Wait for Status / 30 Days)</text>
+    </g>
+
+    <!-- 11. Decision: Assistance Type? (Decision - Diamond) -->
+    <g class="flow-node interactive-node" id="node-dec-type" data-title="Assistance Type Selection" data-type="Decision" data-role="Resident" data-table="requests" data-route="/requests/new" data-desc="Resident selects the municipal assistance category. Medical assistance covers hospitalization and medicines; Burial assistance covers funeral services and casket expenses.">
+      <polygon points="700,915 820,970 700,1025 580,970" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="965" fill="#ffffff" font-size="13">Assistance Type</text>
+      <text x="700" y="983" fill="#ffffff" font-size="13">(Medical / Burial)</text>
+    </g>
+
+    <!-- 12. Medical Details Form (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-med-form" data-title="Medical Assistance Details" data-type="Process" data-role="Resident" data-table="requests" data-route="/requests/new" data-desc="Beneficiary completes medical details: Hospital/Clinic Name, Official Diagnosis, Estimated Cost (PHP), Purpose of Request, and Amount Range (₱1,000 - ₱10,000).">
+      <rect x="245" y="1028" width="270" height="65" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="380" y="1055" fill="#ffffff" font-size="13">Fill Medical Specifics</text>
+      <text x="380" y="1075" fill="#e0edff" font-size="11" font-weight="500">(Hospital, Diagnosis, Est. Cost)</text>
+    </g>
+
+    <!-- 13. Medical Documents Packet (Stacked Documents - Wavy Bottom) -->
+    <g class="flow-node interactive-node" id="node-med-docs" data-title="Medical Supporting Documents" data-type="Stacked Documents" data-role="Resident" data-table="assistance_requirements" data-route="/requests/new" data-desc="Checklist of required crisis proofs: (1) Medical Certificate / Clinical Abstract, (2) Hospital Bill / Official Quotation, (3) Doctor Prescription, (4) Barangay Certificate of Indigency.">
+      <!-- Back Sheet 2 -->
+      <path d="M 255 1145 H 525 V 1205 C 485 1215, 445 1195, 390 1205 C 350 1215, 305 1195, 255 1205 Z" fill="#1555b4" opacity="0.6" filter="url(#stack-shadow)" />
+      <!-- Back Sheet 1 -->
+      <path d="M 250 1140 H 520 V 1200 C 480 1210, 440 1190, 385 1200 C 345 1210, 300 1190, 250 1200 Z" fill="#1862c9" opacity="0.8" filter="url(#stack-shadow)" />
+      <!-- Front Sheet -->
+      <path d="M 245 1135 H 515 V 1195 C 475 1205, 435 1185, 380 1195 C 340 1205, 295 1185, 245 1195 Z" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="380" y="1160" fill="#ffffff" font-size="13">Medical Documents</text>
+      <text x="380" y="1180" fill="#e0edff" font-size="11" font-weight="500">(Abstract, Bill &amp; Indigency)</text>
+    </g>
+
+    <!-- 14. Burial Details Form (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-burial-form" data-title="Burial Assistance Details" data-type="Process" data-role="Resident" data-table="requests" data-route="/requests/new" data-desc="Beneficiary completes burial details: Deceased Full Name (First, Middle, Last, Suffix), Relationship to Beneficiary, Searchable Funeral Home (Bogo to Daanbantayan), and Amount Range (₱5,000 - ₱10,001+).">
+      <rect x="885" y="1028" width="270" height="65" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="1020" y="1055" fill="#ffffff" font-size="13">Fill Burial Specifics</text>
+      <text x="1020" y="1075" fill="#e0edff" font-size="11" font-weight="500">(Deceased, Funeral Home, Rel)</text>
+    </g>
+
+    <!-- 15. Burial Documents Packet (Stacked Documents - Wavy Bottom) -->
+    <g class="flow-node interactive-node" id="node-burial-docs" data-title="Burial Supporting Documents" data-type="Stacked Documents" data-role="Resident" data-table="assistance_requirements" data-route="/requests/new" data-desc="Checklist of required crisis proofs: (1) Official Certified Death Certificate, (2) Signed Funeral Contract, (3) Barangay Certificate of Indigency.">
+      <!-- Back Sheet 2 -->
+      <path d="M 895 1145 H 1165 V 1205 C 1125 1215, 1085 1195, 1030 1205 C 990 1215, 945 1195, 895 1205 Z" fill="#1555b4" opacity="0.6" filter="url(#stack-shadow)" />
+      <!-- Back Sheet 1 -->
+      <path d="M 890 1140 H 1160 V 1200 C 1120 1210, 1080 1190, 1025 1200 C 985 1210, 940 1190, 890 1200 Z" fill="#1862c9" opacity="0.8" filter="url(#stack-shadow)" />
+      <!-- Front Sheet -->
+      <path d="M 885 1135 H 1155 V 1195 C 1115 1205, 1075 1185, 1020 1195 C 980 1205, 935 1185, 885 1195 Z" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="1020" y="1160" fill="#ffffff" font-size="13">Burial Documents</text>
+      <text x="1020" y="1180" fill="#e0edff" font-size="11" font-weight="500">(Death Cert, Contract &amp; Indigency)</text>
+    </g>
+
+    <!-- 16. Capture / Upload Valid ID (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-upload-id" data-title="Valid Government ID Photos" data-type="Process" data-role="Resident" data-table="request_documents, storage.buckets" data-route="/requests/new" data-desc="Resident captures or uploads Front Side and Back Side photos of their Valid Government ID. File upload or live camera captures are validated for image type and file size (&lt; 10 MB).">
+      <rect x="550" y="1273" width="300" height="65" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="1300" fill="#ffffff" font-size="14">Upload Government ID</text>
+      <text x="700" y="1320" fill="#e0edff" font-size="11" font-weight="500">(Front &amp; Back Photos Mandatory)</text>
+    </g>
+
+    <!-- 17. Submit AICS Application (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-submit-app" data-title="Submit Application &amp; Storage Upload" data-type="Process" data-role="Resident / System" data-table="requests, request_documents, system_logs" data-route="/requests/new" data-desc="Application is inserted into requests table with status 'Pending'. Files are securely uploaded to Supabase Storage bucket 'documents'. Activity is logged in system_logs.">
+      <rect x="550" y="1370" width="300" height="60" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="1396" fill="#ffffff" font-size="14">Submit AICS Application</text>
+      <text x="700" y="1415" fill="#e0edff" font-size="11" font-weight="500">(Enters Pending Queue · Status: Pending)</text>
+    </g>
+
+    <!-- 18. Official AICS Claim Packet (Stacked Documents - Wavy Bottom) -->
+    <g class="flow-node interactive-node" id="node-app-packet" data-title="AICS Complete Claim Packet" data-type="Stacked Documents" data-role="System" data-table="requests, request_documents" data-route="/requests" data-desc="Consolidated electronic docket containing resident personal data, crisis rationale, ID photos, and uploaded certificates available to social workers.">
+      <!-- Back Sheet 2 -->
+      <path d="M 565 1472 H 855 V 1532 C 815 1542, 775 1522, 710 1532 C 670 1542, 620 1522, 565 1532 Z" fill="#1555b4" opacity="0.6" filter="url(#stack-shadow)" />
+      <!-- Back Sheet 1 -->
+      <path d="M 560 1467 H 850 V 1527 C 810 1537, 770 1517, 705 1527 C 665 1537, 615 1517, 560 1527 Z" fill="#1862c9" opacity="0.8" filter="url(#stack-shadow)" />
+      <!-- Front Sheet -->
+      <path d="M 555 1462 H 845 V 1522 C 805 1532, 765 1512, 700 1522 C 660 1532, 610 1512, 555 1522 Z" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="1488" fill="#ffffff" font-size="13">AICS Complete Claim Packet</text>
+      <text x="700" y="1507" fill="#e0edff" font-size="11" font-weight="500">(Electronic Docket for MSWDO)</text>
+    </g>
+
+    <!-- 19. Decision: MSWDO Social Assessment? (Decision - Diamond) -->
+    <g class="flow-node interactive-node" id="node-dec-assess" data-title="MSWDO Intake Assessment &amp; Authorization" data-type="Decision" data-role="MSWDO Admin / Social Worker" data-table="assessments, requests" data-route="/requests/[id]" data-desc="Licensed social worker evaluates indigency, case history, and documents. Admin issues decision: Approve (determines PHP grant) or Decline (provides mandatory written justification).">
+      <polygon points="700,1575 820,1630 700,1685 580,1630" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="1625" fill="#ffffff" font-size="13">MSWDO Assessment</text>
+      <text x="700" y="1643" fill="#ffffff" font-size="13">Approved?</text>
+    </g>
+
+    <!-- 20. Application Declined Notice (Document - Wavy Bottom) -->
+    <g class="flow-node interactive-node" id="node-decline-note" data-title="Application Declined" data-type="Document / Output" data-role="System / Admin" data-table="requests, notifications" data-route="/requests/[id]" data-desc="Request status is set to 'Declined'. Beneficiary receives instant notification and can view official MSWDO caseworker remarks directly in their tracking timeline.">
+      <!-- Wavy Document Path: width 260, height 75, x 150, y 1592 -->
+      <path d="M 150 1592 H 410 V 1652 C 370 1662, 330 1642, 280 1652 C 240 1662, 195 1642, 150 1652 Z" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="280" y="1618" fill="#ffffff" font-size="13">Application Declined</text>
+      <text x="280" y="1637" fill="#e0edff" font-size="11" font-weight="500">(View Caseworker Remarks)</text>
+    </g>
+
+    <!-- 21. Grant Approved & Encumbered (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-app-approved" data-title="Grant Approved &amp; Encumbered" data-type="Process" data-role="MSWDO Admin / System" data-table="requests, funds" data-route="/requests/[id]" data-desc="Request status becomes 'Approved' with release_status 'Pending Release'. Approved grant amount (PHP) is pre-encumbered against the municipal assistance budget pool.">
+      <rect x="550" y="1715" width="300" height="60" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="1741" fill="#ffffff" font-size="14">Grant Approved &amp; Encumbered</text>
+      <text x="700" y="1760" fill="#e0edff" font-size="11" font-weight="500">(Status: Approved · Routed to Treasury)</text>
+    </g>
+
+    <!-- 22. Disbursement Voucher & Payroll (Stacked Documents - Wavy Bottom) -->
+    <g class="flow-node interactive-node" id="node-voucher-docs" data-title="Disbursement Voucher (DV) &amp; Payroll" data-type="Stacked Documents" data-role="Municipal Treasurer" data-table="payouts, funds" data-route="/treasurer" data-desc="Municipal Treasurer validates liquid balance, prepares official Disbursement Voucher (DV-YYYY-XXXX), and confirms readiness. Request transitions to 'Ready for Release'.">
+      <!-- Back Sheet 2 -->
+      <path d="M 565 1817 H 855 V 1877 C 815 1887, 775 1867, 710 1877 C 670 1887, 620 1867, 565 1877 Z" fill="#1555b4" opacity="0.6" filter="url(#stack-shadow)" />
+      <!-- Back Sheet 1 -->
+      <path d="M 560 1812 H 850 V 1872 C 810 1882, 770 1862, 705 1872 C 665 1882, 615 1862, 560 1872 Z" fill="#1862c9" opacity="0.8" filter="url(#stack-shadow)" />
+      <!-- Front Sheet -->
+      <path d="M 555 1807 H 845 V 1867 C 805 1877, 765 1857, 700 1867 C 660 1877, 610 1857, 555 1867 Z" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="1833" fill="#ffffff" font-size="13">Disbursement Voucher (DV)</text>
+      <text x="700" y="1852" fill="#e0edff" font-size="11" font-weight="500">&amp; Municipal Cash Payroll</text>
+    </g>
+
+    <!-- 23. Present ID & Sign Payroll (Process - Rectangle) -->
+    <g class="flow-node interactive-node" id="node-claim-payout" data-title="Physical Claim &amp; Identity Verification" data-type="Process" data-role="Beneficiary &amp; Disbursing Officer" data-table="payouts, requests" data-route="/treasurer" data-desc="Beneficiary or authorized representative visits Municipal Treasury with original valid ID, signs official payroll/acknowledgment receipt, and receives cash grant.">
+      <rect x="550" y="1915" width="300" height="60" rx="4" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="1941" fill="#ffffff" font-size="14">Claim Cash at Municipal Treasury</text>
+      <text x="700" y="1960" fill="#e0edff" font-size="11" font-weight="500">Present Valid ID &amp; Sign Payroll</text>
+    </g>
+
+    <!-- 24. END: Assistance Grant Released (Terminal - Pill) -->
+    <g class="flow-node interactive-node" id="node-end" data-title="Assistance Released &amp; Complete" data-type="Terminal (End)" data-role="System / Beneficiary" data-table="requests, payouts, fund_transactions, system_logs" data-route="/resident/dashboard" data-desc="Treasurer logs disbursement. Backend atomically deducts fund balance, updates request to 'Released', and issues payout receipt. Beneficiary receives completion notice.">
+      <rect x="540" y="2005" width="320" height="58" rx="29" fill="#1d68d8" filter="url(#node-shadow)" stroke="#1555b4" stroke-width="1.5" />
+      <text x="700" y="2032" fill="#ffffff" font-size="14">Assistance Grant Released</text>
+      <text x="700" y="2050" fill="#e0edff" font-size="11" font-weight="500">(Status: Released · Process Complete)</text>
+    </g>
+
+  </g>
+</svg>
+    </div>
+
+    <div class="details-panel">
+      <div class="info-card" id="info-card">
+        <div style="flex: 1;">
+          <div class="info-title">
+            <span id="info-node-title">Click any node in the flowchart above to inspect system rules</span>
+            <span class="badge" id="info-node-type">Interactive Guide</span>
+          </div>
+          <div class="info-desc" id="info-node-desc">
+            This flowchart maps out the complete lifecycle of a Beneficiary / Resident account in the AICS System, from online registration, residency gating, and demographic profiling, to crisis application submission, MSWDO intake assessment, and Treasury cash payout.
+          </div>
+          <div class="meta-grid" id="info-meta-grid">
+            <div class="meta-item">
+              <div class="meta-label">Primary Role</div>
+              <div class="meta-val" id="meta-role">Resident / Beneficiary</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">System Route</div>
+              <div class="meta-val" id="meta-route">/register → /requests/new</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Database Entities</div>
+              <div class="meta-val" id="meta-table">profiles, beneficiaries, requests</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="specs-section">
+        <h2>Beneficiary Operational Lifecycle Specifications</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">Stage</th>
+              <th style="width: 200px;">Step Name</th>
+              <th style="width: 120px;">Role</th>
+              <th>System Rule &amp; Validation Standard</th>
+              <th style="width: 140px;">Database Table</th>
+              <th style="width: 140px;">Resulting State</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Stage 1</strong></td>
+              <td>Resident Registration &amp; OTP</td>
+              <td>Resident</td>
+              <td>Password strength validation (8+ chars, upper, lower, number, special). Requires 6-digit OTP confirmation.</td>
+              <td><code>profiles</code>, <code>auth.users</code></td>
+              <td><code>is_active = false</code></td>
+            </tr>
+            <tr>
+              <td><strong>Stage 2</strong></td>
+              <td>Admin Residency Gating</td>
+              <td>MSWDO Admin</td>
+              <td>Admin verifies residency in Barangay Pajo before activating account. Unverified users wait at <code>/pending</code>.</td>
+              <td><code>profiles</code></td>
+              <td><code>is_active = true</code></td>
+            </tr>
+            <tr>
+              <td><strong>Stage 3</strong></td>
+              <td>Beneficiary Profiling Gate</td>
+              <td>Resident</td>
+              <td>Mandatory demographic registry (Purok, civil status, 11-digit phone <code>09XXXXXXXXX</code>, PWD/Senior/4Ps, family size). New Request is locked until completed.</td>
+              <td><code>beneficiaries</code></td>
+              <td>Beneficiary Record Linked</td>
+            </tr>
+            <tr>
+              <td><strong>Stage 4</strong></td>
+              <td>Anti-Duplication Guard</td>
+              <td>System Engine</td>
+              <td>Prevents multiple active requests (Pending/Approved) and enforces the 30-day municipal cooling-off restriction.</td>
+              <td><code>requests</code>, <code>system_settings</code></td>
+              <td>Passed / Blocked</td>
+            </tr>
+            <tr>
+              <td><strong>Stage 5</strong></td>
+              <td>Category Details &amp; Docs</td>
+              <td>Resident</td>
+              <td><strong>Medical:</strong> Hospital, diagnosis, cost, medical certificate &amp; hospital bill.<br><strong>Burial:</strong> Deceased name, relationship, funeral home (Bogo to Daanbantayan), death cert &amp; contract.</td>
+              <td><code>requests</code>, <code>assistance_requirements</code></td>
+              <td>Form Draft Completed</td>
+            </tr>
+            <tr>
+              <td><strong>Stage 6</strong></td>
+              <td>Valid ID Photos &amp; Submit</td>
+              <td>Resident</td>
+              <td>Front Side &amp; Back Side photos of government-issued ID required (max 10 MB). Stored securely in Supabase storage bucket <code>documents</code>.</td>
+              <td><code>requests</code>, <code>request_documents</code></td>
+              <td><code>status = Pending</code></td>
+            </tr>
+            <tr>
+              <td><strong>Stage 7</strong></td>
+              <td>MSWDO Social Assessment</td>
+              <td>Social Worker / Admin</td>
+              <td>Social worker evaluates crisis documents, conducts intake interview, and issues decision. Approve specifies approved grant amount in PHP.</td>
+              <td><code>assessments</code>, <code>requests</code></td>
+              <td><code>Approved</code> or <code>Declined</code></td>
+            </tr>
+            <tr>
+              <td><strong>Stage 8</strong></td>
+              <td>Treasury Voucher Prep</td>
+              <td>Municipal Treasurer</td>
+              <td>Treasurer validates municipal cash reserves, prepares Disbursement Voucher (DV), and marks readiness.</td>
+              <td><code>payouts</code>, <code>funds</code></td>
+              <td><code>Ready for Release</code></td>
+            </tr>
+            <tr>
+              <td><strong>Stage 9</strong></td>
+              <td>Cash Payout &amp; Ledger Release</td>
+              <td>Beneficiary / Treasurer</td>
+              <td>Beneficiary presents original Valid ID at Municipal Treasury, signs disbursement payroll sheet. Treasurer confirms atomic payout in ledger.</td>
+              <td><code>payouts</code>, <code>fund_transactions</code></td>
+              <td><code>status = Released</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Interactive Node Selection
+    document.querySelectorAll('.interactive-node').forEach(node => {
+      node.addEventListener('click', () => {
+        const title = node.getAttribute('data-title') || 'Node Details';
+        const type = node.getAttribute('data-type') || 'Flow Node';
+        const desc = node.getAttribute('data-desc') || 'No description provided.';
+        const role = node.getAttribute('data-role') || 'System';
+        const route = node.getAttribute('data-route') || 'N/A';
+        const table = node.getAttribute('data-table') || 'N/A';
+
+        document.getElementById('info-node-title').textContent = title;
+        document.getElementById('info-node-type').textContent = type;
+        document.getElementById('info-node-desc').textContent = desc;
+        document.getElementById('meta-role').textContent = role;
+        document.getElementById('meta-route').textContent = route;
+        document.getElementById('meta-table').textContent = table;
+
+        // Smooth scroll to card
+        document.getElementById('info-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+
+    // Download SVG
+    function downloadSVG() {
+      const svg = document.getElementById('beneficiary-flowchart-svg');
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+      if (!source.match(/^<\?xml/)) {
+        source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+      }
+      const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'aics_beneficiary_flowchart.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Export PNG
+    function downloadPNG() {
+      const svg = document.getElementById('beneficiary-flowchart-svg');
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      canvas.width = 1400 * 2;
+      canvas.height = 2120 * 2;
+
+      img.onload = () => {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = 'aics_beneficiary_flowchart.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+    }
+  </script>
+</body>
+</html>

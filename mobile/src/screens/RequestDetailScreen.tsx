@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Alert, ActivityIndicator, Linking, Modal, TextInput
+  Alert, ActivityIndicator, Linking, Modal, TextInput, Image
 } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
@@ -28,6 +28,12 @@ export default function RequestDetailScreen({ route, navigation }: any) {
   const [assessment, setAssessment] = useState<any>(null)
   const [payout, setPayout] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+
+  // Document Preview Lightbox Modal State
+  const [previewDoc, setPreviewDoc] = useState<any>(null)
+  const [previewUrl, setPreviewUrl] = useState<string>('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState('')
 
   // Approval Modal State
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
@@ -69,9 +75,46 @@ export default function RequestDetailScreen({ route, navigation }: any) {
     loadData()
   }, [loadData])
 
+  const handlePreviewDoc = async (doc: any) => {
+    setPreviewDoc(doc)
+    setPreviewLoading(true)
+    setPreviewError('')
+    setPreviewUrl('')
+
+    try {
+      // 1. Get public URL (available since documents bucket is public)
+      const { data: pubData } = supabase.storage.from('documents').getPublicUrl(doc.file_path)
+      let resolvedUrl = pubData?.publicUrl || ''
+
+      if (!resolvedUrl) {
+        const { data: signData, error: signErr } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(doc.file_path, 3600)
+        if (signErr) throw signErr
+        resolvedUrl = signData?.signedUrl || ''
+      }
+
+      if (!resolvedUrl) {
+        throw new Error('File not found or unavailable in storage')
+      }
+
+      setPreviewUrl(resolvedUrl)
+    } catch (err: any) {
+      console.error('Error loading document preview:', err)
+      setPreviewError(err.message || 'File not found or unavailable')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
   const openDocUrl = async (path: string) => {
     try {
-      const { data, error } = await supabase.storage.from('documents').createSignedUrl(path, 300)
+      const { data: pubData } = supabase.storage.from('documents').getPublicUrl(path)
+      if (pubData?.publicUrl) {
+        Linking.openURL(pubData.publicUrl)
+        return
+      }
+      const { data, error } = await supabase.storage.from('documents').createSignedUrl(path, 3600)
       if (error) throw error
       if (data?.signedUrl) {
         Linking.openURL(data.signedUrl)
@@ -563,16 +606,23 @@ export default function RequestDetailScreen({ route, navigation }: any) {
               key={doc.id}
               style={s.docItem}
               activeOpacity={0.7}
-              onPress={() => openDocUrl(doc.file_path)}
+              onPress={() => handlePreviewDoc(doc)}
             >
               <View style={s.docIconBox}>
-                <Feather name="file" size={16} color={colors.primary} />
+                <Feather name="file-text" size={16} color={colors.primary} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.docName}>{doc.file_name}</Text>
-                <Text style={s.docSub}>Tap to view attachment</Text>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={s.docName} numberOfLines={1}>{doc.file_name}</Text>
+                <Text style={s.docSub}>Attached Requirement / Proof</Text>
               </View>
-              <Feather name="external-link" size={16} color={colors.primary} />
+              <TouchableOpacity
+                style={s.docViewBtn}
+                activeOpacity={0.7}
+                onPress={() => handlePreviewDoc(doc)}
+              >
+                <Feather name="download" size={12} color={colors.primary} />
+                <Text style={[s.docViewBtnText, { color: colors.primary }]}>View</Text>
+              </TouchableOpacity>
             </TouchableOpacity>
           ))
         )}
@@ -840,6 +890,90 @@ export default function RequestDetailScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
+
+      {/* Document Preview Lightbox Modal */}
+      <Modal
+        visible={!!previewDoc}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setPreviewDoc(null)}
+      >
+        <View style={s.previewModalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setPreviewDoc(null)}
+          />
+          <View style={[s.previewModalBox, { backgroundColor: colors.card }]}>
+            {/* Header */}
+            <View style={s.previewModalHeader}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[s.previewModalTitle, { color: colors.text }]} numberOfLines={1}>
+                  {previewDoc?.file_name}
+                </Text>
+                <Text style={[s.previewModalSubtitle, { color: colors.textSecondary }]}>
+                  Attached Requirement / Proof
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {!!previewUrl && (
+                  <TouchableOpacity
+                    style={[s.previewActionBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => Linking.openURL(previewUrl)}
+                  >
+                    <Feather name="download" size={13} color="#fff" />
+                    <Text style={s.previewActionBtnText}>Open</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[s.previewCloseBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9' }]}
+                  onPress={() => setPreviewDoc(null)}
+                >
+                  <Feather name="x" size={18} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Image Preview Body */}
+            <View style={[s.previewImageBody, { backgroundColor: isDark ? '#020617' : '#f8fafc' }]}>
+              {previewLoading ? (
+                <View style={s.previewCenterState}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={[s.previewLoadingText, { color: colors.textSecondary }]}>
+                    Loading attachment...
+                  </Text>
+                </View>
+              ) : previewError ? (
+                <View style={s.previewCenterState}>
+                  <Feather name="alert-circle" size={36} color="#ef4444" />
+                  <Text style={s.previewErrorTitle}>Unable to load document</Text>
+                  <Text style={[s.previewErrorSub, { color: colors.textSecondary }]}>{previewError}</Text>
+                  <TouchableOpacity
+                    style={[s.previewRetryBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => handlePreviewDoc(previewDoc)}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : previewUrl ? (
+                <Image
+                  source={{ uri: previewUrl }}
+                  style={s.previewImage}
+                  resizeMode="contain"
+                  onError={() => setPreviewError('File not found or unavailable')}
+                />
+              ) : null}
+            </View>
+
+            {/* Footer */}
+            <View style={s.previewModalFooter}>
+              <Text style={[s.previewFooterText, { color: colors.textSecondary }]} numberOfLines={1}>
+                File: {previewDoc?.file_name}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -1054,5 +1188,121 @@ const styles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#fff',
+  },
+
+  // Document View button & Lightbox Modal styles
+  docViewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff',
+  },
+  docViewBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  previewModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  previewModalBox: {
+    width: '100%',
+    maxHeight: '88%',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  previewModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  previewModalTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  previewModalSubtitle: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  previewActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  previewActionBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  previewCloseBtn: {
+    padding: 6,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewImageBody: {
+    width: '100%',
+    height: 380,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewCenterState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  previewLoadingText: {
+    marginTop: 12,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  previewErrorTitle: {
+    marginTop: 10,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ef4444',
+  },
+  previewErrorSub: {
+    marginTop: 4,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  previewRetryBtn: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  previewModalFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  previewFooterText: {
+    fontSize: 11,
   },
 })

@@ -768,7 +768,6 @@ export default function TreasurerDashboardPage() {
                       <Link href={`/requests/${r.id}`} className="hover:text-[var(--color-primary)] hover:underline">
                         {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
                       </Link>
-                      <span className="block text-[10px] text-slate-400">Ref: #{r.id.slice(0, 8).toUpperCase()}</span>
                     </td>
                     <td className="text-sm text-[var(--color-text-secondary)]">
                       {r.beneficiaries?.barangay ?? '—'}

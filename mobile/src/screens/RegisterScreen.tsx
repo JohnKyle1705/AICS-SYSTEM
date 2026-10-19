@@ -165,8 +165,8 @@ export default function RegisterScreen({ navigation }: any) {
   }
 
   return (
-    <ImageBackground source={require('../../assets/images/bg_community_service.png')} style={{ flex: 1 }}>
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(2,6,23,0.88)' : 'rgba(255,255,255,0.88)' }]} />
+    <ImageBackground source={require('../../assets/images/bg_dswd_distribution.jpg')} style={{ flex: 1 }}>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(2,6,23,0.85)' : 'rgba(255,255,255,0.85)' }]} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={s.card}>

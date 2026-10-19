@@ -1,0 +1,971 @@
+const fs = require('fs');
+const path = require('path');
+
+// ==============================================================================
+// 1. GENERATE SVG FLOWCHART (Refined 1:1 Pixel-Perfect Layout)
+// ==============================================================================
+
+function getSvgContent() {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg id="treasurer-flowchart-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 1200" width="880" height="1200">
+  <defs>
+    <!-- Soft shadow matching modern infographic cards -->
+    <filter id="node-shadow" x="-10%" y="-10%" width="125%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.22" />
+    </filter>
+
+    <!-- Arrowhead marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#000000" />
+    </marker>
+  </defs>
+
+  <!-- ── TOP HEADER BANNER ────────────────────────────────────────────────── -->
+  <rect x="0" y="0" width="880" height="135" fill="#1b367d" />
+
+  <!-- Title & Subtitle matching Reference Image -->
+  <g id="chart-header">
+    <text x="45" y="52" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="900" fill="#ffffff" letter-spacing="0.5">Treasurer</text>
+    <text x="45" y="90" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="900" fill="#ffffff" letter-spacing="0.5">Process Flow</text>
+    <text x="45" y="116" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#93c5fd" letter-spacing="0.8">AICS DISBURSEMENT &amp; FINANCIAL MANAGEMENT SYSTEM • MUNICIPALITY OF DAANBANTAYAN, CEBU</text>
+  </g>
+
+  <!-- Top-Right Financial / Treasury Illustration matching reference style -->
+  <g id="header-illustration" transform="translate(685, 12)">
+    <!-- Desk / Base surface -->
+    <ellipse cx="90" cy="98" rx="80" ry="14" fill="#152b66" opacity="0.6" />
+    
+    <!-- Computer Monitor / Terminal -->
+    <rect x="35" y="15" width="90" height="60" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="2" />
+    <rect x="40" y="20" width="80" height="46" rx="3" fill="#1e293b" />
+    <!-- Screen Header & Chart Bars -->
+    <rect x="44" y="24" width="72" height="6" fill="#3b82f6" rx="1.5" />
+    <text x="46" y="29" fill="#ffffff" font-size="5" font-weight="bold" font-family="sans-serif">TREASURY</text>
+    <rect x="46" y="36" width="10" height="24" fill="#10b981" rx="1" />
+    <rect x="60" y="42" width="10" height="18" fill="#38bdf8" rx="1" />
+    <rect x="74" y="32" width="10" height="28" fill="#f59e0b" rx="1" />
+    <rect x="88" y="46" width="10" height="14" fill="#a855f7" rx="1" />
+    <!-- Monitor stand -->
+    <path d="M 75 75 L 85 75 L 88 88 L 72 88 Z" fill="#64748b" />
+    <ellipse cx="80" cy="88" rx="18" ry="4" fill="#94a3b8" />
+
+    <!-- Official Disbursement Voucher Document -->
+    <g transform="translate(15, 45) rotate(-8)">
+      <rect x="0" y="0" width="30" height="40" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" filter="url(#node-shadow)" />
+      <line x1="4" y1="8" x2="26" y2="8" stroke="#1d4ed8" stroke-width="2" />
+      <line x1="4" y1="14" x2="22" y2="14" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="4" y1="19" x2="20" y2="19" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="4" y1="24" x2="24" y2="24" stroke="#94a3b8" stroke-width="1.5" />
+      <circle cx="20" cy="32" r="5" fill="#10b981" />
+      <path d="M 18 32 L 19.5 33.5 L 22.5 30.5" stroke="#ffffff" stroke-width="1" fill="none" />
+    </g>
+
+    <!-- Gold Coins Stack -->
+    <g transform="translate(125, 62)">
+      <ellipse cx="14" cy="22" rx="12" ry="4.5" fill="#b45309" />
+      <rect x="2" y="18" width="24" height="4" fill="#f59e0b" />
+      <ellipse cx="14" cy="18" rx="12" ry="4.5" fill="#fbbf24" />
+      <rect x="2" y="14" width="24" height="4" fill="#f59e0b" />
+      <ellipse cx="14" cy="14" rx="12" ry="4.5" fill="#fbbf24" />
+      <rect x="2" y="10" width="24" height="4" fill="#f59e0b" />
+      <ellipse cx="14" cy="10" rx="12" ry="4.5" fill="#fef08a" />
+      <text x="14" y="12" fill="#78350f" font-size="7" font-weight="900" text-anchor="middle">₱</text>
+    </g>
+
+    <!-- Mini Green Check and Red Cross decorative pill -->
+    <rect x="68" y="94" width="26" height="11" rx="5.5" fill="#ffffff" filter="url(#node-shadow)" />
+    <circle cx="74" cy="99.5" r="3.5" fill="#22c55e" />
+    <path d="M 72.5 99.5 L 73.5 100.5 L 75.5 98.5" stroke="#ffffff" stroke-width="0.8" fill="none" />
+    <circle cx="86" cy="99.5" r="3.5" fill="#f43f5e" />
+    <path d="M 84.5 98 L 87.5 101 M 87.5 98 L 84.5 101" stroke="#ffffff" stroke-width="0.8" />
+  </g>
+
+  <!-- ── CANVAS BACKGROUND (Ice Blue matching image) ───────────────────────── -->
+  <rect x="0" y="135" width="880" height="995" fill="#cbe6fb" />
+
+  <!-- ── CONNECTORS GROUP ─────────────────────────────────────────────────── -->
+  <g id="connectors" stroke="#000000" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 1. Start (Col 1) -> Review Approved Requests Queue (Col 2) -->
+    <path d="M 175 185 L 275 185" marker-end="url(#arrow)" />
+
+    <!-- 2. Review Queue -> Verify Beneficiary & Amount -->
+    <path d="M 350 208 L 350 230" marker-end="url(#arrow)" />
+
+    <!-- 3. Verify Beneficiary -> Validate Assessment -->
+    <path d="M 350 276 L 350 298" marker-end="url(#arrow)" />
+
+    <!-- 4. Validate Assessment -> Decision 1 (Are Request Details Valid?) -->
+    <path d="M 350 344 L 350 365" marker-end="url(#arrow)" />
+
+    <!-- 5. Decision 1 -> Return Request to Admin (NO - Left to Col 1) -->
+    <path d="M 285 395 L 205 395" marker-end="url(#arrow)" />
+
+    <!-- 6. Decision 1 -> Inspect Category Fund Allocation (YES - Right to Col 3) -->
+    <path d="M 415 395 L 510 395" marker-end="url(#arrow)" />
+
+    <!-- 7. Inspect Category Fund -> Decision 2 (Sufficient Fund Balance?) -->
+    <path d="M 585 418 L 585 440" marker-end="url(#arrow)" />
+
+    <!-- 8. Decision 2 -> Review Deficit & Earmarked Pool (NO - Left to Col 2) -->
+    <path d="M 520 470 L 425 470" marker-end="url(#arrow)" />
+
+    <!-- 9. Decision 2 -> Prepare Disbursement Voucher (YES - Down to Col 3) -->
+    <path d="M 585 500 L 585 575" marker-end="url(#arrow)" />
+
+    <!-- 10. Review Deficit -> Decision 1B (Can Fund Be Adjusted / Added?) -->
+    <path d="M 350 493 L 350 515" marker-end="url(#arrow)" />
+
+    <!-- 11. Decision 1B -> Trigger Insufficient Funds Alert (NO - Left to Col 1) -->
+    <path d="M 285 545 L 140 545 L 140 575" marker-end="url(#arrow)" />
+
+    <!-- 12. Decision 1B -> Prepare Disbursement Voucher (YES - Down-Right to Col 3) -->
+    <path d="M 350 575 L 350 598 L 510 598" marker-end="url(#arrow)" />
+
+    <!-- ── Column 1: Deficiency & Hold Path ── -->
+    <!-- 13. Trigger Alert -> Submit Budget Request to Mayor -->
+    <path d="M 140 621 L 140 642" marker-end="url(#arrow)" />
+
+    <!-- 14. Submit Request -> Hold Request in Queue -->
+    <path d="M 140 688 L 140 709" marker-end="url(#arrow)" />
+
+    <!-- 15. Hold Request -> Decision: Budget Approved by LGU? -->
+    <path d="M 140 755 L 140 845" marker-end="url(#arrow)" />
+
+    <!-- 16. Budget Approved Decision -> Orange Pill (Disbursement On Hold - Left Edge) -->
+    <path d="M 140 915 L 140 1018 L 498 1018" marker-end="url(#arrow)" />
+
+    <!-- ── Column 3: Main Voucher & Payout Flow ── -->
+    <!-- 17. Prepare DV -> Assign DV Number & Payment Mode -->
+    <path d="M 585 621 L 585 642" marker-end="url(#arrow)" />
+
+    <!-- 18. Assign DV Number -> Mark Ready for Release -->
+    <path d="M 585 688 L 585 709" marker-end="url(#arrow)" />
+
+    <!-- 19. Mark Ready for Release -> In-Person Recipient ID Check -->
+    <path d="M 585 755 L 585 776" marker-end="url(#arrow)" />
+
+    <!-- 20. In-Person ID Check -> Decision 3 (Recipient Verified & Payroll Signed?) -->
+    <path d="M 585 822 L 585 845" marker-end="url(#arrow)" />
+
+    <!-- 21. Decision 3 -> Orange Pill (NO - Straight Down to Top Edge) -->
+    <path d="M 585 915 L 585 990" marker-end="url(#arrow)" />
+
+    <!-- 22. Decision 3 -> Disburse Cash / Issue Check (YES - Right, Up to Col 4) -->
+    <path d="M 650 880 L 688 880 L 688 598 L 712 598" marker-end="url(#arrow)" />
+
+    <!-- ── Column 4: Release, Ledger Sync & Reporting ── -->
+    <!-- 23. Disburse Cash -> Execute Release in Portal -->
+    <path d="M 785 621 L 785 642" marker-end="url(#arrow)" />
+
+    <!-- 24. Execute Release -> Sync Double-Entry Ledger -->
+    <path d="M 785 688 L 785 709" marker-end="url(#arrow)" />
+
+    <!-- 25. Sync Ledger -> Decision 4 (Disbursement Complete & Recorded?) -->
+    <path d="M 785 755 L 785 845" marker-end="url(#arrow)" />
+
+    <!-- 26. Decision 4 -> Orange Pill (NO - Left & Down to Right Edge of Hold Pill) -->
+    <path d="M 720 880 L 688 880 L 688 1018 L 672 1018" marker-end="url(#arrow)" />
+
+    <!-- 27. Decision 4 -> Assistance Disbursed & Recorded (YES - Down to Col 4 Pill Top Edge) -->
+    <path d="M 785 915 L 785 990" marker-end="url(#arrow)" />
+  </g>
+
+  <!-- ── DECISION BADGES GROUP (Exact [✓] and [✖] badges) ─────────────────── -->
+  <g id="branch-badges">
+    <!-- Decision 1: Details Valid? [✖] Left -->
+    <g transform="translate(245, 395)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 1: Details Valid? [✓] Right -->
+    <g transform="translate(462, 395)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+
+    <!-- Decision 2: Sufficient Balance? [✖] Left -->
+    <g transform="translate(472, 470)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 2: Sufficient Balance? [✓] Down -->
+    <g transform="translate(585, 537)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+
+    <!-- Decision 1B: Can Fund Be Adjusted? [✖] Left -->
+    <g transform="translate(212, 545)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 1B: Can Fund Be Adjusted? [✓] Down-Right -->
+    <g transform="translate(350, 586)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+
+    <!-- Budget Approved? [✖] Down-Right -->
+    <g transform="translate(140, 960)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+
+    <!-- Decision 3: Recipient Verified & Signed? [✖] Down -->
+    <g transform="translate(585, 955)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 3: Recipient Verified & Signed? [✓] Right-Up -->
+    <g transform="translate(688, 740)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+
+    <!-- Decision 4: Disbursement Complete? [✖] Left -->
+    <g transform="translate(688, 970)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 4: Disbursement Complete? [✓] Down -->
+    <g transform="translate(785, 955)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+  </g>
+
+  <!-- ── FLOWCHART NODES GROUP ────────────────────────────────────────────── -->
+  <g id="flowchart-nodes" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="700">
+
+    <!-- START (Orange Circle - Col 1) -->
+    <g class="flow-node interactive-node" id="node-start" data-title="Start: Treasurer Operational Cycle" data-type="Terminal" data-role="Municipal Treasurer" data-table="profiles" data-route="/login" data-desc="Municipal Treasurer securely authenticates via /login and navigates to the dedicated Treasury operations dashboard.">
+      <circle cx="135" cy="185" r="38" fill="#f2720c" filter="url(#node-shadow)" />
+      <text x="135" y="190" fill="#ffffff" font-size="15" font-weight="900">Start</text>
+    </g>
+
+    <!-- Col 2: Action 1 (Review Approved Requests Queue) -->
+    <g class="flow-node interactive-node" id="node-intake" data-title="Review Approved Requests Queue" data-type="Process" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Accesses the queue of social worker approved assistance requests awaiting financial verification and release scheduling.">
+      <rect x="275" y="162" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="350" y="181" fill="#ffffff" font-size="11.5">Review Approved</text>
+      <text x="350" y="197" fill="#ffffff" font-size="11.5">Requests Queue</text>
+    </g>
+
+    <!-- Col 2: Action 2 (Verify Beneficiary & Amount) -->
+    <g class="flow-node interactive-node" id="node-verify-amount" data-title="Verify Beneficiary &amp; Approved Amount" data-type="Process" data-role="Municipal Treasurer" data-table="requests, beneficiaries" data-route="/treasurer/requests" data-desc="Cross-references the approved grant amount in PHP against beneficiary records, emergency crisis classification, and municipal ceiling.">
+      <rect x="275" y="230" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="350" y="249" fill="#ffffff" font-size="11.5">Verify Beneficiary</text>
+      <text x="350" y="265" fill="#ffffff" font-size="11.5">&amp; Approved Amount</text>
+    </g>
+
+    <!-- Col 2: Action 3 (Validate Social Worker Assessment) -->
+    <g class="flow-node interactive-node" id="node-validate-assessment" data-title="Validate Social Worker Assessment" data-type="Process" data-role="Municipal Treasurer" data-table="request_documents, requests" data-route="/treasurer/requests" data-desc="Audits attached legal documentation: Certificate of Indigency, Valid Government ID, Medical Abstract/Hospital Bills, or Funeral Contract.">
+      <rect x="275" y="298" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="350" y="317" fill="#ffffff" font-size="11.5">Validate Social Worker</text>
+      <text x="350" y="333" fill="#ffffff" font-size="11.5">Assessment</text>
+    </g>
+
+    <!-- Col 2: Decision 1 (Are Request Details Valid?) -->
+    <g class="flow-node interactive-node" id="node-dec-details" data-title="Verification: Are Request Details Valid?" data-type="Decision" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Treasurer validates all documentary attachments and approved amounts. Discrepancies trigger Return to Admin; verified files proceed to Fund Inspection.">
+      <polygon points="350,365 415,395 350,425 285,395" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="350" y="391" fill="#ffffff" font-size="11">Are request</text>
+      <text x="350" y="405" fill="#ffffff" font-size="11">details valid?</text>
+    </g>
+
+    <!-- Col 1: Action 4 (Return Request with Notes) -->
+    <g class="flow-node interactive-node" id="node-return-admin" data-title="Return Request with Notes to Admin" data-type="Process" data-role="Municipal Treasurer" data-table="requests, system_logs" data-route="/api/treasury" data-desc="Invokes action: return_request via /api/treasury. Sets remarks with correction notes and notifies MSWDO Social Worker for resolution.">
+      <rect x="70" y="372" width="135" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="137" y="391" fill="#ffffff" font-size="11.5">Return Request</text>
+      <text x="137" y="407" fill="#ffffff" font-size="11.5">with Notes to Admin</text>
+    </g>
+
+    <!-- Col 3: Action 4B (Inspect Category Fund Allocation) -->
+    <g class="flow-node interactive-node" id="node-inspect-fund" data-title="Inspect Category Fund Allocation" data-type="Process" data-role="Municipal Treasurer" data-table="funds" data-route="/treasurer/funds" data-desc="Inspects municipal treasury reserves for specific assistance category: Medical, Burial, Educational, Food, or Transportation.">
+      <rect x="510" y="372" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="391" fill="#ffffff" font-size="11.5">Inspect Category</text>
+      <text x="585" y="407" fill="#ffffff" font-size="11.5">Fund Allocation</text>
+    </g>
+
+    <!-- Col 3: Decision 2 (Sufficient Fund Balance?) -->
+    <g class="flow-node interactive-node" id="node-dec-balance" data-title="Budget Check: Sufficient Fund Balance?" data-type="Decision" data-role="System / Treasurer" data-table="funds" data-route="/treasurer/funds" data-desc="Validates that target fund current_balance >= amount_approved. Overdrafts are programmatically blocked by database rules.">
+      <polygon points="585,440 650,470 585,500 520,470" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="585" y="466" fill="#ffffff" font-size="11">Sufficient fund</text>
+      <text x="585" y="480" fill="#ffffff" font-size="11">balance?</text>
+    </g>
+
+    <!-- Col 2: Action 5 (Review Deficit & Earmarked Pool) -->
+    <g class="flow-node interactive-node" id="node-review-deficit" data-title="Review Deficit &amp; Earmarked Pool" data-type="Process" data-role="Municipal Treasurer" data-table="funds, requests" data-route="/treasurer/funds" data-desc="Examines pending encumbrances, exhausted category balances, and historical municipal general fund appropriations.">
+      <rect x="275" y="447" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="350" y="466" fill="#ffffff" font-size="11.5">Review Deficit &amp;</text>
+      <text x="350" y="482" fill="#ffffff" font-size="11.5">Earmarked Pool</text>
+    </g>
+
+    <!-- Col 2: Decision 1B (Can Fund Be Adjusted / Added?) -->
+    <g class="flow-node interactive-node" id="node-dec-adjust" data-title="Replenishment: Can Fund Be Adjusted?" data-type="Decision" data-role="Municipal Treasurer" data-table="funds" data-route="/treasurer/funds" data-desc="Evaluates if internal adjustment, inter-fund realignment, or municipal general fund replenishment can restore liquidity.">
+      <polygon points="350,515 415,545 350,575 285,545" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="350" y="541" fill="#ffffff" font-size="10.5">Can fund be</text>
+      <text x="350" y="555" fill="#ffffff" font-size="10.5">adjusted / added?</text>
+    </g>
+
+    <!-- Col 1: Action 7 (Trigger Insufficient Funds Alert) -->
+    <g class="flow-node interactive-node" id="node-alert-deficit" data-title="Trigger Insufficient Funds Alert" data-type="Process" data-role="System / Treasurer" data-table="notifications" data-route="/treasurer/funds" data-desc="System generates automated warning notifications alerting Admin and Local Chief Executive of fund exhaustion.">
+      <rect x="70" y="575" width="140" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="140" y="594" fill="#ffffff" font-size="11.5">Trigger Insufficient</text>
+      <text x="140" y="610" fill="#ffffff" font-size="11.5">Funds Alert</text>
+    </g>
+
+    <!-- Col 1: Action 8 (Submit Budget Request to Mayor) -->
+    <g class="flow-node interactive-node" id="node-req-budget" data-title="Submit Budget Request to Mayor" data-type="Process" data-role="Municipal Treasurer" data-table="fund_transactions" data-route="/treasurer/funds" data-desc="Treasurer transmits formal supplemental appropriation request to the Municipal Mayor and Sangguniang Bayan.">
+      <rect x="70" y="642" width="140" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="140" y="661" fill="#ffffff" font-size="11.5">Submit Budget</text>
+      <text x="140" y="677" fill="#ffffff" font-size="11.5">Request to Mayor</text>
+    </g>
+
+    <!-- Col 1: Action 9 (Hold Request in Queue) -->
+    <g class="flow-node interactive-node" id="node-hold-queue" data-title="Hold Request in Queue" data-type="Process" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Assistance application remains queued in 'Pending Release' state with encumbered reservation until liquidity is cleared.">
+      <rect x="70" y="709" width="140" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="140" y="728" fill="#ffffff" font-size="11.5">Hold Request</text>
+      <text x="140" y="744" fill="#ffffff" font-size="11.5">in Queue</text>
+    </g>
+
+    <!-- Col 1: Decision (Budget Approved by LGU?) -->
+    <g class="flow-node interactive-node" id="node-dec-lgu" data-title="Appropriation: Budget Approved by LGU?" data-type="Decision" data-role="Local Chief Executive" data-table="funds" data-route="/treasurer/funds" data-desc="Legislative &amp; executive review determines whether supplemental emergency allocation is granted for the program.">
+      <polygon points="140,845 205,880 140,915 75,880" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="140" y="876" fill="#ffffff" font-size="10.5">Budget approved</text>
+      <text x="140" y="890" fill="#ffffff" font-size="10.5">by LGU?</text>
+    </g>
+
+    <!-- Col 3: Action 6 (Prepare Disbursement Voucher) -->
+    <g class="flow-node interactive-node" id="node-prep-dv" data-title="Prepare Disbursement Voucher (DV)" data-type="Process" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Treasurer initiates the Disbursement Voucher creation modal and links verified beneficiary and grant details.">
+      <rect x="510" y="575" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="594" fill="#ffffff" font-size="11.5">Prepare Disbursement</text>
+      <text x="585" y="610" fill="#ffffff" font-size="11.5">Voucher (DV)</text>
+    </g>
+
+    <!-- Col 3: Action 6B (Assign DV Number & Payment Mode) -->
+    <g class="flow-node interactive-node" id="node-assign-dv" data-title="Assign DV Number &amp; Payment Mode" data-type="Process" data-role="Municipal Treasurer" data-table="requests, payouts" data-route="/treasurer/requests" data-desc="Inputs standardized DV Number (DV-YYYY-XXXX), assigns payment method (Cash / Check / Bank), and records Disbursing Officer.">
+      <rect x="510" y="642" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="661" fill="#ffffff" font-size="11.5">Assign DV Number</text>
+      <text x="585" y="677" fill="#ffffff" font-size="11.5">&amp; Payment Mode</text>
+    </g>
+
+    <!-- Col 3: Action 6C (Mark Ready for Release) -->
+    <g class="flow-node interactive-node" id="node-ready-release" data-title="Mark Ready for Release" data-type="Process" data-role="Municipal Treasurer" data-table="requests, notifications" data-route="/api/treasury" data-desc="Sets release_status = 'Ready for Release' and dispatches real-time broadcast notification to Admin that funds are prepped.">
+      <rect x="510" y="709" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="728" fill="#ffffff" font-size="11.5">Mark Request</text>
+      <text x="585" y="744" fill="#ffffff" font-size="11.5">"Ready for Release"</text>
+    </g>
+
+    <!-- Col 3: Action 6D (In-Person Recipient ID Check) -->
+    <g class="flow-node interactive-node" id="node-inperson-id" data-title="In-Person Recipient ID Check" data-type="Process" data-role="Municipal Treasurer" data-table="beneficiaries" data-route="/treasurer" data-desc="Beneficiary or authorized representative presents physical government ID card and signs the Treasury assistance payroll sheet.">
+      <rect x="510" y="776" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="795" fill="#ffffff" font-size="11.5">In-Person Recipient</text>
+      <text x="585" y="811" fill="#ffffff" font-size="11.5">ID &amp; Signature Check</text>
+    </g>
+
+    <!-- Col 3: Decision 3 (Recipient Verified & Payroll Signed?) -->
+    <g class="flow-node interactive-node" id="node-dec-claim" data-title="Payout Clearance: Recipient Verified?" data-type="Decision" data-role="Municipal Treasurer" data-table="beneficiaries, requests" data-route="/treasurer/requests" data-desc="Final physical verification of recipient identity, signature match, and presence at the Municipal Disbursing counter.">
+      <polygon points="585,845 650,880 585,915 520,880" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="585" y="876" fill="#ffffff" font-size="10.5">Recipient verified &amp;</text>
+      <text x="585" y="890" fill="#ffffff" font-size="10.5">payroll signed?</text>
+    </g>
+
+    <!-- Col 4: Action 11 (Disburse Cash / Issue Check) -->
+    <g class="flow-node interactive-node" id="node-disburse-cash" data-title="Disburse Cash / Issue Check" data-type="Process" data-role="Municipal Treasurer" data-table="payouts" data-route="/treasurer" data-desc="Municipal Treasurer hands over the cash grant or official municipal check to the verified beneficiary with acknowledgment receipt.">
+      <rect x="712" y="575" width="145" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="785" y="594" fill="#ffffff" font-size="11.5">Disburse Cash /</text>
+      <text x="785" y="610" fill="#ffffff" font-size="11.5">Issue Check</text>
+    </g>
+
+    <!-- Col 4: Action 12 (Execute Release in Portal) -->
+    <g class="flow-node interactive-node" id="node-exec-release" data-title="Execute Release in Portal (/api/treasury)" data-type="Process" data-role="Municipal Treasurer" data-table="requests, payouts, funds" data-route="/api/treasury" data-desc="Calls action: confirm_release via /api/treasury. Sets requests.status = 'Released', updates release_status = 'Released'.">
+      <rect x="712" y="642" width="145" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="785" y="661" fill="#ffffff" font-size="11.5">Execute Release in</text>
+      <text x="785" y="677" fill="#ffffff" font-size="11.5">Portal (/api/treasury)</text>
+    </g>
+
+    <!-- Col 4: Action 13 (Sync Double-Entry Ledger) -->
+    <g class="flow-node interactive-node" id="node-sync-ledger" data-title="Sync Double-Entry Ledger &amp; Audit Log" data-type="Process" data-role="System / Treasurer" data-table="funds, fund_transactions, system_logs" data-route="/treasurer/transactions" data-desc="Atomically deducts fund balance, increments total_released, inserts debit row in fund_transactions, and logs audit trail.">
+      <rect x="712" y="709" width="145" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="785" y="728" fill="#ffffff" font-size="11.5">Sync Double-Entry</text>
+      <text x="785" y="744" fill="#ffffff" font-size="11.5">Ledger &amp; Audit Log</text>
+    </g>
+
+    <!-- Col 4: Decision 4 (Disbursement Complete & Recorded?) -->
+    <g class="flow-node interactive-node" id="node-dec-complete" data-title="Audit Verification: Complete &amp; Recorded?" data-type="Decision" data-role="Municipal Treasurer" data-table="fund_transactions, payouts" data-route="/treasurer/reports" data-desc="Confirms ledger synchronization, checks remaining balance against low_balance_threshold, and prepares transaction for COA liquidation.">
+      <polygon points="785,845 850,880 785,915 720,880" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="785" y="876" fill="#ffffff" font-size="10.5">Disbursement complete</text>
+      <text x="785" y="890" fill="#ffffff" font-size="10.5">&amp; verified?</text>
+    </g>
+
+    <!-- BOTTOM TERMINAL: Disbursement On Hold (Col 3 - Orange Capsule) -->
+    <g class="flow-node interactive-node" id="node-end-hold" data-title="Terminal: Disbursement On Hold / Deferred" data-type="Terminal" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Release is withheld due to beneficiary absence, signature mismatch, documentary deficiency, or budget exhaustion. Request held for review.">
+      <rect x="502" y="995" width="166" height="46" rx="23" fill="#f2720c" filter="url(#node-shadow)" />
+      <text x="585" y="1016" fill="#ffffff" font-size="11" font-weight="900">Disbursement On Hold</text>
+      <text x="585" y="1029" fill="#ffffff" font-size="9.5" font-weight="700">/ Returned to Admin</text>
+    </g>
+
+    <!-- BOTTOM TERMINAL: Assistance Disbursed & Recorded (Col 4 - Orange Capsule) -->
+    <g class="flow-node interactive-node" id="node-end-success" data-title="Terminal: Assistance Disbursed &amp; Recorded" data-type="Terminal" data-role="Municipal Treasurer" data-table="requests, payouts, funds" data-route="/treasurer/reports" data-desc="Disbursement successfully concluded. Fund ledger updated, resident notified, and transaction queued for COA/DSWD liquidation reports.">
+      <rect x="702" y="995" width="166" height="46" rx="23" fill="#f2720c" filter="url(#node-shadow)" />
+      <text x="785" y="1016" fill="#ffffff" font-size="11" font-weight="900">Assistance Disbursed</text>
+      <text x="785" y="1029" fill="#ffffff" font-size="9.5" font-weight="700">&amp; Recorded in Ledger</text>
+    </g>
+  </g>
+
+  <!-- ── BOTTOM FOOTER BANNER ──────────────────────────────────────────────── -->
+  <rect x="0" y="1130" width="880" height="70" fill="#1b367d" />
+
+  <!-- Plus Icon & Left Brand Text matching Reference Image -->
+  <g transform="translate(45, 1165)">
+    <path d="M 0 0 H 12 M 6 -6 V 6" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+    <text x="22" y="5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="0.5">AICS TREASURY SYSTEM</text>
+  </g>
+
+  <!-- Right Contact / Municipal Credentials matching Reference Image -->
+  <g transform="translate(835, 1165)">
+    <text x="0" y="5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="700" fill="#ffffff" text-anchor="end" letter-spacing="0.2">www.aics-daanbantayan.gov.ph | treasury@daanbantayan.gov.ph</text>
+  </g>
+</svg>`;
+}
+
+// ==============================================================================
+// 2. GENERATE INTERACTIVE HTML VIEWER (Matching beneficiary_flowchart.html)
+// ==============================================================================
+
+function getHtmlContent(svgContent) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AICS Treasurer Account Flow Chart • Municipality of Daanbantayan</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --primary: #1d4ed8;
+      --primary-hover: #1e40af;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --accent: #f2720c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1b367d 0%, #0f172a 100%);
+      color: white;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header-titles h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .header-titles p {
+      font-size: 13px;
+      color: #93c5fd;
+      margin-top: 4px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend-bar {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 32px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-icon {
+      display: inline-block;
+      width: 16px;
+      height: 12px;
+    }
+    .legend-orange-circle { width: 14px; height: 14px; border-radius: 50%; background: #f2720c; }
+    .legend-black-rect { width: 22px; height: 12px; border-radius: 3px; background: #000000; }
+    .legend-blue-diamond { transform: rotate(45deg); width: 10px; height: 10px; background: #1d4ed8; }
+    .legend-green-badge { width: 14px; height: 14px; border-radius: 50%; background: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; }
+    .legend-red-badge { width: 14px; height: 14px; border-radius: 50%; background: #f43f5e; color: white; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; }
+    .legend-orange-pill { width: 28px; height: 12px; border-radius: 6px; background: #f2720c; }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.22);
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+
+    .chart-wrapper {
+      padding: 30px 20px;
+      background: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+      overflow-x: auto;
+    }
+
+    #svg-container {
+      transition: transform 0.2s ease;
+      transform-origin: top center;
+    }
+
+    svg {
+      max-width: 100%;
+      height: auto;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.08));
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* Node interaction */
+    .interactive-node {
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .interactive-node:hover {
+      filter: drop-shadow(0 8px 18px rgba(29, 78, 216, 0.45)) brightness(1.1);
+      transform: translateY(-2px);
+    }
+
+    /* Info Panel */
+    .details-panel {
+      padding: 24px 32px;
+      background: #ffffff;
+    }
+
+    .info-card {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px 24px;
+      border-left: 5px solid #1b367d;
+      border-top: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .info-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .info-desc {
+      font-size: 14px;
+      color: #475569;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #cbd5e1;
+    }
+
+    .meta-item {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .meta-item strong {
+      color: #1e293b;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* Architecture Highlights */
+    .specs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .spec-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px 20px;
+      background: #ffffff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .spec-card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .spec-card ul {
+      list-style-type: none;
+      font-size: 12.5px;
+      color: #475569;
+    }
+
+    .spec-card li {
+      margin-bottom: 8px;
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .spec-card li::before {
+      content: "•";
+      color: #1d4ed8;
+      font-weight: bold;
+      position: absolute;
+      left: 0;
+    }
+
+    footer.site-footer {
+      padding: 16px 32px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      font-size: 12px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="header-titles">
+        <h1>AICS Municipal Treasurer Account Process Flow</h1>
+        <p>Office of the Municipal Treasurer • Municipality of Daanbantayan, Cebu • Official AICS Disbursement System</p>
+      </div>
+      <div class="toolbar">
+        <button class="action-btn" onclick="zoomIn()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          Zoom In
+        </button>
+        <button class="action-btn" onclick="zoomOut()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          Zoom Out
+        </button>
+        <button class="action-btn" onclick="resetZoom()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Reset View
+        </button>
+        <button class="action-btn" onclick="downloadSVG()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download SVG
+        </button>
+        <button class="action-btn" onclick="downloadPNG()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M20.4 14.5L16 10 4 20"/></svg>
+          Export PNG
+        </button>
+        <button class="action-btn" onclick="window.print()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print / PDF
+        </button>
+      </div>
+    </header>
+
+    <!-- Legend Bar matching standard symbols -->
+    <div class="legend-bar">
+      <span>Flowchart Notation Standard:</span>
+      <div class="legend-item"><span class="legend-icon legend-orange-circle"></span> Start Entry Point</div>
+      <div class="legend-item"><span class="legend-icon legend-black-rect"></span> Treasurer Process / Action</div>
+      <div class="legend-item"><span class="legend-icon legend-blue-diamond"></span> Verification / Decision</div>
+      <div class="legend-item"><span class="legend-green-badge">✓</span> Affirmative Path (Yes / Cleared)</div>
+      <div class="legend-item"><span class="legend-red-badge">✖</span> Negative Path (Return / Deficit)</div>
+      <div class="legend-item"><span class="legend-icon legend-orange-pill"></span> Terminal Outcome</div>
+    </div>
+
+    <!-- Chart Canvas -->
+    <div class="chart-wrapper">
+      <div id="svg-container">
+        ${svgContent}
+      </div>
+    </div>
+
+    <!-- Interactive Node Inspector & Documentation -->
+    <div class="details-panel">
+      <!-- Active Node Info Card -->
+      <div class="info-card" id="info-card">
+        <div style="flex: 1;">
+          <div class="info-title">
+            <span id="info-node-title">Click any node in the flowchart above to inspect system rules</span>
+            <span class="badge" id="info-node-type">TREASURY OPERATIONAL SPECIFICATION</span>
+          </div>
+          <p class="info-desc" id="info-node-desc">
+            This flowchart maps out the complete lifecycle of a Municipal Treasurer account in the AICS System (Municipality of Daanbantayan, Cebu). It details approved request intake, financial validation, category liquidity gating, Disbursement Voucher (DV) preparation, atomic multi-table synchronization, and COA regulatory reporting.
+          </p>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <strong>User Role</strong>
+              <span id="info-node-role">Municipal Treasurer (profiles.role == 'treasurer')</span>
+            </div>
+            <div class="meta-item">
+              <strong>Database Table(s)</strong>
+              <span id="info-node-table">requests, funds, payouts, fund_transactions, system_logs</span>
+            </div>
+            <div class="meta-item">
+              <strong>Application Route / API</strong>
+              <span id="info-node-route">/treasurer, /treasurer/requests, /api/treasury</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Core System Specifications Grid -->
+      <div class="specs-grid">
+        <div class="spec-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Phase 1: Approved Queue Intake
+          </h3>
+          <ul>
+            <li><strong>Role Authentication:</strong> Only verified active staff with <code>profiles.role = 'treasurer'</code> have clearance.</li>
+            <li><strong>Intake Gating:</strong> Only applications with <code>status = 'Approved'</code> and <code>release_status = 'Pending Release'</code> are queued.</li>
+            <li><strong>Discrepancy Loop:</strong> Erroneous records are returned to Admin with remarks via <code>action: 'return_request'</code>.</li>
+          </ul>
+        </div>
+
+        <div class="spec-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Phase 2: Budget Liquidity Verification
+          </h3>
+          <ul>
+            <li><strong>No-Overdraft Rule:</strong> System programmatically enforces <code>funds.current_balance &gt;= amount_approved</code>.</li>
+            <li><strong>Category Isolation:</strong> Separate fund pools for Medical, Burial, Educational, Food, and Transportation.</li>
+            <li><strong>Replenishment:</strong> Treasurers can record new municipal budget appropriations via <code>/treasurer/funds</code>.</li>
+          </ul>
+        </div>
+
+        <div class="spec-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Phase 3: Disbursement Voucher (DV)
+          </h3>
+          <ul>
+            <li><strong>Voucher Tracking:</strong> Generates unique voucher identifier (<code>DV-YYYY-XXXX</code>) and assigns check/cash mode.</li>
+            <li><strong>Readiness Elevation:</strong> Updates request state to <code>release_status = 'Ready for Release'</code>.</li>
+            <li><strong>In-Person Claim:</strong> Physical government ID and payroll signature verified at Municipal Treasury counter.</li>
+          </ul>
+        </div>
+
+        <div class="spec-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Phase 4: Atomic Sync &amp; COA Reporting
+          </h3>
+          <ul>
+            <li><strong>Atomic Release:</strong> Deducts <code>current_balance</code>, increments <code>total_released</code>, and inserts <code>payouts</code> entry.</li>
+            <li><strong>Immutable Ledger:</strong> Every payout produces a double-entry row in <code>fund_transactions</code> with audit hash.</li>
+            <li><strong>COA Compliance:</strong> Exportable liquidation reports in official PDF, Excel (.xlsx), and CSV via <code>/treasurer/reports</code>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div>© 2026 AICS Request Management &amp; Beneficiary Information System • Municipality of Daanbantayan, Cebu</div>
+      <div>Designed for Office of the Municipal Treasurer &amp; Municipal Social Welfare and Development Office (MSWDO)</div>
+    </footer>
+  </div>
+
+  <!-- Interactive Controls & Exporters -->
+  <script>
+    let currentZoom = 1;
+    const container = document.getElementById('svg-container');
+
+    function zoomIn() {
+      currentZoom = Math.min(currentZoom + 0.15, 2.5);
+      container.style.transform = \`scale(\${currentZoom})\`;
+    }
+
+    function zoomOut() {
+      currentZoom = Math.max(currentZoom - 0.15, 0.5);
+      container.style.transform = \`scale(\${currentZoom})\`;
+    }
+
+    function resetZoom() {
+      currentZoom = 1;
+      container.style.transform = 'scale(1)';
+    }
+
+    // Node Click Inspector
+    document.querySelectorAll('.interactive-node').forEach(node => {
+      node.addEventListener('click', () => {
+        const title = node.getAttribute('data-title') || 'Selected Process';
+        const type = node.getAttribute('data-type') || 'Action Node';
+        const desc = node.getAttribute('data-desc') || 'No description provided.';
+        const role = node.getAttribute('data-role') || 'Municipal Treasurer';
+        const table = node.getAttribute('data-table') || 'requests';
+        const route = node.getAttribute('data-route') || '/treasurer';
+
+        document.getElementById('info-node-title').textContent = title;
+        document.getElementById('info-node-type').textContent = type.toUpperCase();
+        document.getElementById('info-node-desc').textContent = desc;
+        document.getElementById('info-node-role').textContent = role;
+        document.getElementById('info-node-table').textContent = table;
+        document.getElementById('info-node-route').textContent = route;
+
+        // Smooth scroll to card
+        document.getElementById('info-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+
+    // Download SVG
+    function downloadSVG() {
+      const svg = document.getElementById('treasurer-flowchart-svg');
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+      if (!source.match(/^<\\?xml/)) {
+        source = '<?xml version="1.0" standalone="no"?>\\r\\n' + source;
+      }
+      const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'aics_treasurer_flowchart.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Export PNG
+    function downloadPNG() {
+      const svg = document.getElementById('treasurer-flowchart-svg');
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      canvas.width = 880 * 2;
+      canvas.height = 1200 * 2;
+
+      img.onload = () => {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = 'aics_treasurer_flowchart.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+    }
+  </script>
+</body>
+</html>`;
+}
+
+// ==============================================================================
+// 3. EXECUTE GENERATOR SCRIPT
+// ==============================================================================
+
+function run() {
+  const rootDir = path.resolve(__dirname, '..');
+  const svg = getSvgContent();
+  const html = getHtmlContent(svg);
+
+  // Write SVG file
+  const svgPath = path.join(rootDir, 'treasurer_flowchart.svg');
+  fs.writeFileSync(svgPath, svg, 'utf8');
+  console.log('✓ Successfully generated treasurer_flowchart.svg at:', svgPath);
+
+  // Write HTML file
+  const htmlPath = path.join(rootDir, 'treasurer_flowchart.html');
+  fs.writeFileSync(htmlPath, html, 'utf8');
+  console.log('✓ Successfully generated treasurer_flowchart.html at:', htmlPath);
+
+  console.log('\nAll Treasurer flowchart artifacts generated successfully!');
+}
+
+run();

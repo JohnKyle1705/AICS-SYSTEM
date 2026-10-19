@@ -188,7 +188,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-community bg-overlay" id="register-page">
+    <div className="min-h-screen flex bg-signup bg-overlay" id="register-page">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center">
         <div className="absolute -top-20 -left-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />

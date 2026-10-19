@@ -219,14 +219,10 @@ function SidebarContent() {
     ],
     treasurer: [
       { href: '/treasurer', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/requests', label: 'All Requests', icon: FileText },
-      { href: '/treasurer/requests?release_status=Pending+Release', label: 'Pending Release', icon: Clock },
-      { href: '/treasurer/requests?release_status=Ready+for+Release', label: 'Ready for Release', icon: Banknote },
-      { href: '/treasurer/requests?release_status=Released', label: 'Released Requests', icon: CheckCircle2 },
-      { href: '/notifications', label: 'Notifications', icon: Bell },
-      { href: '/treasurer/requests', label: 'Request History', icon: ClipboardList },
+      { href: '/treasurer/requests', label: 'Release Management', icon: Banknote },
       { href: '/treasurer/funds', label: 'Fund Tracking', icon: Wallet },
       { href: '/treasurer/reports', label: 'Financial Reports', icon: BarChart2 },
+      { href: '/notifications', label: 'Notifications', icon: Bell },
     ]
   }
 
@@ -331,7 +327,14 @@ function SidebarContent() {
                   }
                   return true
                 }
-                return pathname === basePath && (!searchParams.get('status') && !searchParams.get('release_status'))
+                const hasSiblingWithQuery = filtered.some((item) => {
+                  const [itemBase, itemQuery] = item.href.split('?')
+                  return itemBase === basePath && !!itemQuery
+                })
+                if (hasSiblingWithQuery) {
+                  return pathname === basePath && (!searchParams.get('status') && !searchParams.get('release_status'))
+                }
+                return pathname === basePath
               })()
               return (
                 <Link

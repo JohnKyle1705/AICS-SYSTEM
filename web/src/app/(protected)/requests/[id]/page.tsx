@@ -354,8 +354,18 @@ function RequestDetailContent() {
   }
 
   const getDocUrl = async (path: string) => {
-    const { data } = await supabase.storage.from('documents').createSignedUrl(path, 60)
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+    try {
+      const res = await fetch(`/api/documents/url?path=${encodeURIComponent(path)}`)
+      const data = await res.json()
+      if (data?.url) {
+        window.open(data.url, '_blank')
+      } else {
+        alert(data?.error || 'Failed to get document link')
+      }
+    } catch (err) {
+      console.error('Error fetching document URL:', err)
+      alert('Network error while retrieving document')
+    }
   }
 
   if (!request) return (

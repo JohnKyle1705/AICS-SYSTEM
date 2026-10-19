@@ -1,266 +1,420 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 920" width="100%" height="100%" style="background:#ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="treasurer-flowchart-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 1200" width="880" height="1200">
   <defs>
-    <!-- Drop Shadow Filter -->
-    <filter id="shadow" x="-8%" y="-8%" width="120%" height="125%" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.12" />
-    </filter>
-    <filter id="shadow-sm" x="-5%" y="-5%" width="115%" height="120%" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.08" />
+    <!-- Soft shadow matching modern infographic cards -->
+    <filter id="node-shadow" x="-10%" y="-10%" width="125%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.22" />
     </filter>
 
-    <!-- Arrowhead Marker -->
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2b2d42" />
+    <!-- Arrowhead marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#000000" />
     </marker>
   </defs>
 
-  <!-- Title Header -->
-  <g id="header">
-    <text x="590" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1e293b" letter-spacing="0.5">MUNICIPAL TREASURER OPERATIONAL FLOW CHART</text>
-    <text x="590" y="50" text-anchor="middle" font-size="12" font-weight="500" fill="#64748b">AICS Request Management &amp; Disbursement System — Municipality of Daanbantayan</text>
+  <!-- ── TOP HEADER BANNER ────────────────────────────────────────────────── -->
+  <rect x="0" y="0" width="880" height="135" fill="#1b367d" />
+
+  <!-- Title & Subtitle matching Reference Image -->
+  <g id="chart-header">
+    <text x="45" y="52" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="900" fill="#ffffff" letter-spacing="0.5">Treasurer</text>
+    <text x="45" y="90" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="900" fill="#ffffff" letter-spacing="0.5">Process Flow</text>
+    <text x="45" y="116" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#93c5fd" letter-spacing="0.8">AICS DISBURSEMENT &amp; FINANCIAL MANAGEMENT SYSTEM • MUNICIPALITY OF DAANBANTAYAN, CEBU</text>
   </g>
 
-  <!-- ==================== CONNECTORS & LABELS ==================== -->
-  <g id="connectors" stroke="#2b2d42" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Top-Right Financial / Treasury Illustration matching reference style -->
+  <g id="header-illustration" transform="translate(685, 12)">
+    <!-- Desk / Base surface -->
+    <ellipse cx="90" cy="98" rx="80" ry="14" fill="#152b66" opacity="0.6" />
     
-    <!-- Start -> Decision 1 & Decision a -->
-    <path d="M 540 120 L 540 145 L 250 145 L 250 180" marker-end="url(#arrow)" />
-    <path d="M 540 120 L 540 145 L 830 145 L 830 180" marker-end="url(#arrow)" />
+    <!-- Computer Monitor / Terminal -->
+    <rect x="35" y="15" width="90" height="60" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="2" />
+    <rect x="40" y="20" width="80" height="46" rx="3" fill="#1e293b" />
+    <!-- Screen Header & Chart Bars -->
+    <rect x="44" y="24" width="72" height="6" fill="#3b82f6" rx="1.5" />
+    <text x="46" y="29" fill="#ffffff" font-size="5" font-weight="bold" font-family="sans-serif">TREASURY</text>
+    <rect x="46" y="36" width="10" height="24" fill="#10b981" rx="1" />
+    <rect x="60" y="42" width="10" height="18" fill="#38bdf8" rx="1" />
+    <rect x="74" y="32" width="10" height="28" fill="#f59e0b" rx="1" />
+    <rect x="88" y="46" width="10" height="14" fill="#a855f7" rx="1" />
+    <!-- Monitor stand -->
+    <path d="M 75 75 L 85 75 L 88 88 L 72 88 Z" fill="#64748b" />
+    <ellipse cx="80" cy="88" rx="18" ry="4" fill="#94a3b8" />
 
-    <!-- Decision 1 -> Step 1 (YES) & Decision 2 (NO) -->
-    <path d="M 250 290 L 250 330 L 105 330 L 105 385" marker-end="url(#arrow)" />
-    <path d="M 250 290 L 250 330 L 390 330 L 390 385" marker-end="url(#arrow)" />
+    <!-- Official Disbursement Voucher Document -->
+    <g transform="translate(15, 45) rotate(-8)">
+      <rect x="0" y="0" width="30" height="40" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" filter="url(#node-shadow)" />
+      <line x1="4" y1="8" x2="26" y2="8" stroke="#1d4ed8" stroke-width="2" />
+      <line x1="4" y1="14" x2="22" y2="14" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="4" y1="19" x2="20" y2="19" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="4" y1="24" x2="24" y2="24" stroke="#94a3b8" stroke-width="1.5" />
+      <circle cx="20" cy="32" r="5" fill="#10b981" />
+      <path d="M 18 32 L 19.5 33.5 L 22.5 30.5" stroke="#ffffff" stroke-width="1" fill="none" />
+    </g>
 
-    <!-- Decision 2 -> Decision 3 (YES) & Decision 4 (NO) -->
-    <path d="M 390 500 L 390 545 L 250 545 L 250 600" marker-end="url(#arrow)" />
-    <path d="M 390 500 L 390 600" marker-end="url(#arrow)" />
+    <!-- Gold Coins Stack -->
+    <g transform="translate(125, 62)">
+      <ellipse cx="14" cy="22" rx="12" ry="4.5" fill="#b45309" />
+      <rect x="2" y="18" width="24" height="4" fill="#f59e0b" />
+      <ellipse cx="14" cy="18" rx="12" ry="4.5" fill="#fbbf24" />
+      <rect x="2" y="14" width="24" height="4" fill="#f59e0b" />
+      <ellipse cx="14" cy="14" rx="12" ry="4.5" fill="#fbbf24" />
+      <rect x="2" y="10" width="24" height="4" fill="#f59e0b" />
+      <ellipse cx="14" cy="10" rx="12" ry="4.5" fill="#fef08a" />
+      <text x="14" y="12" fill="#78350f" font-size="7" font-weight="900" text-anchor="middle">₱</text>
+    </g>
 
-    <!-- Decision 3 -> Step 4 (YES) & Step 3 (NO) -->
-    <path d="M 180 655 L 105 655 L 105 785" marker-end="url(#arrow)" />
-    <path d="M 250 710 L 250 785" marker-end="url(#arrow)" />
-
-    <!-- Decision 4 -> Step 2 (YES) -->
-    <path d="M 390 710 L 390 785" marker-end="url(#arrow)" />
-
-    <!-- Decision a -> Decision b (YES) & Decision c (NO) -->
-    <path d="M 830 290 L 830 330 L 680 330 L 680 385" marker-end="url(#arrow)" />
-    <path d="M 830 290 L 830 330 L 980 330 L 980 385" marker-end="url(#arrow)" />
-
-    <!-- Decision b -> Step a (YES) & Decision d (NO) -->
-    <path d="M 680 500 L 680 565" marker-end="url(#arrow)" />
-    <path d="M 750 445 L 830 445 L 830 600" marker-end="url(#arrow)" />
-
-    <!-- Step a -> Step c -->
-    <path d="M 680 645 L 680 785" marker-end="url(#arrow)" />
-
-    <!-- Decision d -> Step d (YES) -->
-    <path d="M 830 710 L 830 785" marker-end="url(#arrow)" />
-
-    <!-- Decision c -> Step b (YES) & Decision e (NO) -->
-    <path d="M 980 500 L 980 565" marker-end="url(#arrow)" />
-    <path d="M 1050 445 L 1100 445 L 1100 600" marker-end="url(#arrow)" />
-
-    <!-- Step b -> Step e -->
-    <path d="M 980 645 L 980 785" marker-end="url(#arrow)" />
-
-    <!-- Decision e -> Step e (YES) & Step f (NO) -->
-    <path d="M 1100 710 L 1100 750 L 1045 750 L 1045 825 L 1040 825" marker-end="url(#arrow)" />
-    <path d="M 1100 710 L 1100 785" marker-end="url(#arrow)" />
+    <!-- Mini Green Check and Red Cross decorative pill -->
+    <rect x="68" y="94" width="26" height="11" rx="5.5" fill="#ffffff" filter="url(#node-shadow)" />
+    <circle cx="74" cy="99.5" r="3.5" fill="#22c55e" />
+    <path d="M 72.5 99.5 L 73.5 100.5 L 75.5 98.5" stroke="#ffffff" stroke-width="0.8" fill="none" />
+    <circle cx="86" cy="99.5" r="3.5" fill="#f43f5e" />
+    <path d="M 84.5 98 L 87.5 101 M 87.5 98 L 84.5 101" stroke="#ffffff" stroke-width="0.8" />
   </g>
 
-  <!-- ==================== YES / NO LABELS ==================== -->
-  <g id="branch-labels" font-size="12" font-weight="700" fill="#1e293b" text-anchor="middle">
-    <!-- From Start -->
-    <rect x="365" y="134" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="387" y="148">YES</text>
-    <rect x="670" y="134" width="40" height="20" rx="4" fill="#ffffff" />
-    <text x="690" y="148">NO</text>
+  <!-- ── CANVAS BACKGROUND (Ice Blue matching image) ───────────────────────── -->
+  <rect x="0" y="135" width="880" height="995" fill="#cbe6fb" />
 
-    <!-- From Decision 1 -->
-    <rect x="150" y="320" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="172" y="334">YES</text>
-    <rect x="300" y="320" width="40" height="20" rx="4" fill="#ffffff" />
-    <text x="320" y="334">NO</text>
+  <!-- ── CONNECTORS GROUP ─────────────────────────────────────────────────── -->
+  <g id="connectors" stroke="#000000" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 1. Start (Col 1) -> Review Approved Requests Queue (Col 2) -->
+    <path d="M 175 185 L 275 185" marker-end="url(#arrow)" />
 
-    <!-- From Decision 2 -->
-    <rect x="290" y="535" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="312" y="549">YES</text>
-    <rect x="395" y="540" width="36" height="20" rx="4" fill="#ffffff" />
-    <text x="413" y="554">NO</text>
+    <!-- 2. Review Queue -> Verify Beneficiary & Amount -->
+    <path d="M 350 208 L 350 230" marker-end="url(#arrow)" />
 
-    <!-- From Decision 3 -->
-    <rect x="120" y="645" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="142" y="659">YES</text>
-    <rect x="255" y="735" width="36" height="20" rx="4" fill="#ffffff" />
-    <text x="273" y="749">NO</text>
+    <!-- 3. Verify Beneficiary -> Validate Assessment -->
+    <path d="M 350 276 L 350 298" marker-end="url(#arrow)" />
 
-    <!-- From Decision 4 -->
-    <rect x="395" y="735" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="417" y="749">YES</text>
+    <!-- 4. Validate Assessment -> Decision 1 (Are Request Details Valid?) -->
+    <path d="M 350 344 L 350 365" marker-end="url(#arrow)" />
 
-    <!-- From Decision a -->
-    <rect x="730" y="320" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="752" y="334">YES</text>
-    <rect x="890" y="320" width="40" height="20" rx="4" fill="#ffffff" />
-    <text x="910" y="334">NO</text>
+    <!-- 5. Decision 1 -> Return Request to Admin (NO - Left to Col 1) -->
+    <path d="M 285 395 L 205 395" marker-end="url(#arrow)" />
 
-    <!-- From Decision b -->
-    <rect x="640" y="525" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="662" y="539">YES</text>
-    <rect x="770" y="435" width="40" height="20" rx="4" fill="#ffffff" />
-    <text x="790" y="449">NO</text>
+    <!-- 6. Decision 1 -> Inspect Category Fund Allocation (YES - Right to Col 3) -->
+    <path d="M 415 395 L 510 395" marker-end="url(#arrow)" />
 
-    <!-- From Decision d -->
-    <rect x="835" y="735" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="857" y="749">YES</text>
+    <!-- 7. Inspect Category Fund -> Decision 2 (Sufficient Fund Balance?) -->
+    <path d="M 585 418 L 585 440" marker-end="url(#arrow)" />
 
-    <!-- From Decision c -->
-    <rect x="940" y="525" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="962" y="539">YES</text>
-    <rect x="1055" y="435" width="40" height="20" rx="4" fill="#ffffff" />
-    <text x="1075" y="449">NO</text>
+    <!-- 8. Decision 2 -> Review Deficit & Earmarked Pool (NO - Left to Col 2) -->
+    <path d="M 520 470 L 425 470" marker-end="url(#arrow)" />
 
-    <!-- From Decision e -->
-    <rect x="1045" y="738" width="44" height="20" rx="4" fill="#ffffff" />
-    <text x="1067" y="752">YES</text>
-    <rect x="1105" y="738" width="40" height="20" rx="4" fill="#ffffff" />
-    <text x="1125" y="752">NO</text>
+    <!-- 9. Decision 2 -> Prepare Disbursement Voucher (YES - Down to Col 3) -->
+    <path d="M 585 500 L 585 575" marker-end="url(#arrow)" />
+
+    <!-- 10. Review Deficit -> Decision 1B (Can Fund Be Adjusted / Added?) -->
+    <path d="M 350 493 L 350 515" marker-end="url(#arrow)" />
+
+    <!-- 11. Decision 1B -> Trigger Insufficient Funds Alert (NO - Left to Col 1) -->
+    <path d="M 285 545 L 140 545 L 140 575" marker-end="url(#arrow)" />
+
+    <!-- 12. Decision 1B -> Prepare Disbursement Voucher (YES - Down-Right to Col 3) -->
+    <path d="M 350 575 L 350 598 L 510 598" marker-end="url(#arrow)" />
+
+    <!-- ── Column 1: Deficiency & Hold Path ── -->
+    <!-- 13. Trigger Alert -> Submit Budget Request to Mayor -->
+    <path d="M 140 621 L 140 642" marker-end="url(#arrow)" />
+
+    <!-- 14. Submit Request -> Hold Request in Queue -->
+    <path d="M 140 688 L 140 709" marker-end="url(#arrow)" />
+
+    <!-- 15. Hold Request -> Decision: Budget Approved by LGU? -->
+    <path d="M 140 755 L 140 845" marker-end="url(#arrow)" />
+
+    <!-- 16. Budget Approved Decision -> Orange Pill (Disbursement On Hold - Left Edge) -->
+    <path d="M 140 915 L 140 1018 L 498 1018" marker-end="url(#arrow)" />
+
+    <!-- ── Column 3: Main Voucher & Payout Flow ── -->
+    <!-- 17. Prepare DV -> Assign DV Number & Payment Mode -->
+    <path d="M 585 621 L 585 642" marker-end="url(#arrow)" />
+
+    <!-- 18. Assign DV Number -> Mark Ready for Release -->
+    <path d="M 585 688 L 585 709" marker-end="url(#arrow)" />
+
+    <!-- 19. Mark Ready for Release -> In-Person Recipient ID Check -->
+    <path d="M 585 755 L 585 776" marker-end="url(#arrow)" />
+
+    <!-- 20. In-Person ID Check -> Decision 3 (Recipient Verified & Payroll Signed?) -->
+    <path d="M 585 822 L 585 845" marker-end="url(#arrow)" />
+
+    <!-- 21. Decision 3 -> Orange Pill (NO - Straight Down to Top Edge) -->
+    <path d="M 585 915 L 585 990" marker-end="url(#arrow)" />
+
+    <!-- 22. Decision 3 -> Disburse Cash / Issue Check (YES - Right, Up to Col 4) -->
+    <path d="M 650 880 L 688 880 L 688 598 L 712 598" marker-end="url(#arrow)" />
+
+    <!-- ── Column 4: Release, Ledger Sync & Reporting ── -->
+    <!-- 23. Disburse Cash -> Execute Release in Portal -->
+    <path d="M 785 621 L 785 642" marker-end="url(#arrow)" />
+
+    <!-- 24. Execute Release -> Sync Double-Entry Ledger -->
+    <path d="M 785 688 L 785 709" marker-end="url(#arrow)" />
+
+    <!-- 25. Sync Ledger -> Decision 4 (Disbursement Complete & Recorded?) -->
+    <path d="M 785 755 L 785 845" marker-end="url(#arrow)" />
+
+    <!-- 26. Decision 4 -> Orange Pill (NO - Left & Down to Right Edge of Hold Pill) -->
+    <path d="M 720 880 L 688 880 L 688 1018 L 672 1018" marker-end="url(#arrow)" />
+
+    <!-- 27. Decision 4 -> Assistance Disbursed & Recorded (YES - Down to Col 4 Pill Top Edge) -->
+    <path d="M 785 915 L 785 990" marker-end="url(#arrow)" />
   </g>
 
-  <!-- ==================== NODES ==================== -->
+  <!-- ── DECISION BADGES GROUP (Exact [✓] and [✖] badges) ─────────────────── -->
+  <g id="branch-badges">
+    <!-- Decision 1: Details Valid? [✖] Left -->
+    <g transform="translate(245, 395)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 1: Details Valid? [✓] Right -->
+    <g transform="translate(462, 395)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
 
-  <!-- START NODE (Red Pill) -->
-  <g id="node-start" filter="url(#shadow)">
-    <rect x="460" y="72" width="160" height="48" rx="24" fill="#ea4335" stroke="#c5221f" stroke-width="2" />
-    <text x="540" y="102" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">Start</text>
+    <!-- Decision 2: Sufficient Balance? [✖] Left -->
+    <g transform="translate(472, 470)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 2: Sufficient Balance? [✓] Down -->
+    <g transform="translate(585, 537)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+
+    <!-- Decision 1B: Can Fund Be Adjusted? [✖] Left -->
+    <g transform="translate(212, 545)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 1B: Can Fund Be Adjusted? [✓] Down-Right -->
+    <g transform="translate(350, 586)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+
+    <!-- Budget Approved? [✖] Down-Right -->
+    <g transform="translate(140, 960)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+
+    <!-- Decision 3: Recipient Verified & Signed? [✖] Down -->
+    <g transform="translate(585, 955)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 3: Recipient Verified & Signed? [✓] Right-Up -->
+    <g transform="translate(688, 740)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+
+    <!-- Decision 4: Disbursement Complete? [✖] Left -->
+    <g transform="translate(688, 970)">
+      <circle cx="0" cy="0" r="11" fill="#f43f5e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 -4 L 4 4 M 4 -4 L -4 4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <!-- Decision 4: Disbursement Complete? [✓] Down -->
+    <g transform="translate(785, 955)">
+      <circle cx="0" cy="0" r="11" fill="#22c55e" stroke="#ffffff" stroke-width="2" filter="url(#node-shadow)" />
+      <path d="M -4 0 L -1 3 L 4 -3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
   </g>
 
-  <!-- ==================== LEFT BRANCH (GREEN & ORANGE) ==================== -->
+  <!-- ── FLOWCHART NODES GROUP ────────────────────────────────────────────── -->
+  <g id="flowchart-nodes" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="700">
 
-  <!-- DECISION 1 (Green Diamond) -->
-  <g id="node-decision-1" filter="url(#shadow)">
-    <polygon points="250,180 320,235 250,290 180,235" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
-    <text x="250" y="231" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="250" y="248" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">1</text>
+    <!-- START (Orange Circle - Col 1) -->
+    <g class="flow-node interactive-node" id="node-start" data-title="Start: Treasurer Operational Cycle" data-type="Terminal" data-role="Municipal Treasurer" data-table="profiles" data-route="/login" data-desc="Municipal Treasurer securely authenticates via /login and navigates to the dedicated Treasury operations dashboard.">
+      <circle cx="135" cy="185" r="38" fill="#f2720c" filter="url(#node-shadow)" />
+      <text x="135" y="190" fill="#ffffff" font-size="15" font-weight="900">Start</text>
+    </g>
+
+    <!-- Col 2: Action 1 (Review Approved Requests Queue) -->
+    <g class="flow-node interactive-node" id="node-intake" data-title="Review Approved Requests Queue" data-type="Process" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Accesses the queue of social worker approved assistance requests awaiting financial verification and release scheduling.">
+      <rect x="275" y="162" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="350" y="181" fill="#ffffff" font-size="11.5">Review Approved</text>
+      <text x="350" y="197" fill="#ffffff" font-size="11.5">Requests Queue</text>
+    </g>
+
+    <!-- Col 2: Action 2 (Verify Beneficiary & Amount) -->
+    <g class="flow-node interactive-node" id="node-verify-amount" data-title="Verify Beneficiary &amp; Approved Amount" data-type="Process" data-role="Municipal Treasurer" data-table="requests, beneficiaries" data-route="/treasurer/requests" data-desc="Cross-references the approved grant amount in PHP against beneficiary records, emergency crisis classification, and municipal ceiling.">
+      <rect x="275" y="230" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="350" y="249" fill="#ffffff" font-size="11.5">Verify Beneficiary</text>
+      <text x="350" y="265" fill="#ffffff" font-size="11.5">&amp; Approved Amount</text>
+    </g>
+
+    <!-- Col 2: Action 3 (Validate Social Worker Assessment) -->
+    <g class="flow-node interactive-node" id="node-validate-assessment" data-title="Validate Social Worker Assessment" data-type="Process" data-role="Municipal Treasurer" data-table="request_documents, requests" data-route="/treasurer/requests" data-desc="Audits attached legal documentation: Certificate of Indigency, Valid Government ID, Medical Abstract/Hospital Bills, or Funeral Contract.">
+      <rect x="275" y="298" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="350" y="317" fill="#ffffff" font-size="11.5">Validate Social Worker</text>
+      <text x="350" y="333" fill="#ffffff" font-size="11.5">Assessment</text>
+    </g>
+
+    <!-- Col 2: Decision 1 (Are Request Details Valid?) -->
+    <g class="flow-node interactive-node" id="node-dec-details" data-title="Verification: Are Request Details Valid?" data-type="Decision" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Treasurer validates all documentary attachments and approved amounts. Discrepancies trigger Return to Admin; verified files proceed to Fund Inspection.">
+      <polygon points="350,365 415,395 350,425 285,395" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="350" y="391" fill="#ffffff" font-size="11">Are request</text>
+      <text x="350" y="405" fill="#ffffff" font-size="11">details valid?</text>
+    </g>
+
+    <!-- Col 1: Action 4 (Return Request with Notes) -->
+    <g class="flow-node interactive-node" id="node-return-admin" data-title="Return Request with Notes to Admin" data-type="Process" data-role="Municipal Treasurer" data-table="requests, system_logs" data-route="/api/treasury" data-desc="Invokes action: return_request via /api/treasury. Sets remarks with correction notes and notifies MSWDO Social Worker for resolution.">
+      <rect x="70" y="372" width="135" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="137" y="391" fill="#ffffff" font-size="11.5">Return Request</text>
+      <text x="137" y="407" fill="#ffffff" font-size="11.5">with Notes to Admin</text>
+    </g>
+
+    <!-- Col 3: Action 4B (Inspect Category Fund Allocation) -->
+    <g class="flow-node interactive-node" id="node-inspect-fund" data-title="Inspect Category Fund Allocation" data-type="Process" data-role="Municipal Treasurer" data-table="funds" data-route="/treasurer/funds" data-desc="Inspects municipal treasury reserves for specific assistance category: Medical, Burial, Educational, Food, or Transportation.">
+      <rect x="510" y="372" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="391" fill="#ffffff" font-size="11.5">Inspect Category</text>
+      <text x="585" y="407" fill="#ffffff" font-size="11.5">Fund Allocation</text>
+    </g>
+
+    <!-- Col 3: Decision 2 (Sufficient Fund Balance?) -->
+    <g class="flow-node interactive-node" id="node-dec-balance" data-title="Budget Check: Sufficient Fund Balance?" data-type="Decision" data-role="System / Treasurer" data-table="funds" data-route="/treasurer/funds" data-desc="Validates that target fund current_balance >= amount_approved. Overdrafts are programmatically blocked by database rules.">
+      <polygon points="585,440 650,470 585,500 520,470" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="585" y="466" fill="#ffffff" font-size="11">Sufficient fund</text>
+      <text x="585" y="480" fill="#ffffff" font-size="11">balance?</text>
+    </g>
+
+    <!-- Col 2: Action 5 (Review Deficit & Earmarked Pool) -->
+    <g class="flow-node interactive-node" id="node-review-deficit" data-title="Review Deficit &amp; Earmarked Pool" data-type="Process" data-role="Municipal Treasurer" data-table="funds, requests" data-route="/treasurer/funds" data-desc="Examines pending encumbrances, exhausted category balances, and historical municipal general fund appropriations.">
+      <rect x="275" y="447" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="350" y="466" fill="#ffffff" font-size="11.5">Review Deficit &amp;</text>
+      <text x="350" y="482" fill="#ffffff" font-size="11.5">Earmarked Pool</text>
+    </g>
+
+    <!-- Col 2: Decision 1B (Can Fund Be Adjusted / Added?) -->
+    <g class="flow-node interactive-node" id="node-dec-adjust" data-title="Replenishment: Can Fund Be Adjusted?" data-type="Decision" data-role="Municipal Treasurer" data-table="funds" data-route="/treasurer/funds" data-desc="Evaluates if internal adjustment, inter-fund realignment, or municipal general fund replenishment can restore liquidity.">
+      <polygon points="350,515 415,545 350,575 285,545" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="350" y="541" fill="#ffffff" font-size="10.5">Can fund be</text>
+      <text x="350" y="555" fill="#ffffff" font-size="10.5">adjusted / added?</text>
+    </g>
+
+    <!-- Col 1: Action 7 (Trigger Insufficient Funds Alert) -->
+    <g class="flow-node interactive-node" id="node-alert-deficit" data-title="Trigger Insufficient Funds Alert" data-type="Process" data-role="System / Treasurer" data-table="notifications" data-route="/treasurer/funds" data-desc="System generates automated warning notifications alerting Admin and Local Chief Executive of fund exhaustion.">
+      <rect x="70" y="575" width="140" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="140" y="594" fill="#ffffff" font-size="11.5">Trigger Insufficient</text>
+      <text x="140" y="610" fill="#ffffff" font-size="11.5">Funds Alert</text>
+    </g>
+
+    <!-- Col 1: Action 8 (Submit Budget Request to Mayor) -->
+    <g class="flow-node interactive-node" id="node-req-budget" data-title="Submit Budget Request to Mayor" data-type="Process" data-role="Municipal Treasurer" data-table="fund_transactions" data-route="/treasurer/funds" data-desc="Treasurer transmits formal supplemental appropriation request to the Municipal Mayor and Sangguniang Bayan.">
+      <rect x="70" y="642" width="140" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="140" y="661" fill="#ffffff" font-size="11.5">Submit Budget</text>
+      <text x="140" y="677" fill="#ffffff" font-size="11.5">Request to Mayor</text>
+    </g>
+
+    <!-- Col 1: Action 9 (Hold Request in Queue) -->
+    <g class="flow-node interactive-node" id="node-hold-queue" data-title="Hold Request in Queue" data-type="Process" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Assistance application remains queued in 'Pending Release' state with encumbered reservation until liquidity is cleared.">
+      <rect x="70" y="709" width="140" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="140" y="728" fill="#ffffff" font-size="11.5">Hold Request</text>
+      <text x="140" y="744" fill="#ffffff" font-size="11.5">in Queue</text>
+    </g>
+
+    <!-- Col 1: Decision (Budget Approved by LGU?) -->
+    <g class="flow-node interactive-node" id="node-dec-lgu" data-title="Appropriation: Budget Approved by LGU?" data-type="Decision" data-role="Local Chief Executive" data-table="funds" data-route="/treasurer/funds" data-desc="Legislative &amp; executive review determines whether supplemental emergency allocation is granted for the program.">
+      <polygon points="140,845 205,880 140,915 75,880" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="140" y="876" fill="#ffffff" font-size="10.5">Budget approved</text>
+      <text x="140" y="890" fill="#ffffff" font-size="10.5">by LGU?</text>
+    </g>
+
+    <!-- Col 3: Action 6 (Prepare Disbursement Voucher) -->
+    <g class="flow-node interactive-node" id="node-prep-dv" data-title="Prepare Disbursement Voucher (DV)" data-type="Process" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Treasurer initiates the Disbursement Voucher creation modal and links verified beneficiary and grant details.">
+      <rect x="510" y="575" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="594" fill="#ffffff" font-size="11.5">Prepare Disbursement</text>
+      <text x="585" y="610" fill="#ffffff" font-size="11.5">Voucher (DV)</text>
+    </g>
+
+    <!-- Col 3: Action 6B (Assign DV Number & Payment Mode) -->
+    <g class="flow-node interactive-node" id="node-assign-dv" data-title="Assign DV Number &amp; Payment Mode" data-type="Process" data-role="Municipal Treasurer" data-table="requests, payouts" data-route="/treasurer/requests" data-desc="Inputs standardized DV Number (DV-YYYY-XXXX), assigns payment method (Cash / Check / Bank), and records Disbursing Officer.">
+      <rect x="510" y="642" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="661" fill="#ffffff" font-size="11.5">Assign DV Number</text>
+      <text x="585" y="677" fill="#ffffff" font-size="11.5">&amp; Payment Mode</text>
+    </g>
+
+    <!-- Col 3: Action 6C (Mark Ready for Release) -->
+    <g class="flow-node interactive-node" id="node-ready-release" data-title="Mark Ready for Release" data-type="Process" data-role="Municipal Treasurer" data-table="requests, notifications" data-route="/api/treasury" data-desc="Sets release_status = 'Ready for Release' and dispatches real-time broadcast notification to Admin that funds are prepped.">
+      <rect x="510" y="709" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="728" fill="#ffffff" font-size="11.5">Mark Request</text>
+      <text x="585" y="744" fill="#ffffff" font-size="11.5">"Ready for Release"</text>
+    </g>
+
+    <!-- Col 3: Action 6D (In-Person Recipient ID Check) -->
+    <g class="flow-node interactive-node" id="node-inperson-id" data-title="In-Person Recipient ID Check" data-type="Process" data-role="Municipal Treasurer" data-table="beneficiaries" data-route="/treasurer" data-desc="Beneficiary or authorized representative presents physical government ID card and signs the Treasury assistance payroll sheet.">
+      <rect x="510" y="776" width="150" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="585" y="795" fill="#ffffff" font-size="11.5">In-Person Recipient</text>
+      <text x="585" y="811" fill="#ffffff" font-size="11.5">ID &amp; Signature Check</text>
+    </g>
+
+    <!-- Col 3: Decision 3 (Recipient Verified & Payroll Signed?) -->
+    <g class="flow-node interactive-node" id="node-dec-claim" data-title="Payout Clearance: Recipient Verified?" data-type="Decision" data-role="Municipal Treasurer" data-table="beneficiaries, requests" data-route="/treasurer/requests" data-desc="Final physical verification of recipient identity, signature match, and presence at the Municipal Disbursing counter.">
+      <polygon points="585,845 650,880 585,915 520,880" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="585" y="876" fill="#ffffff" font-size="10.5">Recipient verified &amp;</text>
+      <text x="585" y="890" fill="#ffffff" font-size="10.5">payroll signed?</text>
+    </g>
+
+    <!-- Col 4: Action 11 (Disburse Cash / Issue Check) -->
+    <g class="flow-node interactive-node" id="node-disburse-cash" data-title="Disburse Cash / Issue Check" data-type="Process" data-role="Municipal Treasurer" data-table="payouts" data-route="/treasurer" data-desc="Municipal Treasurer hands over the cash grant or official municipal check to the verified beneficiary with acknowledgment receipt.">
+      <rect x="712" y="575" width="145" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="785" y="594" fill="#ffffff" font-size="11.5">Disburse Cash /</text>
+      <text x="785" y="610" fill="#ffffff" font-size="11.5">Issue Check</text>
+    </g>
+
+    <!-- Col 4: Action 12 (Execute Release in Portal) -->
+    <g class="flow-node interactive-node" id="node-exec-release" data-title="Execute Release in Portal (/api/treasury)" data-type="Process" data-role="Municipal Treasurer" data-table="requests, payouts, funds" data-route="/api/treasury" data-desc="Calls action: confirm_release via /api/treasury. Sets requests.status = 'Released', updates release_status = 'Released'.">
+      <rect x="712" y="642" width="145" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="785" y="661" fill="#ffffff" font-size="11.5">Execute Release in</text>
+      <text x="785" y="677" fill="#ffffff" font-size="11.5">Portal (/api/treasury)</text>
+    </g>
+
+    <!-- Col 4: Action 13 (Sync Double-Entry Ledger) -->
+    <g class="flow-node interactive-node" id="node-sync-ledger" data-title="Sync Double-Entry Ledger &amp; Audit Log" data-type="Process" data-role="System / Treasurer" data-table="funds, fund_transactions, system_logs" data-route="/treasurer/transactions" data-desc="Atomically deducts fund balance, increments total_released, inserts debit row in fund_transactions, and logs audit trail.">
+      <rect x="712" y="709" width="145" height="46" rx="8" fill="#000000" filter="url(#node-shadow)" />
+      <text x="785" y="728" fill="#ffffff" font-size="11.5">Sync Double-Entry</text>
+      <text x="785" y="744" fill="#ffffff" font-size="11.5">Ledger &amp; Audit Log</text>
+    </g>
+
+    <!-- Col 4: Decision 4 (Disbursement Complete & Recorded?) -->
+    <g class="flow-node interactive-node" id="node-dec-complete" data-title="Audit Verification: Complete &amp; Recorded?" data-type="Decision" data-role="Municipal Treasurer" data-table="fund_transactions, payouts" data-route="/treasurer/reports" data-desc="Confirms ledger synchronization, checks remaining balance against low_balance_threshold, and prepares transaction for COA liquidation.">
+      <polygon points="785,845 850,880 785,915 720,880" fill="#1d4ed8" filter="url(#node-shadow)" />
+      <text x="785" y="876" fill="#ffffff" font-size="10.5">Disbursement complete</text>
+      <text x="785" y="890" fill="#ffffff" font-size="10.5">&amp; verified?</text>
+    </g>
+
+    <!-- BOTTOM TERMINAL: Disbursement On Hold (Col 3 - Orange Capsule) -->
+    <g class="flow-node interactive-node" id="node-end-hold" data-title="Terminal: Disbursement On Hold / Deferred" data-type="Terminal" data-role="Municipal Treasurer" data-table="requests" data-route="/treasurer/requests" data-desc="Release is withheld due to beneficiary absence, signature mismatch, documentary deficiency, or budget exhaustion. Request held for review.">
+      <rect x="502" y="995" width="166" height="46" rx="23" fill="#f2720c" filter="url(#node-shadow)" />
+      <text x="585" y="1016" fill="#ffffff" font-size="11" font-weight="900">Disbursement On Hold</text>
+      <text x="585" y="1029" fill="#ffffff" font-size="9.5" font-weight="700">/ Returned to Admin</text>
+    </g>
+
+    <!-- BOTTOM TERMINAL: Assistance Disbursed & Recorded (Col 4 - Orange Capsule) -->
+    <g class="flow-node interactive-node" id="node-end-success" data-title="Terminal: Assistance Disbursed &amp; Recorded" data-type="Terminal" data-role="Municipal Treasurer" data-table="requests, payouts, funds" data-route="/treasurer/reports" data-desc="Disbursement successfully concluded. Fund ledger updated, resident notified, and transaction queued for COA/DSWD liquidation reports.">
+      <rect x="702" y="995" width="166" height="46" rx="23" fill="#f2720c" filter="url(#node-shadow)" />
+      <text x="785" y="1016" fill="#ffffff" font-size="11" font-weight="900">Assistance Disbursed</text>
+      <text x="785" y="1029" fill="#ffffff" font-size="9.5" font-weight="700">&amp; Recorded in Ledger</text>
+    </g>
   </g>
 
-  <!-- STEP 1 (Orange Box) -->
-  <g id="node-step-1" filter="url(#shadow-sm)">
-    <rect x="50" y="390" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
-    <text x="105" y="425" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 1</text>
+  <!-- ── BOTTOM FOOTER BANNER ──────────────────────────────────────────────── -->
+  <rect x="0" y="1130" width="880" height="70" fill="#1b367d" />
+
+  <!-- Plus Icon & Left Brand Text matching Reference Image -->
+  <g transform="translate(45, 1165)">
+    <path d="M 0 0 H 12 M 6 -6 V 6" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+    <text x="22" y="5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="0.5">AICS TREASURY SYSTEM</text>
   </g>
 
-  <!-- DECISION 2 (Green Diamond) -->
-  <g id="node-decision-2" filter="url(#shadow)">
-    <polygon points="390,390 460,445 390,500 320,445" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
-    <text x="390" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="390" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">2</text>
+  <!-- Right Contact / Municipal Credentials matching Reference Image -->
+  <g transform="translate(835, 1165)">
+    <text x="0" y="5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="700" fill="#ffffff" text-anchor="end" letter-spacing="0.2">www.aics-daanbantayan.gov.ph | treasury@daanbantayan.gov.ph</text>
   </g>
-
-  <!-- DECISION 3 (Green Diamond) -->
-  <g id="node-decision-3" filter="url(#shadow)">
-    <polygon points="250,600 320,655 250,710 180,655" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
-    <text x="250" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="250" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">3</text>
-  </g>
-
-  <!-- DECISION 4 (Green Diamond) -->
-  <g id="node-decision-4" filter="url(#shadow)">
-    <polygon points="390,600 460,655 390,710 320,655" fill="#1b7f4b" stroke="#135b34" stroke-width="2" />
-    <text x="390" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="390" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">4</text>
-  </g>
-
-  <!-- STEP 4 (Orange Box) -->
-  <g id="node-step-4" filter="url(#shadow-sm)">
-    <rect x="50" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
-    <text x="105" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 4</text>
-  </g>
-
-  <!-- STEP 3 (Orange Box) -->
-  <g id="node-step-3" filter="url(#shadow-sm)">
-    <rect x="195" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
-    <text x="250" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 3</text>
-  </g>
-
-  <!-- STEP 2 (Orange Box) -->
-  <g id="node-step-2" filter="url(#shadow-sm)">
-    <rect x="335" y="790" width="110" height="60" rx="6" fill="#e67e22" stroke="#b95f13" stroke-width="2" />
-    <text x="390" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step 2</text>
-  </g>
-
-
-  <!-- ==================== RIGHT BRANCH (LIME & PURPLE) ==================== -->
-
-  <!-- DECISION a (Olive Diamond) -->
-  <g id="node-decision-a" filter="url(#shadow)">
-    <polygon points="830,180 900,235 830,290 760,235" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
-    <text x="830" y="231" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="830" y="248" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">a</text>
-  </g>
-
-  <!-- DECISION b (Olive Diamond) -->
-  <g id="node-decision-b" filter="url(#shadow)">
-    <polygon points="680,390 750,445 680,500 610,445" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
-    <text x="680" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="680" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">b</text>
-  </g>
-
-  <!-- STEP a (Purple Box) -->
-  <g id="node-step-a" filter="url(#shadow-sm)">
-    <rect x="625" y="570" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
-    <text x="680" y="605" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step a</text>
-  </g>
-
-  <!-- DECISION d (Olive Diamond) -->
-  <g id="node-decision-d" filter="url(#shadow)">
-    <polygon points="830,600 900,655 830,710 760,655" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
-    <text x="830" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="830" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">d</text>
-  </g>
-
-  <!-- STEP c (Purple Box) -->
-  <g id="node-step-c" filter="url(#shadow-sm)">
-    <rect x="625" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
-    <text x="680" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step c</text>
-  </g>
-
-  <!-- STEP d (Purple Box) -->
-  <g id="node-step-d" filter="url(#shadow-sm)">
-    <rect x="775" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
-    <text x="830" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step d</text>
-  </g>
-
-  <!-- DECISION c (Olive Diamond) -->
-  <g id="node-decision-c" filter="url(#shadow)">
-    <polygon points="980,390 1050,445 980,500 910,445" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
-    <text x="980" y="441" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="980" y="458" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">c</text>
-  </g>
-
-  <!-- STEP b (Purple Box) -->
-  <g id="node-step-b" filter="url(#shadow-sm)">
-    <rect x="925" y="570" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
-    <text x="980" y="605" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step b</text>
-  </g>
-
-  <!-- DECISION e (Olive Diamond) -->
-  <g id="node-decision-e" filter="url(#shadow)">
-    <polygon points="1100,600 1170,655 1100,710 1030,655" fill="#8cb811" stroke="#688c0a" stroke-width="2" />
-    <text x="1100" y="651" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Decision</text>
-    <text x="1100" y="668" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">e</text>
-  </g>
-
-  <!-- STEP e (Purple Box) -->
-  <g id="node-step-e" filter="url(#shadow-sm)">
-    <rect x="925" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
-    <text x="980" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step e</text>
-  </g>
-
-  <!-- STEP f (Purple Box) -->
-  <g id="node-step-f" filter="url(#shadow-sm)">
-    <rect x="1045" y="790" width="110" height="60" rx="6" fill="#7e57c2" stroke="#5a3899" stroke-width="2" />
-    <text x="1100" y="825" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Step f</text>
-  </g>
-
 </svg>
