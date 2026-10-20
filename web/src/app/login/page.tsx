@@ -108,26 +108,26 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fadeInBackdrop" />
 
-      {/* Modal */}
+        {/* Modal */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-2xl max-h-[85vh] flex flex-col bg-gradient-to-br from-slate-900/95 via-blue-950/95 to-slate-900/95 backdrop-blur-2xl border border-white/15 rounded-3xl shadow-2xl shadow-blue-900/30 animate-modalSlideUp overflow-hidden"
+        className="relative w-full max-w-2xl max-h-[85vh] flex flex-col bg-white border border-slate-200 rounded-3xl shadow-2xl animate-modalSlideUp overflow-hidden"
         id="terms-modal"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-white/10 bg-white/5 shrink-0">
+        <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-slate-100 bg-slate-50/80 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
               <Shield size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Terms and Conditions</h2>
-              <p className="text-xs text-white/50">AICS Request Management System — v{TERMS_VERSION}</p>
+              <h2 className="text-lg font-bold text-slate-900">Terms and Conditions</h2>
+              <p className="text-xs text-slate-500">AICS Request Management System — v{TERMS_VERSION}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all duration-200"
+            className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all duration-200"
             aria-label="Close terms modal"
             id="close-terms-modal"
           >
@@ -138,9 +138,9 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-6 custom-scrollbar">
           {/* Preamble */}
-          <div className="mb-6 p-4 bg-cyan-500/10 border border-cyan-400/20 rounded-xl">
-            <p className="text-sm text-cyan-100/90 leading-relaxed">
-              By accessing and using the <strong className="text-cyan-300">AICS Request Management and Beneficiary Information System</strong>, you acknowledge that you have read, understood, and agree to be bound by the following terms and conditions.
+          <div className="mb-6 p-4 bg-cyan-50 border border-cyan-200/60 rounded-xl">
+            <p className="text-sm text-cyan-950 leading-relaxed">
+              By accessing and using the <strong className="text-cyan-800">AICS Request Management and Beneficiary Information System</strong>, you acknowledge that you have read, understood, and agree to be bound by the following terms and conditions.
             </p>
           </div>
 
@@ -149,15 +149,15 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
             {TERMS_SECTIONS.map((section, idx) => (
               <div
                 key={idx}
-                className="group p-5 bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/20 rounded-2xl transition-all duration-300"
+                className="group p-5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl transition-all duration-300"
               >
-                <div className="flex items-start gap-3 mb-3">
+                <div className="flex items-start gap-3 mb-2">
                   <span className="text-xl shrink-0 mt-0.5">{section.icon}</span>
-                  <h3 className="text-base font-bold text-white/90 group-hover:text-white transition-colors">
+                  <h3 className="text-base font-bold text-slate-800 group-hover:text-slate-900 transition-colors">
                     {idx + 1}. {section.title}
                   </h3>
                 </div>
-                <p className="text-sm text-white/65 leading-relaxed pl-9">
+                <p className="text-sm text-slate-600 leading-relaxed pl-9">
                   {section.content}
                 </p>
               </div>
@@ -165,21 +165,21 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
           </div>
 
           {/* Footer Notice */}
-          <div className="mt-6 p-4 bg-amber-500/10 border border-amber-400/20 rounded-xl">
-            <p className="text-xs text-amber-200/80 leading-relaxed">
-              <strong className="text-amber-300">Note:</strong> These terms may be updated from time to time. Continued use of the system after changes constitutes acceptance of the revised terms. You will be prompted to re-accept when terms are updated.
+          <div className="mt-6 p-4 bg-amber-50 border border-amber-200/60 rounded-xl">
+            <p className="text-xs text-amber-900/90 leading-relaxed">
+              <strong className="text-amber-800">Note:</strong> These terms may be updated from time to time. Continued use of the system after changes constitutes acceptance of the revised terms. You will be prompted to re-accept when terms are updated.
             </p>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 sm:px-8 py-4 border-t border-white/10 bg-white/5 shrink-0">
+        <div className="px-6 sm:px-8 py-4 border-t border-slate-100 bg-slate-50/80 shrink-0">
           <button
             onClick={() => {
               if (onAccept) onAccept()
               else onClose()
             }}
-            className="w-full py-3 px-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-95"
+            className="w-full py-3 px-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:scale-[1.01] active:scale-95"
             id="terms-understood-btn"
           >
             <CheckCircle2 size={18} />
@@ -242,6 +242,13 @@ export default function LoginPage() {
           setError(decodeURIComponent(err))
         }
       }
+    }
+
+    // Ensure body background is pure white on login page
+    const originalBg = document.body.style.backgroundColor
+    document.body.style.backgroundColor = '#ffffff'
+    return () => {
+      document.body.style.backgroundColor = originalBg
     }
   }, [])
 
@@ -329,46 +336,36 @@ export default function LoginPage() {
   const isLoginDisabled = loading || !termsAccepted
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row relative overflow-hidden" id="login-page">
-      {/* Animated Background */}
-      <div
-        className="absolute inset-0 -z-10"
-        style={{
-          backgroundImage: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%)',
-        }}
-      >
-        {/* Animated background shapes */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-blob" />
-        <div className="absolute top-1/3 right-0 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl animate-blob animation-delay-2000" />
-        <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl animate-blob animation-delay-4000" />
-      </div>
+    <div className="min-h-screen flex flex-col lg:flex-row relative overflow-hidden bg-white" style={{ backgroundColor: '#ffffff' }} id="login-page">
+      {/* Clean White Background Layer */}
+      <div className="absolute inset-0 -z-10 bg-white" style={{ backgroundColor: '#ffffff' }} />
 
       {/* Left Panel - Branding (Desktop Only) */}
       <div className="hidden lg:flex lg:flex-1 relative items-center justify-center px-8 py-12">
-        <div className="text-center relative z-10">
+        <div className="text-center relative z-10 max-w-lg">
           {/* Logos */}
           <div className="flex items-center justify-center gap-6 mb-12">
             <div className="animate-slideUp opacity-0" style={{ animationDelay: '0.1s' }}>
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 hover:bg-white/20 transition-all duration-300 hover:scale-105">
+              <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105">
                 <Image
                   src="/dswd_logo.png"
                   alt="DSWD Logo"
                   width={80}
                   height={80}
-                  className="object-contain drop-shadow-lg"
+                  className="object-contain"
                   priority
                 />
               </div>
             </div>
-            <div className="w-1 h-24 bg-linear-to-b from-transparent via-white/40 to-transparent" />
+            <div className="w-px h-20 bg-gradient-to-b from-transparent via-slate-300 to-transparent" />
             <div className="animate-slideUp opacity-0" style={{ animationDelay: '0.2s' }}>
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 hover:bg-white/20 transition-all duration-300 hover:scale-105">
+              <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105">
                 <Image
                   src="/aics_logo.png"
                   alt="AICS Logo"
                   width={80}
                   height={80}
-                  className="object-contain drop-shadow-lg"
+                  className="object-contain"
                   priority
                 />
               </div>
@@ -376,24 +373,32 @@ export default function LoginPage() {
           </div>
 
           {/* System Title */}
-          <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4 tracking-tight drop-shadow-lg animate-slideUp opacity-0"
-            style={{ animationDelay: '0.3s' }}>
+          <h1
+            className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4 tracking-tight animate-slideUp opacity-0"
+            style={{ animationDelay: '0.3s' }}
+          >
             AICS Request Management and Beneficiary Information System
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xl text-blue-100 font-semibold drop-shadow-md animate-slideUp opacity-0"
-            style={{ animationDelay: '0.4s' }}>
+          <p
+            className="text-xl text-blue-900 font-semibold animate-slideUp opacity-0"
+            style={{ animationDelay: '0.4s' }}
+          >
             Municipality of Daanbantayan – MSWD
           </p>
 
           {/* Decorative Line */}
-          <div className="w-32 h-1.5 bg-linear-to-r from-transparent via-cyan-400 to-transparent mx-auto mt-8 animate-slideUp opacity-0"
-            style={{ animationDelay: '0.5s' }} />
+          <div
+            className="w-32 h-1.5 bg-gradient-to-r from-transparent via-cyan-500 to-transparent mx-auto mt-8 animate-slideUp opacity-0"
+            style={{ animationDelay: '0.5s' }}
+          />
 
           {/* Tagline */}
-          <p className="text-white/70 text-lg mt-8 max-w-sm mx-auto leading-relaxed animate-slideUp opacity-0"
-            style={{ animationDelay: '0.6s' }}>
+          <p
+            className="text-slate-600 text-lg mt-8 max-w-sm mx-auto leading-relaxed animate-slideUp opacity-0"
+            style={{ animationDelay: '0.6s' }}
+          >
             Managing requests and beneficiary information for the Municipality of Daanbantayan
           </p>
         </div>
@@ -405,26 +410,27 @@ export default function LoginPage() {
           {/* Mobile Header */}
           <div className="lg:hidden text-center mb-8">
             <div className="flex items-center justify-center gap-4 mb-6">
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
-                <Image src="/dswd_logo.png" alt="DSWD" width={50} height={50} className="object-contain drop-shadow-lg" priority />
+              <div className="bg-white rounded-xl p-3 border border-slate-200/80 shadow-sm">
+                <Image src="/dswd_logo.png" alt="DSWD" width={50} height={50} className="object-contain" priority />
               </div>
-              <div className="w-px h-12 bg-white/30" />
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
-                <Image src="/aics_logo.png" alt="AICS" width={50} height={50} className="object-contain drop-shadow-lg" priority />
+              <div className="w-px h-12 bg-slate-300" />
+              <div className="bg-white rounded-xl p-3 border border-slate-200/80 shadow-sm">
+                <Image src="/aics_logo.png" alt="AICS" width={50} height={50} className="object-contain" priority />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-1">AICS System</h1>
-            <p className="text-blue-100">Municipality of Daanbantayan – MSWD</p>
+            <h1 className="text-3xl font-bold text-slate-900 mb-1">AICS System</h1>
+            <p className="text-slate-600 font-medium">Municipality of Daanbantayan – MSWD</p>
           </div>
 
           {/* Login Card */}
-          <div className="backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl p-8 sm:p-10 shadow-2xl hover:shadow-3xl hover:bg-white/12 transition-all duration-300 animate-slideUp opacity-0"
-            style={{ animationDelay: '0.7s' }}>
-
+          <div
+            className="bg-white border border-slate-200/90 rounded-3xl p-8 sm:p-10 shadow-xl shadow-slate-200/60 hover:shadow-2xl hover:shadow-slate-200/80 transition-all duration-300 animate-slideUp opacity-0"
+            style={{ animationDelay: '0.7s' }}
+          >
             {/* Welcome Section */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
-              <p className="text-white/70">Sign in with your credentials to continue</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome Back</h2>
+              <p className="text-slate-500 text-sm">Sign in with your credentials to continue</p>
             </div>
 
             {/* Login Form */}
@@ -432,11 +438,11 @@ export default function LoginPage() {
 
               {/* Email Field */}
               <div>
-                <label htmlFor="login-email" className="block text-white/80 text-sm font-semibold mb-2">
+                <label htmlFor="login-email" className="block text-slate-700 text-sm font-semibold mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none" />
+                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     id="login-email"
                     type="email"
@@ -447,23 +453,23 @@ export default function LoginPage() {
                     required
                     autoComplete="off"
                     placeholder="your.email@example.com"
-                    className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 focus:bg-white/15 transition-all duration-300"
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 focus:bg-white transition-all duration-200 text-sm"
                   />
                   {/* Email Suggestions */}
                   {showSuggestions && savedEmails.length > 0 && (
-                    <ul className="absolute z-[60] w-full mt-2 bg-slate-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                    <ul className="absolute z-[60] w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto py-1">
                       {savedEmails.map((savedEmail, idx) => (
                         <li
                           key={idx}
-                          className="px-4 py-3 text-sm text-white/90 hover:bg-white/10 hover:text-white cursor-pointer transition-colors"
+                          className="px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer transition-colors flex items-center"
                           onMouseDown={(e) => {
                             e.preventDefault()
                             setEmail(savedEmail)
                             setShowSuggestions(false)
                           }}
                         >
-                          <CheckCircle2 size={14} className="inline mr-2 text-cyan-400" />
-                          {savedEmail}
+                          <CheckCircle2 size={14} className="mr-2 text-cyan-500 shrink-0" />
+                          <span>{savedEmail}</span>
                         </li>
                       ))}
                     </ul>
@@ -473,11 +479,11 @@ export default function LoginPage() {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="login-password" className="block text-white/80 text-sm font-semibold mb-2">
+                <label htmlFor="login-password" className="block text-slate-700 text-sm font-semibold mb-2">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none" />
+                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
@@ -486,12 +492,12 @@ export default function LoginPage() {
                     required
                     autoComplete="off"
                     placeholder="Enter your password"
-                    className="w-full pl-12 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 focus:bg-white/15 transition-all duration-300"
+                    className="w-full pl-12 pr-12 py-3 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 focus:bg-white transition-all duration-200 text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors p-1 rounded"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1 rounded"
                     tabIndex={-1}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                     id="toggle-password-visibility"
@@ -508,10 +514,10 @@ export default function LoginPage() {
                     type="checkbox"
                     checked={termsAccepted}
                     onChange={(e) => handleTermsCheckbox(e.target.checked)}
-                    className="w-5 h-5 mt-0.5 rounded border-white/30 bg-white/10 checked:bg-cyan-500 checked:border-cyan-500 cursor-pointer accent-cyan-500 shrink-0"
+                    className="w-5 h-5 mt-0.5 rounded border-slate-300 bg-white checked:bg-cyan-500 checked:border-cyan-500 cursor-pointer accent-cyan-500 shrink-0"
                     id="terms-checkbox"
                   />
-                  <span className="text-white/70 text-xs leading-relaxed group-hover:text-white/90 transition-colors select-none">
+                  <span className="text-slate-600 text-xs leading-relaxed group-hover:text-slate-800 transition-colors select-none">
                     I have read and agree to the{' '}
                     <button
                       type="button"
@@ -520,7 +526,7 @@ export default function LoginPage() {
                         e.stopPropagation()
                         setShowTermsModal(true)
                       }}
-                      className="text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 decoration-cyan-400/40 hover:decoration-cyan-300/60 transition-colors inline-flex items-center gap-1"
+                      className="text-cyan-600 hover:text-cyan-700 font-semibold underline underline-offset-2 decoration-cyan-500/40 hover:decoration-cyan-600 transition-colors inline-flex items-center gap-1"
                       id="view-terms-link"
                     >
                       <ScrollText size={12} className="inline" />
@@ -534,7 +540,7 @@ export default function LoginPage() {
                         e.stopPropagation()
                         setShowTermsModal(true)
                       }}
-                      className="text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 decoration-cyan-400/40 hover:decoration-cyan-300/60 transition-colors"
+                      className="text-cyan-600 hover:text-cyan-700 font-semibold underline underline-offset-2 decoration-cyan-500/40 hover:decoration-cyan-600 transition-colors"
                       id="view-privacy-link"
                     >
                       Privacy Policy
@@ -546,33 +552,33 @@ export default function LoginPage() {
 
               {/* Success Message */}
               {successMessage && (
-                <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-100 text-sm px-4 py-3 rounded-lg backdrop-blur-sm flex items-center gap-2.5">
-                  <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3 rounded-xl flex items-center gap-2.5">
+                  <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
                   <p className="font-medium">{successMessage}</p>
                 </div>
               )}
 
               {/* Error Message */}
               {error && (
-                <div className="bg-red-500/20 border border-red-500/40 text-red-100 text-sm px-4 py-3 rounded-lg backdrop-blur-sm animate-pulse">
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex items-center gap-2">
                   <p className="font-medium">⚠ {error}</p>
                 </div>
               )}
 
               {/* Remember Me & Forgot Password */}
               <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center text-white/70 hover:text-white cursor-pointer transition-colors">
+                <label className="flex items-center text-slate-600 hover:text-slate-800 cursor-pointer transition-colors select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-white/30 bg-white/10 checked:bg-cyan-500 checked:border-cyan-500 cursor-pointer accent-cyan-500"
+                    className="w-4 h-4 rounded border-slate-300 bg-white checked:bg-cyan-500 checked:border-cyan-500 cursor-pointer accent-cyan-500"
                   />
                   <span className="ml-2">Remember me</span>
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-cyan-300 hover:text-cyan-200 font-medium transition-colors"
+                  className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -582,9 +588,9 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoginDisabled}
-                className={`w-full py-3 px-4 text-white font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg transform active:scale-95 ${termsAccepted
-                    ? 'bg-linear-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 hover:shadow-xl hover:scale-105'
-                    : 'bg-gradient-to-r from-slate-600/50 to-slate-700/50 cursor-not-allowed shadow-md'
+                className={`w-full py-3 px-4 text-white font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-md transform active:scale-95 ${termsAccepted
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 hover:shadow-lg hover:shadow-cyan-500/25 hover:scale-[1.02]'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                   } disabled:hover:scale-100`}
                 id="login-submit"
               >
@@ -603,23 +609,23 @@ export default function LoginPage() {
 
               {/* Terms not accepted hint */}
               {!termsAccepted && (
-                <p className="text-center text-xs text-amber-300/70 flex items-center justify-center gap-1.5">
+                <p className="text-center text-xs text-amber-600 flex items-center justify-center gap-1.5 font-medium">
                   <FileText size={12} />
                   Please accept the Terms and Conditions to continue
                 </p>
               )}
             </form>
 
-            <div className="text-center text-sm text-white/60 mt-6">
+            <div className="text-center text-sm text-slate-500 mt-6">
               Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-cyan-300 hover:text-cyan-200 font-semibold transition-colors">
+              <Link href="/register" className="text-cyan-600 hover:text-cyan-700 font-semibold transition-colors">
                 Sign up here
               </Link>
             </div>
           </div>
 
           {/* Security Notice */}
-          <p className="text-center text-white/40 text-xs mt-6 px-4">
+          <p className="text-center text-slate-500 text-xs mt-6 px-4">
             🔒 This is a secure government system. Authorized access only. All activities are logged and monitored.
           </p>
         </div>
@@ -651,13 +657,6 @@ export default function LoginPage() {
           }
         }
 
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(20px, -50px) scale(1.1); }
-          50% { transform: translate(-20px, 20px) scale(0.9); }
-          75% { transform: translate(50px, 50px) scale(1.05); }
-        }
-
         @keyframes fadeInBackdrop {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -678,10 +677,6 @@ export default function LoginPage() {
           animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-
         .animate-fadeInBackdrop {
           animation: fadeInBackdrop 0.25s ease-out forwards;
         }
@@ -690,27 +685,19 @@ export default function LoginPage() {
           animation: modalSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(0, 0, 0, 0.04);
           border-radius: 3px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(0, 0, 0, 0.15);
           border-radius: 3px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.25);
+          background: rgba(0, 0, 0, 0.25);
         }
       `}</style>
     </div>

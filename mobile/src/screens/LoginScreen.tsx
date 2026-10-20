@@ -144,14 +144,7 @@ export default function LoginScreen({ navigation }: any) {
   const s = styles(colors)
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/bg_community_service.png')} 
-      style={{ flex: 1 }}
-    >
-      <View style={[StyleSheet.absoluteFill, { 
-        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(30, 58, 138, 0.88)' 
-      }]} />
-      
+    <View style={s.mainWrapper}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
@@ -202,7 +195,7 @@ export default function LoginScreen({ navigation }: any) {
                   <Feather 
                     name="mail" 
                     size={18} 
-                    color="#22d3ee"
+                    color="#64748b"
                     style={s.fieldIcon}
                   />
                   <TextInput 
@@ -212,7 +205,7 @@ export default function LoginScreen({ navigation }: any) {
                     autoCapitalize="none"
                     keyboardType="email-address" 
                     placeholder={t('login_emailPlaceholder')} 
-                    placeholderTextColor="rgba(255, 255, 255, 0.5)" 
+                    placeholderTextColor="#94a3b8" 
                     editable={!loading}
                   />
                 </View>
@@ -225,7 +218,7 @@ export default function LoginScreen({ navigation }: any) {
                   <Feather 
                     name="lock" 
                     size={18} 
-                    color="#22d3ee"
+                    color="#64748b"
                     style={s.fieldIcon}
                   />
                   <TextInput 
@@ -234,7 +227,7 @@ export default function LoginScreen({ navigation }: any) {
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
                     placeholder={t('login_passwordPlaceholder')} 
-                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    placeholderTextColor="#94a3b8"
                     editable={!loading}
                   />
                   <TouchableOpacity
@@ -246,7 +239,7 @@ export default function LoginScreen({ navigation }: any) {
                     <Feather
                       name={showPassword ? 'eye-off' : 'eye'}
                       size={18}
-                      color="#22d3ee"
+                      color="#64748b"
                     />
                   </TouchableOpacity>
                 </View>
@@ -292,7 +285,7 @@ export default function LoginScreen({ navigation }: any) {
 
                 {!termsAccepted && (
                   <View style={s.termsHint}>
-                    <Feather name="file-text" size={11} color="rgba(251, 191, 36, 0.7)" />
+                    <Feather name="file-text" size={11} color="#d97706" />
                     <Text style={s.termsHintText}>
                       Please accept the Terms and Conditions to continue
                     </Text>
@@ -303,7 +296,7 @@ export default function LoginScreen({ navigation }: any) {
               {/* Error Message */}
               {error && (
                 <View style={s.errorBox}>
-                  <Feather name="alert-circle" size={16} color="#fecaca" />
+                  <Feather name="alert-circle" size={16} color="#ef4444" />
                   <Text style={s.errorText}>{error}</Text>
                 </View>
               )}
@@ -319,22 +312,22 @@ export default function LoginScreen({ navigation }: any) {
                 activeOpacity={0.8}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={termsAccepted ? '#fff' : '#94a3b8'} size="small" />
                 ) : (
                   <View style={s.btnContent}>
-                    <Text style={s.btnText}>{t('login_signIn')}</Text>
-                    <Feather name="arrow-right" size={18} color="#fff" />
+                    <Text style={[s.btnText, (!termsAccepted || loading) && s.btnTextDisabled]}>{t('login_signIn')}</Text>
+                    <Feather name="arrow-right" size={18} color={termsAccepted ? '#fff' : '#94a3b8'} />
                   </View>
                 )}
               </TouchableOpacity>
 
               {/* Forgot Password */}
               <TouchableOpacity
-                style={{ alignItems: 'flex-end', marginTop: 8 }}
+                style={{ alignItems: 'flex-end', marginTop: 10 }}
                 onPress={() => navigation.navigate('ForgotPassword')}
                 disabled={loading}
               >
-                <Text style={{ color: '#22d3ee', fontSize: 13, fontWeight: '600' }}>
+                <Text style={{ color: '#0891b2', fontSize: 13, fontWeight: '600' }}>
                   Forgot password?
                 </Text>
               </TouchableOpacity>
@@ -362,7 +355,7 @@ export default function LoginScreen({ navigation }: any) {
                     activeOpacity={0.8}
                   >
                     <Text style={s.roleEmoji}>{emoji}</Text>
-                    <Text style={s.roleLabel}>{label}</Text>
+                    <Text style={[s.roleLabel, selectedRole === role && s.roleLabelActive]}>{label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -411,7 +404,7 @@ export default function LoginScreen({ navigation }: any) {
               style={s.modalCloseBtn}
               activeOpacity={0.7}
             >
-              <Feather name="x" size={20} color="rgba(255,255,255,0.7)" />
+              <Feather name="x" size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
 
@@ -467,11 +460,15 @@ export default function LoginScreen({ navigation }: any) {
           </View>
         </View>
       </Modal>
-    </ImageBackground>
+    </View>
   )
 }
 
 const styles = (colors: any) => StyleSheet.create({
+  mainWrapper: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
   container: { 
     flex: 1, 
     padding: 20, 
@@ -484,18 +481,24 @@ const styles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-    marginBottom: 24,
+    marginBottom: 20,
+    marginTop: Platform.OS === 'ios' ? 20 : 10,
   },
   logoBox: {
     width: 68,
     height: 68,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   logoImage: {
     width: '100%',
@@ -505,60 +508,65 @@ const styles = (colors: any) => StyleSheet.create({
   logoDivider: {
     width: 1.5,
     height: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#cbd5e1',
   },
   
   header: { 
-    marginBottom: 32,
+    marginBottom: 24,
     alignItems: 'center'
   },
   title: { 
-    fontSize: 32, 
+    fontSize: 28, 
     fontWeight: '900', 
-    color: '#fff', 
-    marginBottom: 8, 
+    color: '#0f172a', 
+    marginBottom: 6, 
     letterSpacing: -0.5,
     textAlign: 'center'
   },
   subtitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#1e3a8a',
     textAlign: 'center'
   },
   decorativeLine: {
     width: 40,
-    height: 2,
-    backgroundColor: 'rgba(34, 211, 238, 0.6)',
+    height: 2.5,
+    backgroundColor: '#06b6d4',
     marginVertical: 12,
-    borderRadius: 1
+    borderRadius: 2
   },
   tagline: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#64748b',
     textAlign: 'center',
-    marginTop: 8,
-    fontWeight: '500'
+    fontWeight: '500',
+    maxWidth: 280
   },
 
   formCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
+    borderColor: '#e2e8f0',
+    borderRadius: 24,
     padding: 24,
     marginBottom: 20,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 3,
   },
 
   welcomeTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 4
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#64748b',
     marginBottom: 20
   },
 
@@ -569,16 +577,16 @@ const styles = (colors: any) => StyleSheet.create({
   label: { 
     fontSize: 13, 
     fontWeight: '700', 
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#334155',
     letterSpacing: 0.3
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(34, 211, 238, 0.4)',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     borderRadius: 12,
-    backgroundColor: 'rgba(30, 58, 138, 0.6)',
+    backgroundColor: '#f8fafc',
     overflow: 'hidden',
     paddingHorizontal: 12
   },
@@ -586,29 +594,29 @@ const styles = (colors: any) => StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    fontSize: 16, 
-    color: '#fff',
+    fontSize: 15, 
+    color: '#0f172a',
   },
   fieldIcon: {
     marginRight: 4,
-    color: '#22d3ee'
+    color: '#64748b'
   },
   passwordWrapper: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    borderWidth: 1.5,
-    borderColor: 'rgba(34, 211, 238, 0.4)',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     borderRadius: 12,
-    backgroundColor: 'rgba(30, 58, 138, 0.6)',
+    backgroundColor: '#f8fafc',
     overflow: 'hidden',
     paddingHorizontal: 12
   },
   passwordInput: { 
     flex: 1, 
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    fontSize: 16, 
-    color: '#fff'
+    paddingVertical: 12, 
+    paddingHorizontal: 8, 
+    fontSize: 15, 
+    color: '#0f172a'
   },
   eyeBtn: { 
     padding: 8,
@@ -630,25 +638,25 @@ const styles = (colors: any) => StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 6,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1.5,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
   },
   checkboxChecked: {
-    backgroundColor: '#06b6d4',
-    borderColor: '#06b6d4',
+    backgroundColor: '#0891b2',
+    borderColor: '#0891b2',
   },
   termsText: {
     flex: 1,
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#475569',
     lineHeight: 18,
   },
   termsLink: {
-    color: '#22d3ee',
+    color: '#0891b2',
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
@@ -661,15 +669,15 @@ const styles = (colors: any) => StyleSheet.create({
   },
   termsHintText: {
     fontSize: 11,
-    color: 'rgba(251, 191, 36, 0.7)',
-    fontWeight: '500',
+    color: '#d97706',
+    fontWeight: '600',
   },
 
   errorBox: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: '#fef2f2',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: '#fecaca',
     borderRadius: 10,
     padding: 12,
     alignItems: 'center',
@@ -677,26 +685,27 @@ const styles = (colors: any) => StyleSheet.create({
     marginBottom: 16
   },
   errorText: {
-    color: '#fecaca',
+    color: '#b91c1c',
     fontSize: 13,
     fontWeight: '500',
     flex: 1
   },
 
   btn: { 
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#0891b2',
     borderRadius: 12, 
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#06b6d4',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#0891b2',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
     minHeight: 48
   },
   btnDisabled: {
-    backgroundColor: 'rgba(100, 116, 139, 0.4)',
+    backgroundColor: '#e2e8f0',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -712,6 +721,9 @@ const styles = (colors: any) => StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5
   },
+  btnTextDisabled: {
+    color: '#94a3b8',
+  },
 
   dividerContainer: {
     flexDirection: 'row',
@@ -722,12 +734,12 @@ const styles = (colors: any) => StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)'
+    backgroundColor: '#e2e8f0'
   },
   dividerText: {
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: '#94a3b8',
     letterSpacing: 0.8
   },
 
@@ -739,18 +751,18 @@ const styles = (colors: any) => StyleSheet.create({
   },
   roleBtn: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 8,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#f8fafc',
     gap: 4
   },
   roleBtnActive: {
-    backgroundColor: 'rgba(34, 211, 238, 0.2)',
-    borderColor: 'rgba(34, 211, 238, 0.6)',
+    backgroundColor: '#ecfeff',
+    borderColor: '#0891b2',
   },
   roleEmoji: {
     fontSize: 20
@@ -758,8 +770,11 @@ const styles = (colors: any) => StyleSheet.create({
   roleLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#475569',
     letterSpacing: 0.2
+  },
+  roleLabelActive: {
+    color: '#0e7490',
   },
 
   signupContainer: {
@@ -770,18 +785,18 @@ const styles = (colors: any) => StyleSheet.create({
     gap: 2
   },
   signupText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#64748b',
     fontSize: 13
   },
   signupLink: {
-    color: '#22d3ee',
+    color: '#0891b2',
     fontSize: 13,
     fontWeight: '700'
   },
 
   securityNotice: {
     textAlign: 'center',
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: '#64748b',
     fontSize: 11,
     marginBottom: 16,
     paddingHorizontal: 12
@@ -790,7 +805,7 @@ const styles = (colors: any) => StyleSheet.create({
   // ── Modal Styles ───────────────────────────────────
   modalContainer: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#ffffff',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -799,8 +814,8 @@ const styles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: '#f1f5f9',
+    backgroundColor: '#f8fafc',
   },
   modalHeaderLeft: {
     flexDirection: 'row',
@@ -811,29 +826,29 @@ const styles = (colors: any) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#0891b2',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#06b6d4',
-    shadowOpacity: 0.3,
+    shadowColor: '#0891b2',
+    shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   modalTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#fff',
+    color: '#0f172a',
   },
   modalVersion: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#64748b',
     marginTop: 1,
   },
   modalCloseBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -845,26 +860,26 @@ const styles = (colors: any) => StyleSheet.create({
     paddingBottom: 32,
   },
   preambleBox: {
-    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+    backgroundColor: '#ecfeff',
     borderWidth: 1,
-    borderColor: 'rgba(6, 182, 212, 0.2)',
+    borderColor: '#cffafe',
     borderRadius: 14,
     padding: 16,
     marginBottom: 20,
   },
   preambleText: {
     fontSize: 13,
-    color: 'rgba(165, 243, 252, 0.9)',
+    color: '#155e75',
     lineHeight: 20,
   },
   preambleBold: {
     fontWeight: '700',
-    color: '#22d3ee',
+    color: '#0e7490',
   },
   sectionCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#f1f5f9',
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
@@ -881,51 +896,51 @@ const styles = (colors: any) => StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#0f172a',
     flex: 1,
   },
   sectionContent: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#475569',
     lineHeight: 20,
     paddingLeft: 30,
   },
   noticeBox: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: '#fffbeb',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
+    borderColor: '#fef3c7',
     borderRadius: 14,
     padding: 16,
     marginTop: 8,
   },
   noticeText: {
     fontSize: 12,
-    color: 'rgba(253, 230, 138, 0.8)',
+    color: '#92400e',
     lineHeight: 18,
   },
   noticeBold: {
     fontWeight: '700',
-    color: 'rgba(253, 224, 71, 0.9)',
+    color: '#78350f',
   },
   modalFooter: {
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: '#f1f5f9',
+    backgroundColor: '#f8fafc',
   },
   understoodBtn: {
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#0891b2',
     borderRadius: 12,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#06b6d4',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#0891b2',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   understoodBtnText: {
     color: '#fff',
