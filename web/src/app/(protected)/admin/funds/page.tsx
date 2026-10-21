@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Wallet, TrendingUp, AlertCircle, History, ArrowUpRight, ArrowDownRight, PlusCircle, AlertTriangle } from 'lucide-react'
+import { Wallet, TrendingUp, AlertCircle, History, ArrowUpRight, ArrowDownRight, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import AllocationModal from './AllocationModal'
 

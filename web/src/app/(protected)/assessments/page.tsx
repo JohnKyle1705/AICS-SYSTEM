@@ -6,16 +6,21 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import { ClipboardList } from 'lucide-react'
 
+type AssessmentRecord = {
+  id: string; request_id: string; interview_date: string; recommendation: string; home_visit: boolean;
+  requests?: { assistance_type?: string; status?: string; beneficiaries?: { first_name?: string; last_name?: string } }
+}
+
 export default function AssessmentsPage() {
-  const [assessments, setAssessments] = useState<any[]>([])
+  const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
+    const supabase = createClient()
     supabase.from('assessments')
       .select('*, requests(assistance_type, status, beneficiaries(first_name, last_name))')
       .order('created_at', { ascending: false })
-      .then(({ data }: { data: any[] | null }) => { setAssessments(data ?? []); setLoading(false) })
+      .then(({ data }: { data: AssessmentRecord[] | null }) => { setAssessments((data ?? []) as AssessmentRecord[]); setLoading(false) })
   }, [])
 
   return (

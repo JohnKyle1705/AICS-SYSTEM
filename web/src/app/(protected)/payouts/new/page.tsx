@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState, useMemo, Suspense } from 'react'
+import { useEffect, useState, useMemo, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink } from 'lucide-react'
+import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 
 const schema = z.object({
   request_id: z.string().min(1, 'Please select a request'),
@@ -19,12 +19,21 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 function PayoutForm() {
+  // 'use no memo' — React Hook Form's watch() is incompatible with React Compiler memoization
   const router = useRouter()
   const searchParams = useSearchParams()
   const preselectedId = searchParams.get('request_id')
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
-  const [requests, setRequests] = useState<any[]>([])
+  type RequestRecord = {
+    id: string; assistance_type: string; encoded_by?: string;
+    amount_approved?: number; amount_requested?: number;
+    approved_by?: string;
+    purpose?: string; status: string; created_at: string;
+    beneficiaries?: { first_name?: string; last_name?: string; barangay?: string }
+  }
+
+  const [requests, setRequests] = useState<RequestRecord[]>([])
   const [loadingRequests, setLoadingRequests] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -50,6 +59,7 @@ function PayoutForm() {
   useEffect(() => {
     const fetchRequests = async () => {
       setLoadingRequests(true)
+      const supabase = supabaseRef.current
       const { data, error: qErr } = await supabase
         .from('requests')
         .select('id, assistance_type, encoded_by, amount_approved, amount_requested, purpose, status, created_at, beneficiaries(first_name, last_name, barangay)')
@@ -59,11 +69,11 @@ function PayoutForm() {
       if (qErr) {
         console.error('Error fetching requests for payout:', qErr)
       } else if (data) {
-        setRequests(data)
+        setRequests(data as RequestRecord[])
 
         // If preselectedId is in URL, auto-fill form
         if (preselectedId) {
-          const matched = data.find((r: any) => r.id === preselectedId)
+          const matched = data.find((r: RequestRecord) => r.id === preselectedId)
           if (matched) {
             setValue('request_id', matched.id, { shouldValidate: true })
             if (matched.amount_approved) {
@@ -100,7 +110,7 @@ function PayoutForm() {
   const onSubmit = async (data: FormData) => {
     setSaving(true)
     setError('')
-
+    const supabase = supabaseRef.current
     const { data: { user } } = await supabase.auth.getUser()
     const amountNum = parseFloat(data.amount_released)
 
@@ -127,7 +137,7 @@ function PayoutForm() {
 
     // 2. Update request status to Released (and auto-approve if was Pending)
     const req = requests.find((r) => r.id === data.request_id)
-    const updatePayload: any = {
+    const updatePayload: Record<string, unknown> = {
       status: 'Released',
       release_status: 'Released',
     }

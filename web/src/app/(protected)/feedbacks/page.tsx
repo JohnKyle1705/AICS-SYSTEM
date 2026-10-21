@@ -1,22 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { MessageSquare, Heart, Star, Search, Clock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { MessageSquare, Heart, Star, Clock, RefreshCw } from 'lucide-react'
 import { format } from 'date-fns'
 
 type TabType = 'feedbacks' | 'tickets'
 
+type FeedbackRecord = { id: string; profiles?: { full_name?: string; role?: string }; rating: number; comments?: string; created_at: string }
+type TicketRecord   = { id: string; profiles?: { full_name?: string; role?: string }; status: string; concern_type: string; message: string; created_at: string }
+
 export default function FeedbacksPage() {
   const [activeTab, setActiveTab] = useState<TabType>('feedbacks')
-  const [feedbacks, setFeedbacks] = useState<any[]>([])
-  const [tickets, setTickets] = useState<any[]>([])
+  const [feedbacks, setFeedbacks] = useState<FeedbackRecord[]>([])
+  const [tickets, setTickets] = useState<TicketRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setRefreshing(true)
+    const supabase = supabaseRef.current
     
     // Load Feedbacks
     const { data: fData } = await supabase
@@ -24,7 +28,7 @@ export default function FeedbacksPage() {
       .select('*, profiles(full_name, role)')
       .order('created_at', { ascending: false })
     
-    if (fData) setFeedbacks(fData)
+    if (fData) setFeedbacks(fData as FeedbackRecord[])
 
     // Load Tickets
     const { data: tData } = await supabase
@@ -32,20 +36,20 @@ export default function FeedbacksPage() {
       .select('*, profiles(full_name, role)')
       .order('created_at', { ascending: false })
     
-    if (tData) setTickets(tData)
+    if (tData) setTickets(tData as TicketRecord[])
 
     setLoading(false)
     setRefreshing(false)
-  }
+  }, [])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   const updateTicketStatus = async (id: string, newStatus: string) => {
-    const { error } = await supabase.from('support_tickets').update({ status: newStatus }).eq('id', id)
+    const { error } = await supabaseRef.current.from('support_tickets').update({ status: newStatus }).eq('id', id)
     if (!error) {
-      setTickets(tickets.map(t => t.id === id ? { ...t, status: newStatus } : t))
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t))
     }
   }
 

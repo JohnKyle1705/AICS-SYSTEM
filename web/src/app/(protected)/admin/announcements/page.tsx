@@ -3,11 +3,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
-import { Megaphone, Plus, Trash2, Edit, Calendar, Info, Loader2, X, Image as ImageIcon, Upload } from 'lucide-react'
+import { Megaphone, Plus, Trash2, Edit, Calendar, Loader2, X, Image as ImageIcon, Upload } from 'lucide-react'
+import NextImage from 'next/image'
 import { format } from 'date-fns'
 
 export default function AdminAnnouncements() {
-  const [announcements, setAnnouncements] = useState<any[]>([])
+  type Announcement = { id: string; title: string; content: string; image_url?: string; is_published: boolean; created_at: string }
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -59,8 +61,8 @@ export default function AdminAnnouncements() {
         .getPublicUrl(filePath)
         
       setForm({ ...form, image_url: publicUrl })
-    } catch (error: any) {
-      alert('Error uploading image: ' + error.message)
+    } catch (error: unknown) {
+      alert('Error uploading image: ' + (error instanceof Error ? error.message : String(error)))
     } finally {
       setUploadingImage(false)
     }
@@ -114,7 +116,7 @@ export default function AdminAnnouncements() {
     else load()
   }
 
-  const openEdit = (ann: any) => {
+  const openEdit = (ann: Announcement) => {
     setEditingId(ann.id)
     setForm({
       title: ann.title,
@@ -232,13 +234,11 @@ export default function AdminAnnouncements() {
               {/* Image Preview */}
               {form.image_url && (
                 <div className="mt-2 relative rounded-xl overflow-hidden border border-[var(--color-border)] max-h-36 bg-slate-900/40">
-                  <img 
-                    src={form.image_url} 
-                    alt="Preview" 
-                    className="w-full h-36 object-cover" 
-                    onError={(e) => {
-                      (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
-                    }}
+                  <NextImage
+                    src={form.image_url}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
                   />
                   <button
                     type="button"
@@ -335,13 +335,11 @@ export default function AdminAnnouncements() {
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 w-full sm:w-auto flex-1 min-w-0">
                   {ann.image_url && (
                     <div className="w-full sm:w-24 h-40 sm:h-24 rounded-xl overflow-hidden shrink-0 border border-[var(--color-border)] shadow-sm">
-                      <img 
-                        src={ann.image_url} 
-                        alt="" 
-                        className="w-full h-full object-cover" 
-                        onError={(e) => {
-                          (e.currentTarget.parentElement as HTMLElement).style.display = 'none'
-                        }}
+                      <NextImage
+                        src={ann.image_url ?? ''}
+                        alt={ann.title}
+                        fill
+                        className="object-cover"
                       />
                     </div>
                   )}

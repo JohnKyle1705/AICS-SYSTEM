@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { HeartPulse, GraduationCap, HeartHandshake, ShieldCheck, Phone, Info, Utensils } from 'lucide-react'
+import { HeartPulse, HeartHandshake, ShieldCheck, Phone, Info } from 'lucide-react'
 
 export default function AboutPage() {
   return (

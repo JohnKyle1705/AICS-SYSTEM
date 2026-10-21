@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import {
@@ -39,7 +39,7 @@ const ACTION_OPTIONS = [
 
 const ROLE_OPTIONS = ['ALL', 'admin', 'treasurer', 'resident']
 
-const ACTION_META: Record<string, { color: string; icon: any; label: string }> = {
+const ACTION_META: Record<string, { color: string; icon: React.ComponentType<{ size?: number; className?: string }>; label: string }> = {
   LOGIN:                    { color: 'text-emerald-500', icon: LogIn,        label: 'Login'              },
   LOGOUT:                   { color: 'text-slate-400',   icon: LogOut,       label: 'Logout'             },
   CREATE_REQUEST:           { color: 'text-blue-500',    icon: Plus,         label: 'New Request'        },
@@ -500,6 +500,7 @@ export default function LogsPage() {
   const [error, setError]       = useState('')
   const [selected, setSelected] = useState<AuditLog | null>(null)
   const [page, setPage]         = useState(0)
+  const supabaseRef = useRef(createClient())
 
   // Filters
   const [search, setSearch]     = useState('')
@@ -510,17 +511,19 @@ export default function LogsPage() {
 
   // Admin guard
   useEffect(() => {
-    supabase.auth.getUser().then(async (res: any) => {
+    const supabase = supabaseRef.current
+    supabase.auth.getUser().then(async (res: { data: { user: { id: string } | null } }) => {
       const user = res.data?.user
       if (!user) { router.replace('/login'); return }
       const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
       if (p?.role !== 'admin') router.replace('/dashboard')
     })
-  }, [])
+  }, [router])
 
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
+    const supabase = supabaseRef.current
     try {
       let q = supabase
         .from('system_logs')
@@ -555,8 +558,8 @@ export default function LogsPage() {
 
       setLogs(rows)
       setTotal(count ?? 0)
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to load audit logs.')
+    } catch (e: unknown) {
+      setError((e instanceof Error ? e.message : String(e)) || 'Failed to load audit logs.')
     } finally {
       setLoading(false)
     }

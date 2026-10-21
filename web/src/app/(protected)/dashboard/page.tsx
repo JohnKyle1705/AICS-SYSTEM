@@ -7,10 +7,10 @@ import { Loader2 } from 'lucide-react'
 
 export default function DashboardRouter() {
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
     const routeUser = async () => {
+      const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
         router.push('/login')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js'
@@ -15,7 +15,7 @@ const TYPE_STYLES: Record<string, string> = {
   info: 'bg-transparent border-slate-200 dark:border-slate-700',
 }
 
-const TYPE_ICONS: Record<string, any> = {
+const TYPE_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   pending: Clock,
   incomplete: AlertTriangle,
   followup: MessageSquare,
@@ -26,9 +26,10 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    const supabase = supabaseRef.current
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { data } = await supabase.from('notifications')
@@ -36,12 +37,13 @@ export default function NotificationsPage() {
       .order('created_at', { ascending: false })
     setNotifications(data ?? [])
     setLoading(false)
-  }
+  }, [])
 
   useEffect(() => { 
-    load() 
+    load()
 
     const setupRealtime = async () => {
+      const supabase = supabaseRef.current
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -59,12 +61,13 @@ export default function NotificationsPage() {
       return () => { supabase.removeChannel(channel) }
     }
 
-    let cleanup: any
-    setupRealtime().then(fn => cleanup = fn)
+    let cleanup: (() => void) | undefined
+    setupRealtime().then(fn => { cleanup = fn })
     return () => { if (cleanup) cleanup() }
-  }, [])
+  }, [load])
 
   const markRead = async (id: string) => {
+    const supabase = supabaseRef.current
     await supabase.from('notifications').update({ is_read: true }).eq('id', id)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
   }
@@ -73,7 +76,7 @@ export default function NotificationsPage() {
     if (!n.is_read) {
       await markRead(n.id)
     }
-
+    const supabase = supabaseRef.current
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       await supabase.from('system_logs').insert({
@@ -91,6 +94,7 @@ export default function NotificationsPage() {
   }
 
   const markAllRead = async () => {
+    const supabase = supabaseRef.current
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id)

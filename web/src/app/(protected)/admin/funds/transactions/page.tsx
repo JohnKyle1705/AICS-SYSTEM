@@ -28,7 +28,7 @@ export default async function FundTransactionsPage({
     query = query.eq('transaction_type', params.type)
   }
 
-  const { data: transactions, error } = await query
+  const { data: transactions } = await query
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount)

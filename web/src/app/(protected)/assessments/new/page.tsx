@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -21,10 +21,10 @@ function AssessmentForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const requestId = searchParams.get('request_id')
-  const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [requestInfo, setRequestInfo] = useState<any>(null)
+  const [requestInfo, setRequestInfo] = useState<{ assistance_type?: string; encoded_by?: string; beneficiaries?: { first_name?: string; last_name?: string } } | null>(null)
+  const supabaseRef = useRef(createClient())
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
@@ -33,13 +33,15 @@ function AssessmentForm() {
 
   useEffect(() => {
     if (!requestId) return
+    const supabase = supabaseRef.current
     supabase.from('requests').select('assistance_type, encoded_by, beneficiaries(first_name, last_name)')
-      .eq('id', requestId).single().then(({ data }: { data: any }) => setRequestInfo(data))
+      .eq('id', requestId).single().then(({ data }: { data: typeof requestInfo }) => setRequestInfo(data))
   }, [requestId])
 
   const onSubmit = async (data: FormData) => {
     if (!requestId) return
     setSaving(true)
+    const supabase = supabaseRef.current
     const { data: { user } } = await supabase.auth.getUser()
     const { error: err, data: newAssess } = await supabase.from('assessments').insert({
       ...data, request_id: requestId, assessed_by: user?.id,

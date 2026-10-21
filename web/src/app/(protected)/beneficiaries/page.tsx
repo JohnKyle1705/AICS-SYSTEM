@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Beneficiary } from '@/types'
@@ -16,10 +16,11 @@ export default function BeneficiariesPage() {
   const [barangay, setBarangay] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   const load = useCallback(async () => {
     setLoading(true)
+    const supabase = supabaseRef.current
     let query = supabase.from('beneficiaries').select('*').order('last_name')
     if (search) query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`)
     if (barangay) query = query.eq('barangay', barangay)
@@ -33,7 +34,7 @@ export default function BeneficiariesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm(t('ben_deleteMsg'))) return
 
-    await supabase.from('beneficiaries').delete().eq('id', id)
+    await supabaseRef.current.from('beneficiaries').delete().eq('id', id)
     load()
   }
 

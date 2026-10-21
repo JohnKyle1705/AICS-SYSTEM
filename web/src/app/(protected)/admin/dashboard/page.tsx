@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ASSISTANCE_COLORS } from '@/lib/constants'
 import {
@@ -13,18 +13,29 @@ import Link from 'next/link'
 import { useLanguage } from '@/lib/LanguageContext'
 
 
+type StatsType = {
+  totalBeneficiaries: number; totalRequests: number; pendingRequests: number;
+  releasedRequests: number; approvedRequests: number; declinedRequests: number;
+  byType: { name: string; value: number }[];
+  monthly: { month: string; count: number }[];
+}
+type PendingUser = { id: string; full_name?: string; role: string; created_at: string; is_active: boolean }
+type DuplicateSuspect = { beneficiary_id: string; name: string; count: number; reason: string }
+type ReleaseNotif = { id: string; title?: string; message: string; created_at: string; request_id?: string }
+
 export default function AdminDashboard() {
   const { t } = useLanguage()
-  const [stats, setStats] = useState<any>(null)
-  const [pendingUsers, setPendingUsers] = useState<any[]>([])
-  const [duplicateSuspects, setDuplicateSuspects] = useState<any[]>([])
-  const [releaseNotifications, setReleaseNotifications] = useState<any[]>([])
+  const [stats, setStats] = useState<StatsType | null>(null)
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([])
+  const [duplicateSuspects, setDuplicateSuspects] = useState<DuplicateSuspect[]>([])
+  const [releaseNotifications, setReleaseNotifications] = useState<ReleaseNotif[]>([])
   const [activatingId, setActivatingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   // Role Guard: Ensure only Administrator accounts can view this dashboard
   useEffect(() => {
+    const supabase = supabaseRef.current
     const verifyRole = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -43,12 +54,14 @@ export default function AdminDashboard() {
   }, [])
 
 
-  const loadPendingUsers = async () => {
+  const loadPendingUsers = useCallback(async () => {
+    const supabase = supabaseRef.current
     const { data } = await supabase.from('profiles').select('*').eq('is_active', false).order('created_at', { ascending: false })
-    setPendingUsers(data ?? [])
-  }
+    setPendingUsers((data ?? []) as PendingUser[])
+  }, [])
 
   const activateUser = async (userId: string) => {
+    const supabase = supabaseRef.current
     setActivatingId(userId)
     await supabase.from('profiles').update({ is_active: true }).eq('id', userId)
 
@@ -79,6 +92,7 @@ export default function AdminDashboard() {
   }
 
   const load = useCallback(async () => {
+    const supabase = supabaseRef.current
     const [
       { count: totalBeneficiaries },
       { count: totalRequests },
@@ -112,20 +126,21 @@ export default function AdminDashboard() {
       .select('id, beneficiary_id, beneficiaries(first_name, last_name)')
       .order('created_at', { ascending: false })
       .limit(300)
-    const suspects: any[] = []
+    const suspects: DuplicateSuspect[] = []
     if (allReqs) {
-      const bIdGroups = allReqs.reduce((acc: any, r: any) => {
+      const bIdGroups = allReqs.reduce((acc: Record<string, typeof allReqs>, r: typeof allReqs[0]) => {
         acc[r.beneficiary_id] = acc[r.beneficiary_id] || []
         acc[r.beneficiary_id].push(r)
         return acc
       }, {})
       
-      Object.entries(bIdGroups).forEach(([bId, reqs]: [string, any]) => {
-        if (reqs.length > 1) {
+      Object.entries(bIdGroups).forEach(([bId, reqs]) => {
+        const reqArr = reqs as typeof allReqs
+        if (reqArr.length > 1) {
           suspects.push({
             beneficiary_id: bId,
-            name: `${reqs[0].beneficiaries?.first_name || ''} ${reqs[0].beneficiaries?.last_name || ''}`.trim() || 'Beneficiary',
-            count: reqs.length,
+            name: `${reqArr[0].beneficiaries?.first_name || ''} ${reqArr[0].beneficiaries?.last_name || ''}`.trim() || 'Beneficiary',
+            count: reqArr.length,
             reason: 'Multiple requests from same beneficiary'
           })
         }
@@ -158,7 +173,7 @@ export default function AdminDashboard() {
 
     await loadPendingUsers()
     setLoading(false)
-  }, [])
+  }, [loadPendingUsers])
 
   useEffect(() => {
     load()
@@ -169,9 +184,9 @@ export default function AdminDashboard() {
         load()
       }, 500)
     }
-
-    const existing = supabase.getChannels().filter((c: any) => c.topic.includes('admin-dashboard'))
-    existing.forEach((c: any) => supabase.removeChannel(c))
+    const supabase = supabaseRef.current
+    const existing = supabase.getChannels().filter((c: { topic: string }) => c.topic.includes('admin-dashboard'))
+    existing.forEach((c: { topic: string }) => supabase.removeChannel(c as Parameters<typeof supabase.removeChannel>[0]))
 
     const channel = supabase.channel(`admin-dashboard-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, debouncedLoad)
@@ -182,9 +197,10 @@ export default function AdminDashboard() {
       if (debounceTimer) clearTimeout(debounceTimer)
       supabase.removeChannel(channel)
     }
-  }, [load])
+  }, [load, loadPendingUsers])
 
   const markNotificationRead = async (id: string) => {
+    const supabase = supabaseRef.current
     await supabase.from('notifications').update({ is_read: true }).eq('id', id)
     setReleaseNotifications(prev => prev.filter(n => n.id !== id))
   }
@@ -372,7 +388,7 @@ export default function AdminDashboard() {
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={stats?.byType ?? []} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} innerRadius={35} label>
-                {stats?.byType.map((entry: any) => (
+                {stats?.byType.map((entry: { name: string; value: number }) => (
                   <Cell key={entry.name} fill={ASSISTANCE_COLORS[entry.name] ?? '#94a3b8'} />
                 ))}
               </Pie>
