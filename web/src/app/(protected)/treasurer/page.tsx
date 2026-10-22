@@ -259,7 +259,7 @@ export default function TreasurerDashboardPage() {
         body: JSON.stringify({
           action: 'return_request',
           requestId: selectedRequest.id,
-          remarks: returnRemarks.trim()
+          reason: returnRemarks.trim()
         })
       })
 
