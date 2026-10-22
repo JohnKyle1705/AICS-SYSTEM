@@ -225,7 +225,7 @@ function RequestDetailContent() {
         body: JSON.stringify({
           action: 'return_request',
           requestId: id,
-          remarks: returnRemarks.trim()
+          reason: returnRemarks.trim()
         })
       })
       const data = await res.json()
