@@ -40,6 +40,11 @@ export default function RequestDetailScreen({ route, navigation }: any) {
   const [approvedAmount, setApprovedAmount] = useState('')
   const [submittingApproval, setSubmittingApproval] = useState(false)
 
+  // Decline Modal State
+  const [declineModalOpen, setDeclineModalOpen] = useState(false)
+  const [declineReason, setDeclineReason] = useState('')
+  const [submittingDecline, setSubmittingDecline] = useState(false)
+
   // Treasurer Action States
   const [returnModalOpen, setReturnModalOpen]         = useState(false)
   const [returnRemarks, setReturnRemarks]             = useState('')
@@ -128,6 +133,16 @@ export default function RequestDetailScreen({ route, navigation }: any) {
     const amt = parseFloat(approvedAmount)
     if (isNaN(amt) || amt <= 0) {
       Alert.alert('Invalid Amount', 'Please specify a valid approved amount greater than 0.')
+      return
+    }
+
+    // ── Assessment Gate ────────────────────────────────
+    if (!assessment) {
+      Alert.alert(
+        'Assessment Required',
+        'Action blocked — Assessment is required per AICS policy. Complete the assessment before approving.'
+      )
+      setApprovalModalOpen(false)
       return
     }
 
@@ -366,7 +381,26 @@ export default function RequestDetailScreen({ route, navigation }: any) {
 
   const updateStatus = async (status: string) => {
     if (status === 'Approved') {
+      if (!assessment) {
+        Alert.alert(
+          'Assessment Required',
+          'Action blocked — Assessment is required per AICS policy. Complete the assessment before approving.'
+        )
+        return
+      }
       setApprovalModalOpen(true)
+      return
+    }
+    if (status === 'Declined') {
+      if (!assessment) {
+        Alert.alert(
+          'Assessment Required',
+          'Action blocked — Assessment is required per AICS policy. Complete the assessment before declining.'
+        )
+        return
+      }
+      setDeclineReason('')
+      setDeclineModalOpen(true)
       return
     }
     if (status === 'Released') {
@@ -454,7 +488,55 @@ export default function RequestDetailScreen({ route, navigation }: any) {
     }
   }
 
+  const handleDeclineMobile = async () => {
+    if (!declineReason.trim()) {
+      Alert.alert('Required', 'Please state a reason for declining this request.')
+      return
+    }
+    if (!assessment) {
+      Alert.alert('Assessment Required', 'Action blocked — Assessment is required per AICS policy.')
+      setDeclineModalOpen(false)
+      return
+    }
+    setSubmittingDecline(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { error } = await supabase.from('requests').update({
+        status: 'Declined',
+        remarks: `Declined: ${declineReason.trim()}`,
+        updated_at: new Date().toISOString(),
+      }).eq('id', id)
+      if (error) throw error
+      if (user) {
+        await supabase.from('system_logs').insert({
+          user_id: user.id,
+          action: 'DECLINE_REQUEST',
+          table_name: 'requests',
+          record_id: id,
+          details: { reason: declineReason.trim(), assessment_id: assessment?.id }
+        })
+      }
+      if (request.encoded_by) {
+        await supabase.from('notifications').insert({
+          user_id: request.encoded_by,
+          title: 'Request Declined',
+          message: `Your ${request.assistance_type} assistance request has been declined. Reason: ${declineReason.trim()}`,
+          type: 'pending',
+          request_id: id,
+        })
+      }
+      setDeclineModalOpen(false)
+      loadData()
+      Alert.alert('Declined', 'Request has been declined.')
+    } catch (e: any) {
+      Alert.alert('Error', e.message)
+    } finally {
+      setSubmittingDecline(false)
+    }
+  }
+
   const s = styles(colors, isDark)
+
 
   if (loading || !request) {
     return (
@@ -667,25 +749,46 @@ export default function RequestDetailScreen({ route, navigation }: any) {
       {profile?.role === 'admin' && (
         <View style={s.section}>
           <Text style={s.sectionTitle}>Admin Actions</Text>
+
+          {/* Assessment Gate Warning */}
+          {request.status === 'Pending' && !assessment && (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+              <Feather name="alert-triangle" size={14} color="#d97706" style={{ marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#92400e' }}>Assessment required</Text>
+                <Text style={{ fontSize: 11, color: '#b45309', marginTop: 2 }}>
+                  Complete assessment first — required before approving or declining.
+                </Text>
+              </View>
+            </View>
+          )}
+
           <View style={s.actions}>
             {request.status === 'Pending' && (
               <>
-                <TouchableOpacity 
-                  style={[s.actionBtn, { borderColor: '#2563eb', backgroundColor: '#eff6ff' }]}
-                  onPress={() => setApprovalModalOpen(true)} 
-                  activeOpacity={0.7}
+                <TouchableOpacity
+                  style={[s.actionBtn, assessment
+                    ? { borderColor: '#2563eb', backgroundColor: '#eff6ff' }
+                    : { borderColor: '#cbd5e1', backgroundColor: '#f1f5f9', opacity: 0.6 }
+                  ]}
+                  onPress={() => updateStatus('Approved')}
+                  activeOpacity={assessment ? 0.7 : 1}
                 >
-                  <Text style={[s.actionText, { color: '#1e40af' }]}>Approve Request</Text>
+                  <Text style={[s.actionText, { color: assessment ? '#1e40af' : '#94a3b8' }]}>Approve Request</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[s.actionBtn, { borderColor: '#dc2626', backgroundColor: '#fef2f2' }]}
-                  onPress={() => updateStatus('Declined')} 
-                  activeOpacity={0.7}
+                <TouchableOpacity
+                  style={[s.actionBtn, assessment
+                    ? { borderColor: '#dc2626', backgroundColor: '#fef2f2' }
+                    : { borderColor: '#cbd5e1', backgroundColor: '#f1f5f9', opacity: 0.6 }
+                  ]}
+                  onPress={() => updateStatus('Declined')}
+                  activeOpacity={assessment ? 0.7 : 1}
                 >
-                  <Text style={[s.actionText, { color: '#991b1b' }]}>Decline Request</Text>
+                  <Text style={[s.actionText, { color: assessment ? '#991b1b' : '#94a3b8' }]}>Decline Request</Text>
                 </TouchableOpacity>
               </>
             )}
+
 
             {request.status === 'Approved' && request.release_status !== 'Released' && (
               <TouchableOpacity 
@@ -891,7 +994,56 @@ export default function RequestDetailScreen({ route, navigation }: any) {
         </View>
       </Modal>
 
-      {/* Document Preview Lightbox Modal */}
+      {/* Decline Request Modal */}
+      <Modal visible={declineModalOpen} animationType="fade" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalBox}>
+            <View style={s.modalHeader}>
+              <Text style={[s.modalTitle, { color: '#ef4444' }]}>Decline Request</Text>
+              <TouchableOpacity onPress={() => setDeclineModalOpen(false)}>
+                <Feather name="x" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', borderRadius: 8, padding: 10, marginBottom: 12 }}>
+              <Text style={{ fontSize: 12, color: '#991b1b', lineHeight: 16 }}>
+                A submitted assessment has been verified. State a clear reason for declining — the beneficiary will be notified.
+              </Text>
+            </View>
+
+            <Text style={s.inputLabel}>Reason for Declining *</Text>
+            <TextInput
+              style={[s.amountInput, { height: 80, textAlignVertical: 'top' }]}
+              multiline
+              numberOfLines={3}
+              placeholder="State a clear reason for declining this request..."
+              placeholderTextColor={colors.textSecondary}
+              value={declineReason}
+              onChangeText={setDeclineReason}
+            />
+
+            <View style={s.modalBtnRow}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setDeclineModalOpen(false)}>
+                <Text style={s.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.confirmApproveBtn, { backgroundColor: '#ef4444', opacity: declineReason.trim() ? 1 : 0.5 }]}
+                activeOpacity={0.8}
+                onPress={handleDeclineMobile}
+                disabled={submittingDecline || !declineReason.trim()}
+              >
+                {submittingDecline ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={s.confirmApproveBtnText}>Confirm Decline</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+
       <Modal
         visible={!!previewDoc}
         animationType="fade"

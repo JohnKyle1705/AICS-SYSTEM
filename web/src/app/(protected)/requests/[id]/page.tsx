@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_COLORS, REQUEST_STATUSES } from '@/lib/constants'
 import { format } from 'date-fns'
-import { FileText, Download, CheckCircle, CheckCircle2, AlertCircle, Clock, XCircle, ClipboardCheck, Banknote, Wallet, RotateCcw } from 'lucide-react'
+import { FileText, Download, CheckCircle, CheckCircle2, AlertCircle, Clock, XCircle, ClipboardCheck, Banknote, Wallet, RotateCcw, AlertTriangle, Eye } from 'lucide-react'
 import AssessmentForm from '@/components/assessments/AssessmentForm'
 import { useLanguage } from '@/lib/LanguageContext'
 
@@ -36,6 +36,10 @@ function RequestDetailContent() {
   const [approveModalOpen, setApproveModalOpen] = useState(false)
   const [approvedAmountInput, setApprovedAmountInput] = useState('')
   const [approvalRemarks, setApprovalRemarks] = useState('')
+
+  // Admin Decline Modal State
+  const [declineModalOpen, setDeclineModalOpen] = useState(false)
+  const [declineReason, setDeclineReason] = useState('')
 
   const handleConfirmReadiness = async () => {
     if (!request.amount_approved || Number(request.amount_approved) <= 0) {
@@ -111,55 +115,26 @@ function RequestDetailContent() {
       return
     }
 
+    if (!assessment) {
+      alert('Action blocked — Assessment is required per AICS policy. Complete the assessment before approving.')
+      setApproveModalOpen(false)
+      return
+    }
+
     setUpdating(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const { error: updErr } = await supabase.from('requests').update({
-        status: 'Approved',
-        release_status: 'Pending Release',
-        amount_approved: numAmt,
-        approved_by: user?.id,
-        remarks: approvalRemarks.trim() || request.remarks || null,
-        updated_at: new Date().toISOString()
-      }).eq('id', id)
-
-      if (updErr) throw updErr
-
-      // Audit Log
-      await supabase.from('system_logs').insert({
-        user_id: user?.id,
-        action: 'APPROVE_REQUEST',
-        table_name: 'requests',
-        record_id: id,
-        details: { amount_approved: numAmt, release_status: 'Pending Release' }
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'approve',
+          requestId: id,
+          amountApproved: numAmt,
+          remarks: approvalRemarks.trim(),
+        }),
       })
-
-      // Notify Treasurers: "Pending Release"
-      const { data: treasurers } = await supabase.from('profiles').select('id').eq('role', 'treasurer')
-      if (treasurers && treasurers.length > 0) {
-        const benName = request.beneficiaries ? `${request.beneficiaries.first_name} ${request.beneficiaries.last_name}` : 'Beneficiary'
-        await supabase.from('notifications').insert(
-          treasurers.map((t: any) => ({
-            user_id: t.id,
-            title: 'Request Approved (Pending Release)',
-            message: `New approved request pending release: ${benName} – ${request.assistance_type} Assistance (₱${numAmt.toLocaleString()}). Request #${id.slice(0, 8).toUpperCase()}.`,
-            type: 'info',
-            request_id: id,
-          }))
-        )
-      }
-
-      // Notify Resident
-      if (request.encoded_by) {
-        await supabase.from('notifications').insert({
-          user_id: request.encoded_by,
-          title: 'Assistance Request Approved',
-          message: `Your ${request.assistance_type} assistance request has been approved for ₱${numAmt.toLocaleString()}. Awaiting Treasury release clearance.`,
-          type: 'info',
-          request_id: id,
-        })
-      }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to approve request')
 
       alert('Request approved! Amount recorded and Treasurer notified that request is Pending Release.')
       setApproveModalOpen(false)
@@ -171,39 +146,41 @@ function RequestDetailContent() {
     }
   }
 
-  const handleDeclineRequest = async () => {
-    const reason = prompt('Please enter remarks/reason for declining this request:')
-    if (reason === null) return
+  const handleDeclineRequest = () => {
+    if (!assessment) {
+      alert('Action blocked — Assessment is required per AICS policy. Complete the assessment before declining.')
+      return
+    }
+    setDeclineReason('')
+    setDeclineModalOpen(true)
+  }
+
+  const handleConfirmDecline = async () => {
+    if (!declineReason.trim()) {
+      alert('A decline reason is required.')
+      return
+    }
+    if (!assessment) {
+      alert('Action blocked — Assessment is required per AICS policy.')
+      setDeclineModalOpen(false)
+      return
+    }
     setUpdating(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      await supabase.from('requests').update({
-        status: 'Declined',
-        remarks: reason.trim() ? `${request.remarks ? request.remarks + ' | ' : ''}Declined: ${reason.trim()}` : request.remarks,
-        updated_at: new Date().toISOString()
-      }).eq('id', id)
-
-      await supabase.from('system_logs').insert({
-        user_id: user?.id,
-        action: 'DECLINE_REQUEST',
-        table_name: 'requests',
-        record_id: id,
-        details: { reason: reason.trim() }
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'decline',
+          requestId: id,
+          reason: declineReason.trim(),
+        }),
       })
-
-      // Notify Resident (Treasurer is NOT notified)
-      if (request.encoded_by) {
-        await supabase.from('notifications').insert({
-          user_id: request.encoded_by,
-          title: 'Request Declined',
-          message: `Your ${request.assistance_type} assistance request has been declined. ${reason.trim() ? `Reason: ${reason.trim()}` : ''}`,
-          type: 'pending',
-          request_id: id,
-        })
-      }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to decline request')
 
       alert('Request has been declined.')
+      setDeclineModalOpen(false)
       loadData()
     } catch (err: any) {
       alert(err.message)
@@ -516,10 +493,12 @@ function RequestDetailContent() {
             <h2 className="text-xl font-black text-slate-800">New Eligibility Assessment</h2>
             <button onClick={() => setIsAssessing(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={20} /></button>
           </div>
-          <AssessmentForm 
-            requestId={id} 
-            beneficiaryData={request.beneficiaries} 
-            onComplete={() => { loadData() }} 
+          <AssessmentForm
+            requestId={id}
+            requestRef={id.slice(0, 8).toUpperCase()}
+            assistanceType={request.assistance_type ?? 'Medical'}
+            beneficiaryData={request.beneficiaries ?? {}}
+            onComplete={() => { loadData() }}
           />
         </div>
       ) : null}
@@ -650,20 +629,40 @@ function RequestDetailContent() {
       {(profile?.role === 'admin') && (
         <div className="card p-6">
           <h2 className="font-semibold text-[var(--color-text)] mb-4 text-[15px]">{t('actions')}</h2>
+
+          {/* Assessment Gate Warning */}
+          {request.status === 'Pending' && !assessment && (
+            <div className="flex items-start gap-3 p-4 mb-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded-2xl">
+              <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Assessment required before approving or declining</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                  Complete assessment first — required before approving or declining.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row flex-wrap gap-2.5 items-center">
             {request.status === 'Pending' && (
               <>
                 <button
                   onClick={handleOpenApproveModal}
-                  disabled={updating}
-                  className="btn btn-primary text-sm w-full sm:w-auto flex items-center justify-center gap-1.5"
+                  disabled={updating || !assessment}
+                  title={!assessment ? 'Complete assessment first — required before approving or declining.' : 'Approve this request'}
+                  className={`btn text-sm w-full sm:w-auto flex items-center justify-center gap-1.5 ${
+                    assessment ? 'btn-primary' : 'opacity-50 cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-600'
+                  }`}
                 >
                   <CheckCircle size={15} /> Approve Request
                 </button>
                 <button
                   onClick={handleDeclineRequest}
-                  disabled={updating}
-                  className="btn btn-danger text-sm w-full sm:w-auto flex items-center justify-center gap-1.5"
+                  disabled={updating || !assessment}
+                  title={!assessment ? 'Complete assessment first — required before approving or declining.' : 'Decline this request'}
+                  className={`btn text-sm w-full sm:w-auto flex items-center justify-center gap-1.5 ${
+                    assessment ? 'btn-danger' : 'opacity-50 cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-600'
+                  }`}
                 >
                   <XCircle size={15} /> Decline Request
                 </button>
@@ -698,8 +697,14 @@ function RequestDetailContent() {
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 mt-4">
             {!assessment && !isAssessing && (
               <button onClick={() => setIsAssessing(true)}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors text-center w-full sm:w-auto">
-                + {t('assessment_start')}
+                className="btn btn-primary text-sm w-full sm:w-auto flex items-center justify-center gap-2 animate-pulse-subtle">
+                <ClipboardCheck size={15} /> + {t('assessment_start')}
+              </button>
+            )}
+            {assessment && (
+              <button onClick={() => setIsAssessing(false)}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 font-semibold bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2 w-full sm:w-auto">
+                <Eye size={14} /> View Assessment
               </button>
             )}
           </div>
@@ -884,6 +889,65 @@ function RequestDetailContent() {
                 className="btn btn-danger text-sm"
               >
                 {updating ? 'Returning...' : 'Confirm Return'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Decline Request Modal ──────────────────────────────── */}
+      {declineModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[var(--color-border)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
+              <div>
+                <h3 className="text-lg font-bold text-red-600">Decline Request</h3>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Beneficiary: {request?.beneficiaries?.first_name} {request?.beneficiaries?.last_name}
+                </p>
+              </div>
+              <button onClick={() => setDeclineModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/30">
+                <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-red-700 dark:text-red-400">
+                  This action will decline the request. The beneficiary will be notified with the reason provided.
+                  A submitted assessment is required and has been verified.
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">
+                  Reason for Declining *
+                </label>
+                <textarea
+                  className="form-input w-full h-24 text-xs"
+                  placeholder="State a clear reason for declining this request..."
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-[var(--color-border)]">
+              <button
+                type="button"
+                onClick={() => setDeclineModalOpen(false)}
+                className="btn btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDecline}
+                disabled={updating || !declineReason.trim()}
+                className="btn btn-danger text-sm flex items-center gap-1.5"
+              >
+                <XCircle size={15} />
+                {updating ? 'Declining...' : 'Confirm Decline'}
               </button>
             </div>
           </div>
