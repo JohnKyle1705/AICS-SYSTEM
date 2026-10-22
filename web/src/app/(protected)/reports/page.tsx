@@ -55,7 +55,7 @@ export default function ReportsPage() {
     setLoading(true)
     const { data } = await supabase
       .from('requests')
-      .select('*, beneficiaries(first_name, last_name, barangay, sex, birthdate)')
+      .select('*, beneficiaries(first_name, last_name, barangay, sex, birthdate), assessments(*)')
       .order('created_at', { ascending: false })
     setAllData(data ?? [])
     setLoading(false)
@@ -135,38 +135,71 @@ export default function ReportsPage() {
   })).filter(x => x.count > 0).sort((a, b) => b.count - a.count).slice(0, 10)
 
   const exportPDF = () => {
-    const doc = new jsPDF()
+    const doc = new jsPDF({ orientation: 'landscape' })
     doc.setFontSize(14)
-    doc.text('AICS Report - Municipality of Daanbantayan', 14, 15)
-    doc.setFontSize(10)
-    doc.text(`Generated: ${format(new Date(), 'MMM d, yyyy HH:mm')}`, 14, 22)
+    doc.text('AICS Assessment & Decision Report - Municipality of Daanbantayan', 14, 15)
+    doc.setFontSize(9)
+    doc.text(`Generated: ${format(new Date(), 'MMM d, yyyy HH:mm')} | Official MSWDO Records`, 14, 21)
     autoTable(doc, {
-      startY: 28,
-      head: [[t('requests_beneficiary'), t('beneficiary_barangay'), t('requests_type'), t('requests_status'), t('requests_amount'), t('requests_date')]],
-      body: filteredData.map((r: any) => [
-        `${r.beneficiaries?.last_name}, ${r.beneficiaries?.first_name}`,
-        r.beneficiaries?.barangay, r.assistance_type, r.status,
-        r.amount_approved ? `₱${Number(r.amount_approved).toLocaleString()}` : '—',
-        format(new Date(r.created_at), 'MMM d, yyyy'),
-      ]),
+      startY: 25,
+      head: [[
+        'Ref #',
+        'Beneficiary',
+        'Barangay',
+        'Category',
+        'Assessor & Date',
+        'Assessor Rec.',
+        'Rec. Amt',
+        'Final Decision',
+        'Approved Amt',
+        'Decision Date',
+      ]],
+      body: filteredData.map((r: any) => {
+        const assess = Array.isArray(r.assessments) ? r.assessments[0] : r.assessments
+        return [
+          `#${r.id?.slice(0, 8).toUpperCase()}`,
+          `${r.beneficiaries?.last_name || ''}, ${r.beneficiaries?.first_name || ''}`,
+          r.beneficiaries?.barangay || '—',
+          r.assistance_type,
+          assess?.assessor_name
+            ? `${assess.assessor_name} (${format(new Date(assess.interview_date || assess.created_at), 'MMM d, yyyy')})`
+            : 'Unassessed',
+          assess?.recommendation || '—',
+          assess?.recommended_amount ? `₱${Number(assess.recommended_amount).toLocaleString()}` : '—',
+          r.status,
+          r.amount_approved ? `₱${Number(r.amount_approved).toLocaleString()}` : '—',
+          r.updated_at ? format(new Date(r.updated_at), 'MMM d, yyyy') : '—',
+        ]
+      }),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [37, 99, 235] },
     })
-    doc.save('AICS_Report.pdf')
-
+    doc.save('AICS_Assessment_Report.pdf')
   }
 
   const exportExcel = () => {
-    const rows = filteredData.map((r: any) => ({
-      [t('requests_beneficiary')]: `${r.beneficiaries?.last_name}, ${r.beneficiaries?.first_name}`,
-      [t('beneficiary_barangay')]: r.beneficiaries?.barangay, [t('requests_type')]: r.assistance_type,
-      [t('requests_status')]: r.status, [t('newRequest_amountRequested')]: r.amount_requested,
-      [t('requests_amount')]: r.amount_approved,
-      [t('requests_date')]: format(new Date(r.created_at), 'MMM d, yyyy'),
-    }))
+    const rows = filteredData.map((r: any) => {
+      const assess = Array.isArray(r.assessments) ? r.assessments[0] : r.assessments
+      return {
+        'Reference No.': `#${r.id?.slice(0, 8).toUpperCase()}`,
+        'Beneficiary': `${r.beneficiaries?.last_name || ''}, ${r.beneficiaries?.first_name || ''}`,
+        'Barangay': r.beneficiaries?.barangay || '—',
+        'Assistance Category': r.assistance_type,
+        'Assessment Date': assess?.interview_date ? format(new Date(assess.interview_date), 'yyyy-MM-dd') : 'Unassessed',
+        'Assessor': assess?.assessor_name ? `${assess.assessor_name} (${assess.assessor_designation || 'Assessor'})` : '—',
+        'Assessor Recommendation': assess?.recommendation || '—',
+        'Recommended Amount (PHP)': assess?.recommended_amount ? Number(assess.recommended_amount) : 0,
+        'Final Decision': r.status,
+        'Final Approved Amount (PHP)': r.amount_approved ? Number(r.amount_approved) : 0,
+        'Decision Date': r.updated_at ? format(new Date(r.updated_at), 'yyyy-MM-dd') : '—',
+        'Decline Reason / Remarks': r.remarks || '—',
+        'Request Date': format(new Date(r.created_at), 'yyyy-MM-dd'),
+      }
+    })
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'AICS Report')
-    XLSX.writeFile(wb, 'AICS_Report.xlsx')
-
+    XLSX.writeFile(wb, 'AICS_Assessment_Report.xlsx')
   }
 
   const statCards = [
@@ -396,32 +429,60 @@ export default function ReportsPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    {[t('requests_beneficiary'), t('beneficiary_barangay'), t('requests_type'), t('requests_status'), t('requests_amount'), t('requests_date')].map(h => <th key={h}>{h}</th>)}
+                    <th>{t('requests_beneficiary')}</th>
+                    <th>{t('beneficiary_barangay')}</th>
+                    <th>{t('requests_type')}</th>
+                    <th>Assessor Recommendation</th>
+                    <th>Final Decision</th>
+                    <th>{t('requests_amount')}</th>
+                    <th>{t('requests_date')}</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredData.slice(0, 50).map((r: any) => (
-                    <tr key={r.id}>
-                      <td className="font-medium text-[var(--color-text)]">{r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}</td>
-                      <td>{r.beneficiaries?.barangay}</td>
-                      <td>
-                        <span className="badge" style={{ background: `${(ASSISTANCE_COLORS as any)[r.assistance_type]}20`, color: (ASSISTANCE_COLORS as any)[r.assistance_type] }}>
-                          {r.assistance_type}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="badge" style={{ background: `${STATUS_COLORS[r.status]}20`, color: STATUS_COLORS[r.status] }}>
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="text-[var(--color-text)] font-medium">{r.amount_approved ? `₱${Number(r.amount_approved).toLocaleString()}` : '—'}</td>
-                      <td className="text-[var(--color-text-secondary)] text-xs">{format(new Date(r.created_at), 'MMM d, yyyy')}</td>
-                    </tr>
-                  ))}
+                  {filteredData.slice(0, 50).map((r: any) => {
+                    const assess = Array.isArray(r.assessments) ? r.assessments[0] : r.assessments
+                    return (
+                      <tr key={r.id}>
+                        <td className="font-medium text-[var(--color-text)]">
+                          {r.beneficiaries?.last_name}, {r.beneficiaries?.first_name}
+                          <span className="block text-[11px] font-mono text-[var(--color-text-secondary)]">#{r.id.slice(0, 8).toUpperCase()}</span>
+                        </td>
+                        <td>{r.beneficiaries?.barangay}</td>
+                        <td>
+                          <span className="badge" style={{ background: `${(ASSISTANCE_COLORS as any)[r.assistance_type]}20`, color: (ASSISTANCE_COLORS as any)[r.assistance_type] }}>
+                            {r.assistance_type}
+                          </span>
+                        </td>
+                        <td>
+                          {assess ? (
+                            <div>
+                              <span className={`inline-block font-semibold text-xs ${assess.recommendation === 'Approve' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {assess.recommendation}
+                              </span>
+                              {assess.assessor_name && (
+                                <span className="block text-[11px] text-[var(--color-text-secondary)]">
+                                  by {assess.assessor_name}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Unassessed</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className="badge" style={{ background: `${STATUS_COLORS[r.status]}20`, color: STATUS_COLORS[r.status] }}>
+                            {r.status}
+                          </span>
+                        </td>
+                        <td className="text-[var(--color-text)] font-medium">{r.amount_approved ? `₱${Number(r.amount_approved).toLocaleString()}` : '—'}</td>
+                        <td className="text-[var(--color-text-secondary)] text-xs">{format(new Date(r.created_at), 'MMM d, yyyy')}</td>
+                      </tr>
+                    )
+                  })}
                   {filteredData.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-10">{t('reports_noRecords')}</td>
+                      <td colSpan={7} className="text-center text-[var(--color-text-secondary)] py-10">{t('reports_noRecords')}</td>
                     </tr>
                   )}
                 </tbody>

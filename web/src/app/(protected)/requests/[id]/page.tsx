@@ -458,33 +458,56 @@ function RequestDetailContent() {
 
       {/* Assessment */}
       {assessment ? (
-        <div className="card p-6 border-l-4 border-blue-500">
+        <div id="assessment-section" className="card p-6 border-l-4 border-blue-500 shadow-sm animate-fade-in">
           <div className="flex justify-between items-start mb-6">
-            <h2 className="font-bold text-[var(--color-text)] text-lg flex items-center gap-2">
-              <ClipboardCheck className="text-blue-500" /> {t('assessment_result')}
-            </h2>
+            <div>
+              <h2 className="font-bold text-[var(--color-text)] text-lg flex items-center gap-2">
+                <ClipboardCheck className="text-blue-500" /> {t('assessment_result')}
+              </h2>
+              {assessment.assessor_name && (
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                  Assessed by <strong className="text-[var(--color-text)]">{assessment.assessor_name}</strong> ({assessment.assessor_designation || 'Assessor'})
+                  {assessment.submitted_at && ` · ${format(new Date(assessment.submitted_at), 'MMM d, yyyy h:mm a')}`}
+                </p>
+              )}
+            </div>
 
             <div className={`px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest
-              ${assessment.priority_level === 'High' ? 'bg-red-100 text-red-600' : 
-                assessment.priority_level === 'Medium' ? 'bg-amber-100 text-amber-600' : 
-                'bg-blue-100 text-blue-600'}`}>
-              {assessment.priority_level} {t('priority')}
+              ${assessment.priority_level === 'High' ? 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400' : 
+                assessment.priority_level === 'Medium' ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400' : 
+                'bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400'}`}>
+              {assessment.priority_level} {t('priority')} ({assessment.priority_score ?? 0} pts)
             </div>
-
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-sm">
             <div className="space-y-4">
-              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Eligibility</span><span className={`font-bold ${assessment.eligibility_status === 'Eligible' ? 'text-emerald-600' : 'text-red-600'}`}>{assessment.eligibility_status}</span></div>
-              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Urgency</span><span className="font-bold text-[var(--color-text)]">{assessment.urgency_level}</span></div>
-              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Interview Date</span><span className="text-[var(--color-text)]">{format(new Date(assessment.interview_date), 'MMM d, yyyy')}</span></div>
+              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Eligibility Outcome</span><span className={`font-bold ${assessment.eligibility_status === 'Eligible' ? 'text-emerald-600' : 'text-red-600'}`}>{assessment.eligibility_status || 'Eligible'}</span></div>
+              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Urgency Level</span><span className="font-bold text-[var(--color-text)]">{assessment.urgency_level || 'Normal'}</span></div>
+              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Interview Date &amp; Time</span><span className="text-[var(--color-text)]">{format(new Date(assessment.interview_date), 'MMM d, yyyy')}{assessment.interview_time ? ` at ${assessment.interview_time}` : ''}</span></div>
               <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Home Visit</span><span className="text-[var(--color-text)]">{assessment.home_visit ? 'Conducted' : 'Not Conducted'}</span></div>
+              {assessment.documents_reviewed && (
+                <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Documents Reviewed</span><span className="text-[var(--color-text)]">{assessment.documents_reviewed}</span></div>
+              )}
             </div>
             <div className="space-y-4">
-              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_docStatus')}</span><span className="font-bold text-[var(--color-text)]">{assessment.document_status}</span></div>
-              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_findings')}</span><p className="text-[var(--color-text)] leading-relaxed italic">&ldquo;{assessment.findings}&rdquo;</p></div>
-              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_recommendation')}</span><p className="font-bold text-blue-600">{assessment.recommendation}</p></div>
+              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_docStatus')}</span><span className="font-bold text-[var(--color-text)]">{assessment.document_status || 'Verified'}</span></div>
+              <div>
+                <span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_recommendation')}</span>
+                <p className={`font-bold text-base ${assessment.recommendation === 'Approve' ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {assessment.recommendation}
+                </p>
+                {assessment.recommended_amount && (
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    Recommended Assistance Amount: <strong className="text-emerald-600 font-semibold">₱{Number(assessment.recommended_amount).toLocaleString()}</strong>
+                  </p>
+                )}
+              </div>
+              {assessment.justification && (
+                <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">Justification &amp; Remarks</span><p className="text-[var(--color-text)] leading-relaxed italic bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-[var(--color-border)] text-xs">&ldquo;{assessment.justification}&rdquo;</p></div>
+              )}
+              <div><span className="text-[var(--color-text-secondary)] text-xs block mb-1">{t('assessment_findings')}</span><p className="text-[var(--color-text)] leading-relaxed text-xs whitespace-pre-line bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-[var(--color-border)]">&ldquo;{assessment.findings}&rdquo;</p></div>
             </div>
-
           </div>
         </div>
       ) : isAssessing ? (
@@ -702,8 +725,12 @@ function RequestDetailContent() {
               </button>
             )}
             {assessment && (
-              <button onClick={() => setIsAssessing(false)}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 font-semibold bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => {
+                  document.getElementById('assessment-section')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 font-semibold bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2 w-full sm:w-auto"
+              >
                 <Eye size={14} /> View Assessment
               </button>
             )}

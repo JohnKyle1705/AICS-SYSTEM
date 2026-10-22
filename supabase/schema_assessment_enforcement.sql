@@ -104,3 +104,41 @@ CREATE POLICY "Resident can read own request assessments"
   );
 
 GRANT EXECUTE ON FUNCTION public.has_submitted_assessment(UUID) TO authenticated;
+
+-- ============================================================
+-- 8. Assessment Amendments table (preserves original assessment immutability)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS assessment_amendments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  assessment_id UUID REFERENCES assessments(id) ON DELETE CASCADE NOT NULL,
+  request_id UUID REFERENCES requests(id) ON DELETE CASCADE NOT NULL,
+  amended_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  amendment_reason TEXT NOT NULL,
+  previous_findings TEXT,
+  new_findings TEXT,
+  previous_recommendation TEXT,
+  new_recommendation TEXT,
+  previous_amount NUMERIC(10,2),
+  new_amount NUMERIC(10,2),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_assessment_amendments_assessment_id ON assessment_amendments(assessment_id);
+CREATE INDEX IF NOT EXISTS idx_assessment_amendments_request_id ON assessment_amendments(request_id);
+
+ALTER TABLE assessment_amendments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admin can manage assessment amendments" ON assessment_amendments;
+DROP POLICY IF EXISTS "Authenticated can read assessment amendments" ON assessment_amendments;
+
+CREATE POLICY "Admin can manage assessment amendments"
+  ON assessment_amendments FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Authenticated can read assessment amendments"
+  ON assessment_amendments FOR SELECT
+  USING (
+    auth.role() = 'authenticated'
+  );

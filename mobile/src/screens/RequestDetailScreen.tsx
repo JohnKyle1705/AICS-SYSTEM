@@ -78,7 +78,11 @@ export default function RequestDetailScreen({ route, navigation }: any) {
 
   useEffect(() => {
     loadData()
-  }, [loadData])
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadData()
+    })
+    return unsubscribe
+  }, [loadData, navigation])
 
   const handlePreviewDoc = async (doc: any) => {
     setPreviewDoc(doc)
@@ -725,10 +729,21 @@ export default function RequestDetailScreen({ route, navigation }: any) {
               ]}>{assessment.priority_level || 'NORMAL'} PRIORITY</Text>
             </View>
           </View>
-          <Info label="Eligibility" value={assessment.eligibility_status} />
-          <Info label="Urgency" value={assessment.urgency_level} />
-          <Info label="Recommendation" value={assessment.recommendation} />
+
+          <Info label="Assessor" value={assessment.assessor_name ? `${assessment.assessor_name} (${assessment.assessor_designation || 'Assessor'})` : '—'} />
+          <Info label="Interview Date/Time" value={assessment.interview_date ? `${format(new Date(assessment.interview_date), 'MMM d, yyyy')}${assessment.interview_time ? ' ' + assessment.interview_time : ''}` : '—'} />
+          <Info label="Eligibility" value={assessment.eligibility_status || 'Eligible'} />
+          <Info label="Urgency" value={assessment.urgency_level || 'Normal'} />
+          <Info label="Recommendation" value={assessment.recommendation || '—'} />
+          {assessment.recommended_amount ? (
+            <Info label="Recommended Amount" value={`₱${Number(assessment.recommended_amount).toLocaleString()}`} />
+          ) : null}
+          <Info label="Document Status" value={assessment.document_status || 'Verified'} />
+          {assessment.documents_reviewed ? <Info label="Documents Reviewed" value={assessment.documents_reviewed} /> : null}
           <Info label="Home Visit" value={assessment.home_visit ? 'Conducted' : 'Not Conducted'} />
+          {assessment.findings ? <Info label="Findings" value={assessment.findings} /> : null}
+          {assessment.justification ? <Info label="Justification" value={assessment.justification} /> : null}
+          <Info label="Submission Date" value={assessment.submitted_at || assessment.created_at ? format(new Date(assessment.submitted_at || assessment.created_at), 'MMM d, yyyy h:mm a') : '—'} />
         </View>
       )}
 
@@ -818,9 +833,46 @@ export default function RequestDetailScreen({ route, navigation }: any) {
             )}
           </View>
 
-          {!assessment && (
-            <TouchableOpacity onPress={() => navigation.navigate('AssessmentForm', { request_id: id })}>
-              <Text style={s.linkBtn}>+ Conduct Assessment</Text>
+          {!assessment ? (
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.primary,
+                paddingVertical: 14,
+                borderRadius: 12,
+                alignItems: 'center',
+                marginTop: 12,
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+              onPress={() => navigation.navigate('AssessmentForm', { request_id: id })}
+            >
+              <Feather name="clipboard" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>+ Start Assessment</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.card,
+                borderWidth: 1.5,
+                borderColor: colors.border,
+                paddingVertical: 12,
+                borderRadius: 12,
+                alignItems: 'center',
+                marginTop: 12,
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+              onPress={() => {
+                Alert.alert(
+                  'Assessment Submitted',
+                  `Assessed by: ${assessment.assessor_name || 'Assessor'}\nRecommendation: ${assessment.recommendation}\nPriority: ${assessment.priority_level || 'Normal'}\n\nReview complete details in the assessment section above.`
+                )
+              }}
+            >
+              <Feather name="eye" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontWeight: 'bold', fontSize: 14 }}>View Assessment</Text>
             </TouchableOpacity>
           )}
 
