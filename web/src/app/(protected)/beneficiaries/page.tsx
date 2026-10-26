@@ -125,9 +125,9 @@ export default function BeneficiariesPage() {
                   Contact: <span className="font-medium text-[var(--color-text)]">{b.contact_number ?? '—'}</span>
                 </span>
                 <div className="flex gap-1 flex-wrap">
-                  {b.is_pwd && <span className="badge text-[10px] py-0.5 px-2" style={{ background: '#f3e8ff', color: '#7c3aed' }}>PWD</span>}
-                  {b.is_senior && <span className="badge text-[10px] py-0.5 px-2" style={{ background: '#fff7ed', color: '#c2410c' }}>Senior</span>}
-                  {b.is_4ps && <span className="badge text-[10px] py-0.5 px-2" style={{ background: '#ecfdf5', color: '#059669' }}>4Ps</span>}
+                  {b.is_pwd && <span className="badge text-[10px] py-0.5 px-2 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">PWD</span>}
+                  {b.is_senior && <span className="badge text-[10px] py-0.5 px-2 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300">Senior</span>}
+                  {b.is_4ps && <span className="badge text-[10px] py-0.5 px-2 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">4Ps</span>}
                 </div>
               </div>
             </div>
@@ -174,9 +174,9 @@ export default function BeneficiariesPage() {
                   <td>{b.contact_number ?? '—'}</td>
                   <td>
                     <div className="flex gap-1 flex-wrap">
-                      {b.is_pwd && <span className="badge" style={{ background: '#f3e8ff', color: '#7c3aed' }}>PWD</span>}
-                      {b.is_senior && <span className="badge" style={{ background: '#fff7ed', color: '#c2410c' }}>Senior</span>}
-                      {b.is_4ps && <span className="badge" style={{ background: '#ecfdf5', color: '#059669' }}>4Ps</span>}
+                      {b.is_pwd && <span className="badge bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">PWD</span>}
+                      {b.is_senior && <span className="badge bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300">Senior</span>}
+                      {b.is_4ps && <span className="badge bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">4Ps</span>}
                     </div>
                   </td>
                   <td>

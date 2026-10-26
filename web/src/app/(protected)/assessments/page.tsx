@@ -58,7 +58,7 @@ export default function AssessmentsPage() {
                   <td className="font-medium text-[var(--color-text)]">
                     {a.requests?.beneficiaries?.last_name}, {a.requests?.beneficiaries?.first_name}
                   </td>
-                  <td><span className="badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>{a.requests?.assistance_type}</span></td>
+                  <td><span className="badge bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{a.requests?.assistance_type}</span></td>
                   <td>{format(new Date(a.interview_date), 'MMM d, yyyy')}</td>
                   <td className="max-w-[200px] truncate">{a.recommendation}</td>
                   <td>{a.home_visit ? <span className="text-emerald-600 font-medium">Yes</span> : <span className="text-slate-400">No</span>}</td>
@@ -100,7 +100,7 @@ export default function AssessmentsPage() {
                     Interview: {format(new Date(a.interview_date), 'MMM d, yyyy')}
                   </p>
                 </div>
-                <span className="badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>
+                <span className="badge bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
                   {a.requests?.assistance_type}
                 </span>
               </div>

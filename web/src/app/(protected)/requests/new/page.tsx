@@ -516,7 +516,7 @@ export default function NewRequestPage() {
                   {t(type.toLowerCase() as any)}
                 </span>
                 {isRestricted && (
-                  <span className="text-[10px] font-bold text-red-500 mt-2 bg-red-100 px-2 py-0.5 rounded uppercase tracking-widest">
+                  <span className="text-[10px] font-bold text-red-500 dark:text-red-400 mt-2 bg-red-100 dark:bg-red-900/40 px-2 py-0.5 rounded uppercase tracking-widest">
                     Restricted
                   </span>
                 )}
@@ -735,7 +735,7 @@ export default function NewRequestPage() {
             <div className="flex items-center justify-between">
               <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">{t('newRequest_frontSide')}</label>
               {validIdFront && (
-                <span className="text-[10px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+                <span className="text-[10px] font-black bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
                   <Check size={10} /> {t('success')}
                 </span>
               )}
@@ -841,7 +841,7 @@ export default function NewRequestPage() {
             <div className="flex items-center justify-between">
               <label className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">{t('newRequest_backSide')}</label>
               {validIdBack && (
-                <span className="text-[10px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+                <span className="text-[10px] font-black bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
                   <Check size={10} /> {t('success')}
                 </span>
               )}
@@ -953,16 +953,16 @@ export default function NewRequestPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {requirements.map((req) => (
             <div key={req.id} className={`flex items-center justify-between p-5 rounded-2xl border transition-all duration-300 ${
-              preparedDocs[req.id] ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/50 border-[var(--color-border)]'
+              preparedDocs[req.id] ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/60' : 'bg-slate-50/50 dark:bg-slate-800/30 border-[var(--color-border)]'
             }`}>
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                  preparedDocs[req.id] ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'
+                  preparedDocs[req.id] ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
                 }`}>
                   <FileText size={20} />
                 </div>
                 <div>
-                  <h3 className={`font-bold text-sm ${preparedDocs[req.id] ? 'text-emerald-700' : 'text-[var(--color-text)]'}`}>
+                  <h3 className={`font-bold text-sm ${preparedDocs[req.id] ? 'text-emerald-700 dark:text-emerald-400' : 'text-[var(--color-text)]'}`}>
                     {req.document_name}
                   </h3>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">
@@ -976,7 +976,7 @@ export default function NewRequestPage() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                   preparedDocs[req.id] 
                   ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                  : 'bg-white text-slate-400 border border-slate-200 hover:border-emerald-300 hover:text-emerald-500'
+                  : 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:border-emerald-300 hover:text-emerald-500'
                 }`}
               >
                 {preparedDocs[req.id] ? (
@@ -1041,7 +1041,7 @@ export default function NewRequestPage() {
           <div key={n} className="flex items-center gap-2 flex-1">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all
               ${step === n ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' :
-                step > n ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                step > n ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}>
               {step > n ? <Check size={14} /> : n}
             </div>
             <span className={`text-xs font-semibold hidden sm:block ${step === n ? 'text-blue-600' : 'text-slate-400'}`}>{label}</span>
@@ -1051,13 +1051,13 @@ export default function NewRequestPage() {
       </div>
 
       {isBlocked ? (
-        <div className="bg-red-50/80 border border-red-200 rounded-2xl p-8 text-center animate-in fade-in slide-in-from-bottom-4">
-          <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="bg-red-50/80 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-2xl p-8 text-center animate-in fade-in slide-in-from-bottom-4">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle size={32} />
           </div>
-          <h2 className="text-xl font-bold text-red-700 mb-2">Request Blocked</h2>
-          <p className="text-red-600/80 max-w-md mx-auto mb-6">{blockedMessage}</p>
-          <button onClick={() => router.push('/requests')} className="btn btn-secondary bg-white">
+          <h2 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2">Request Blocked</h2>
+          <p className="text-red-600/80 dark:text-red-400/80 max-w-md mx-auto mb-6">{blockedMessage}</p>
+          <button onClick={() => router.push('/requests')} className="btn btn-secondary bg-white dark:bg-slate-800 dark:text-slate-200">
             Return to My Requests
           </button>
         </div>
@@ -1070,7 +1070,7 @@ export default function NewRequestPage() {
       )}
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+        <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
           <AlertCircle size={18} />
           <p className="text-sm font-bold">{error}</p>
         </div>

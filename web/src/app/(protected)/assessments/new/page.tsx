@@ -113,7 +113,7 @@ function AssessmentForm() {
           Home visit conducted
         </label>
 
-        {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
+        {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-400 text-sm px-4 py-3 rounded-xl">{error}</div>}
 
         <div className="flex gap-3 pt-2">
           <button type="submit" disabled={saving} className="btn btn-primary">

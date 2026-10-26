@@ -346,7 +346,7 @@ export default function AdminAnnouncements() {
                   <div className="space-y-2 flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       {!ann.is_published && (
-                        <span className="badge bg-slate-100 text-slate-600 text-[10px] py-0.5 px-2">Draft</span>
+                        <span className="badge bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] py-0.5 px-2">Draft</span>
                       )}
                       <h3 className="font-bold text-base sm:text-lg text-[var(--color-text)] break-words">{ann.title}</h3>
                     </div>

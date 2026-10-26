@@ -35,7 +35,7 @@ export default function AboutPage() {
               Our dedicated team of social workers and support staff work tirelessly to process requests, verify information, and ensure that those in critical need receive timely assistance. We believe in providing compassionate, transparent, and efficient public service.
             </p>
             <div className="pt-4">
-              <Link href="/requests/new" className="inline-flex items-center gap-2 bg-white text-blue-700 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors shadow-lg">
+              <Link href="/requests/new" className="inline-flex items-center gap-2 bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-400 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors shadow-lg">
                 <HeartHandshake size={18} /> Apply for Assistance
               </Link>
             </div>
@@ -62,7 +62,7 @@ export default function AboutPage() {
         
         <div className="grid sm:grid-cols-2 gap-6 mt-8">
           <div className="card p-6 hover:border-blue-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex items-center justify-center mb-4">
               <HeartPulse size={24} />
             </div>
             <h3 className="font-bold text-lg text-[var(--color-text)] mb-2">Medical Assistance</h3>

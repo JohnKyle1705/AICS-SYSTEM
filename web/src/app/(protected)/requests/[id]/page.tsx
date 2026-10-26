@@ -513,7 +513,7 @@ function RequestDetailContent() {
       ) : isAssessing ? (
         <div className="card p-8 border-2 border-blue-500 bg-blue-50/5 shadow-2xl animate-fade-in">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-black text-slate-800">New Eligibility Assessment</h2>
+            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">New Eligibility Assessment</h2>
             <button onClick={() => setIsAssessing(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={20} /></button>
           </div>
           <AssessmentForm

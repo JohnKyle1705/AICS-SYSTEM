@@ -109,7 +109,7 @@ export default function ResidentDashboard() {
           </div>
           <Link
             href="/beneficiaries/new"
-            className="bg-white text-blue-600 hover:bg-slate-100 font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-md shrink-0 self-stretch sm:self-auto text-center"
+            className="bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700 font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-md shrink-0 self-stretch sm:self-auto text-center"
           >
             Start Registration
           </Link>
@@ -179,7 +179,7 @@ export default function ResidentDashboard() {
                 <Link key={r.id} href={`/requests/${r.id}`} className="card p-5 flex items-center justify-between hover:border-blue-300 transition-all group">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center 
-                      ${r.status === 'Released' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                      ${r.status === 'Released' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'}`}>
                       {r.status === 'Released' ? <CheckCircle size={20} /> : <Clock size={20} />}
                     </div>
                     <div>
@@ -190,10 +190,10 @@ export default function ResidentDashboard() {
                   </div>
                   <div className="text-right">
                     <span className={`badge text-[10px] uppercase font-bold
-                      ${r.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                        r.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
-                          r.status === 'Released' ? 'bg-emerald-100 text-emerald-700' :
-                            'bg-red-100 text-red-700'}`}>
+                      ${r.status === 'Pending' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' :
+                        r.status === 'Approved' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' :
+                          r.status === 'Released' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400' :
+                            'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'}`}>
                       {r.status}
                     </span>
                     <p className="text-xs font-semibold text-[var(--color-text)] mt-1 group-hover:text-blue-600 transition-colors">{t('details')} →</p>
