@@ -370,6 +370,19 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+            <div className="w-px h-20 bg-gradient-to-b from-transparent via-slate-300 to-transparent" />
+            <div className="animate-slideUp opacity-0" style={{ animationDelay: '0.25s' }}>
+              <div className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105">
+                <Image
+                  src="/bagong_pilipinas_logo.png"
+                  alt="Bagong Pilipinas Logo"
+                  width={88}
+                  height={88}
+                  className="object-contain w-[88px] h-[88px]"
+                  priority
+                />
+              </div>
+            </div>
           </div>
 
           {/* System Title */}
@@ -409,13 +422,17 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Mobile Header */}
           <div className="lg:hidden text-center mb-8">
-            <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6">
               <div className="bg-white rounded-xl p-3 border border-slate-200/80 shadow-sm">
                 <Image src="/dswd_logo.png" alt="DSWD" width={50} height={50} className="object-contain" priority />
               </div>
               <div className="w-px h-12 bg-slate-300" />
               <div className="bg-white rounded-xl p-3 border border-slate-200/80 shadow-sm">
                 <Image src="/aics_logo.png" alt="AICS" width={50} height={50} className="object-contain" priority />
+              </div>
+              <div className="w-px h-12 bg-slate-300" />
+              <div className="bg-white rounded-xl p-2 border border-slate-200/80 shadow-sm">
+                <Image src="/bagong_pilipinas_logo.png" alt="Bagong Pilipinas" width={58} height={58} className="object-contain w-[58px] h-[58px]" priority />
               </div>
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-1">AICS System</h1>

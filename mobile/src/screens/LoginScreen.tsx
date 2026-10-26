@@ -170,6 +170,14 @@ export default function LoginScreen({ navigation }: any) {
                   style={s.logoImage} 
                 />
               </View>
+              <View style={s.logoDivider} />
+              <View style={[s.logoBox, s.logoBoxWide]}>
+                <Image 
+                  source={require('../../assets/bagong_pilipinas_logo.png')} 
+                  style={s.logoImage} 
+                  accessibilityLabel="Bagong Pilipinas Logo"
+                />
+              </View>
             </View>
 
             {/* System Title & Subtitle */}
@@ -480,7 +488,7 @@ const styles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: 12,
     marginBottom: 20,
     marginTop: Platform.OS === 'ios' ? 20 : 10,
   },
@@ -504,6 +512,11 @@ const styles = (colors: any) => StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'contain',
+  },
+  // Wide-format logo (Bagong Pilipinas): same card size, less inner padding
+  // so it matches the perceived size of the square logos.
+  logoBoxWide: {
+    padding: 4,
   },
   logoDivider: {
     width: 1.5,
