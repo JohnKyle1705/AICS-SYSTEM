@@ -175,7 +175,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Requirements" component={RequirementsScreen}
               options={{ ...stackOptions, title: 'Requirements Setup' }} />
             <Stack.Screen name="Reports" component={ReportsScreen}
-              options={{ ...stackOptions, title: 'System Reports' }} />
+              options={{ ...stackOptions, title: 'Reports & Analytics' }} />
             <Stack.Screen name="FundsDashboard" component={FundsDashboardScreen}
               options={{ ...stackOptions, title: 'Fund Tracking' }} />
             <Stack.Screen name="FundTransactions" component={FundTransactionsScreen}

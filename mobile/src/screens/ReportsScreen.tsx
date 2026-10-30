@@ -105,14 +105,17 @@ export default function ReportsScreen({ navigation }: any) {
     totalAmount: scopedData.reduce((s, r) => s + Number(r.amount_approved || 0), 0),
   }
 
+  const legendTextColor = isDark ? '#cbd5e1' : '#334155'
+  const chartSurface = isDark ? '#0f172a' : '#ffffff'
+
   // Pie data - by type
   const byTypePie = ASSISTANCE_TYPES
-    .map((t, i) => ({ name: t, population: filtered.filter(r => r.assistance_type === t).length, color: ASSISTANCE_COLORS[t], legendFontColor: colors.textSecondary, legendFontSize: 12 }))
+    .map((t) => ({ name: t, population: filtered.filter(r => r.assistance_type === t).length, color: ASSISTANCE_COLORS[t], legendFontColor: legendTextColor, legendFontSize: 12 }))
     .filter(x => x.population > 0)
 
   // Donut data - by status
   const byStatusPie = Object.entries(STATUS_COLORS)
-    .map(([name, color]) => ({ name, population: filtered.filter(r => r.status === name).length, color, legendFontColor: colors.textSecondary, legendFontSize: 12 }))
+    .map(([name, color]) => ({ name, population: filtered.filter(r => r.status === name).length, color, legendFontColor: legendTextColor, legendFontSize: 12 }))
     .filter(x => x.population > 0)
 
   // Bar chart - top 5 barangays
@@ -120,31 +123,32 @@ export default function ReportsScreen({ navigation }: any) {
     .map(b => ({ name: b.slice(0, 6), count: filtered.filter(r => r.beneficiaries?.barangay === b).length }))
     .filter(x => x.count > 0).sort((a, b) => b.count - a.count).slice(0, 5)
 
-  // Line chart - last 6 months
+  // Line chart - last 6 months (synchronized with Web Declined toggle)
   const months = getLastNMonths(6)
   const monthlyLabels = months.map(m => m.label)
+  const monthlyBase = includeDeclined ? allData : allData.filter(r => r.status !== 'Declined')
   const monthlyDataSets = months.map(m =>
-    allData.filter(r => {
+    monthlyBase.filter(r => {
       const d = new Date(r.created_at)
       return d.getFullYear() === m.year && d.getMonth() === m.month
     }).length
   )
   const monthlyApproved = months.map(m =>
-    allData.filter(r => {
+    monthlyBase.filter(r => {
       const d = new Date(r.created_at)
       return d.getFullYear() === m.year && d.getMonth() === m.month && ['Approved', 'Released'].includes(r.status)
     }).length
   )
 
   const chartConfig = {
-    backgroundColor: colors.card,
-    backgroundGradientFrom: colors.card,
-    backgroundGradientTo: colors.card,
+    backgroundColor: chartSurface,
+    backgroundGradientFrom: chartSurface,
+    backgroundGradientTo: chartSurface,
     decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-    labelColor: () => colors.textSecondary,
+    color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
+    labelColor: (opacity = 1) => isDark ? `rgba(203, 213, 225, ${opacity})` : `rgba(51, 65, 85, ${opacity})`,
     style: { borderRadius: 16 },
-    propsForDots: { r: '4', strokeWidth: '2', stroke: '#3b82f6' },
+    propsForDots: { r: '4', strokeWidth: '2', stroke: '#2563eb' },
   }
 
   const s = styles(colors, isDark)
@@ -177,10 +181,20 @@ export default function ReportsScreen({ navigation }: any) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterBar} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
         {/* Declined toggle chip */}
         <TouchableOpacity
-          style={[s.chip, includeDeclined && { backgroundColor: '#fef2f2', borderColor: '#ef4444' }]}
+          style={[
+            s.chip,
+            includeDeclined
+              ? { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.18)' : '#fef2f2', borderColor: isDark ? '#f87171' : '#dc2626' }
+              : { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5', borderColor: isDark ? '#34d399' : '#059669' },
+          ]}
           onPress={() => { setIncludeDeclined(v => !v); setFilterStatus('') }}
         >
-          <Text style={[s.chipText, includeDeclined && { color: '#ef4444' }]}>
+          <Text
+            style={[
+              s.chipText,
+              { color: includeDeclined ? (isDark ? '#f87171' : '#dc2626') : (isDark ? '#34d399' : '#047857') },
+            ]}
+          >
             {includeDeclined ? t('reports_declinedVisible') : t('reports_declinedHidden')}
           </Text>
         </TouchableOpacity>
@@ -188,40 +202,43 @@ export default function ReportsScreen({ navigation }: any) {
           <Text style={[s.chipText, !filterType && s.chipTextActive]}>{t('reports_allTypes')}</Text>
         </TouchableOpacity>
 
-        {ASSISTANCE_TYPES.map(t => (
-          <TouchableOpacity key={t} style={[s.chip, filterType === t && { backgroundColor: ASSISTANCE_COLORS[t] + '30', borderColor: ASSISTANCE_COLORS[t] }]} onPress={() => setFilterType(filterType === t ? '' : t)}>
-            <Text style={[s.chipText, filterType === t && { color: ASSISTANCE_COLORS[t] }]}>{t}</Text>
-          </TouchableOpacity>
-        ))}
-        {['Pending', 'Approved', 'Released', ...(includeDeclined ? ['Declined'] : [])].map(st => (
-          <TouchableOpacity key={st} style={[s.chip, filterStatus === st && { backgroundColor: STATUS_COLORS[st] + '30', borderColor: STATUS_COLORS[st] }]} onPress={() => setFilterStatus(filterStatus === st ? '' : st)}>
-            <Text style={[s.chipText, filterStatus === st && { color: STATUS_COLORS[st] }]}>{st}</Text>
-          </TouchableOpacity>
-        ))}
+        {ASSISTANCE_TYPES.map(typeName => {
+          const activeText = typeName === 'Medical' ? (isDark ? '#60a5fa' : '#1d4ed8') : (isDark ? '#cbd5e1' : '#334155')
+          return (
+            <TouchableOpacity key={typeName} style={[s.chip, filterType === typeName && { backgroundColor: ASSISTANCE_COLORS[typeName] + '22', borderColor: activeText }]} onPress={() => setFilterType(filterType === typeName ? '' : typeName)}>
+              <Text style={[s.chipText, filterType === typeName && { color: activeText, fontWeight: '700' }]}>{typeName}</Text>
+            </TouchableOpacity>
+          )
+        })}
+        {['Pending', 'Approved', 'Released', ...(includeDeclined ? ['Declined'] : [])].map(st => {
+          const stTextColor = (STATUS_TEXT_COLORS[st] || STATUS_TEXT_COLORS.Pending)[isDark ? 'dark' : 'light']
+          return (
+            <TouchableOpacity key={st} style={[s.chip, filterStatus === st && { backgroundColor: STATUS_COLORS[st] + '22', borderColor: stTextColor }]} onPress={() => setFilterStatus(filterStatus === st ? '' : st)}>
+              <Text style={[s.chipText, filterStatus === st && { color: stTextColor, fontWeight: '700' }]}>{st}</Text>
+            </TouchableOpacity>
+          )
+        })}
       </ScrollView>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        {/* Record Summary Line (matches Web) */}
+        <Text style={s.summaryMeta}>
+          {filtered.length} of {allData.length} records ·{' '}
+          <Text style={{ color: includeDeclined ? (isDark ? '#fbbf24' : '#d97706') : (isDark ? '#34d399' : '#059669'), fontWeight: '700' }}>
+            {includeDeclined ? t('reports_allIncluded') : t('reports_declinedExcluded')}
+          </Text>
+        </Text>
 
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <>
-            {/* Amount Banner */}
-            <View style={s.amountBanner}>
-              <Feather name="trending-up" size={28} color="rgba(255,255,255,0.8)" />
-              <View style={{ marginLeft: 16 }}>
-                <Text style={s.amountLabel}>{t('reports_totalAmount')}</Text>
-                <Text style={s.amountValue}>₱{stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-              </View>
-            </View>
-
-
             {/* Stat Grid - Clickable Summary Cards */}
             <View style={s.grid}>
               {[
-                { label: t('all'), value: stats.total, color: '#7c3aed', bg: isDark ? '#2d2442' : '#f5f3ff', icon: 'file-text', status: 'All' },
-                { label: t('dashboard_approved'), value: stats.approved, color: '#059669', bg: isDark ? '#143d2c' : '#ecfdf5', icon: 'check-circle', status: 'Approved' },
-                { label: t('dashboard_pending'), value: stats.pending, color: '#d97706', bg: isDark ? '#3d3014' : '#fffbeb', icon: 'clock', status: 'Pending' },
-                { label: t('dashboard_declined'), value: stats.declined, color: '#dc2626', bg: isDark ? '#3d1414' : '#fef2f2', icon: 'x-circle', status: 'Declined' },
+                { label: t('dashboard_totalRequests'), value: stats.total, color: isDark ? '#a78bfa' : '#7c3aed', bg: isDark ? '#2d2442' : '#f5f3ff', icon: 'file-text', status: 'All' },
+                { label: t('dashboard_approved'), value: stats.approved, color: isDark ? '#34d399' : '#059669', bg: isDark ? '#143d2c' : '#ecfdf5', icon: 'check-circle', status: 'Approved' },
+                { label: t('dashboard_pending'), value: stats.pending, color: isDark ? '#fbbf24' : '#d97706', bg: isDark ? '#3d3014' : '#fffbeb', icon: 'clock', status: 'Pending' },
+                { label: t('dashboard_declined'), value: stats.declined, color: isDark ? '#f87171' : '#dc2626', bg: isDark ? '#3d1414' : '#fef2f2', icon: 'x-circle', status: 'Declined' },
               ].map(({ label, value, color, bg, icon, status }) => (
                 <TouchableOpacity
                   key={label}
@@ -232,10 +249,21 @@ export default function ReportsScreen({ navigation }: any) {
                   <View style={[s.statIcon, { backgroundColor: bg }]}>
                     <Feather name={icon as any} size={18} color={color} />
                   </View>
-                  <Text style={[s.statValue, { color }]}>{value}</Text>
                   <Text style={s.statLabel}>{label}</Text>
+                  <Text style={[s.statValue, { color: colors.text }]}>{value}</Text>
                 </TouchableOpacity>
               ))}
+            </View>
+
+            {/* Amount Banner */}
+            <View style={s.amountBanner}>
+              <View style={s.amountIconBox}>
+                <Feather name="trending-up" size={24} color="#ffffff" />
+              </View>
+              <View style={{ marginLeft: 14, flex: 1 }}>
+                <Text style={s.amountLabel}>{t('reports_totalAmount')}</Text>
+                <Text style={s.amountValue}>₱{stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+              </View>
             </View>
 
             {/* Type breakdown list */}
@@ -398,14 +426,16 @@ const styles = (colors: any, isDark: boolean) => StyleSheet.create({
   chipTextActive: { color: colors.primary },
   scroll: { flex: 1 },
   content: { padding: 16 },
-  amountBanner: { borderRadius: 20, padding: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 16, backgroundColor: '#3b82f6', shadowColor: '#3b82f6', shadowOpacity: 0.3, shadowRadius: 12, elevation: 5 },
-  amountLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600', marginBottom: 4 },
-  amountValue: { color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  summaryMeta: { fontSize: 13, color: colors.textSecondary, fontWeight: '500', marginBottom: 14 },
+  amountBanner: { borderRadius: 20, padding: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: '#2563eb', borderWidth: 1, borderColor: '#4f46e5', shadowColor: '#2563eb', shadowOpacity: 0.28, shadowRadius: 12, elevation: 5 },
+  amountIconBox: { width: 46, height: 46, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)', justifyContent: 'center', alignItems: 'center' },
+  amountLabel: { color: 'rgba(255,255,255,0.92)', fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  amountValue: { color: '#ffffff', fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
   statCard: { width: '47.5%', backgroundColor: colors.card, borderRadius: 14, padding: 14, borderLeftWidth: 4, borderWidth: 1, borderColor: colors.border },
-  statIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  statValue: { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
-  statLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 2, fontWeight: '500' },
+  statIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  statValue: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
+  statLabel: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
   sectionSubtitle: { fontSize: 12, color: colors.textSecondary, marginBottom: 12 },
   typeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },

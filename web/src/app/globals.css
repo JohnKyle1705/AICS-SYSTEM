@@ -3,6 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  color-scheme: light;
   --color-primary: #2563eb;
   --color-primary-light: #3b82f6;
   --color-primary-dark: #1d4ed8;
@@ -30,6 +31,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --color-primary: #3b82f6;
   --color-primary-light: #60a5fa;
   --color-primary-dark: #2563eb;
@@ -176,23 +178,25 @@ body {
 }
 
 /* ── Card Styles ────────────────────────────────── */
-.card {
-  background: var(--color-surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 20px;
-  border: 1px solid var(--color-border);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
+@layer components {
+  .card {
+    background-color: var(--color-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 
-.card:hover {
-  border-color: var(--color-border-light);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 0 0 20px rgba(37, 99, 235, 0.04);
-}
+  .card:hover {
+    border-color: var(--color-border-light);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 0 0 20px rgba(37, 99, 235, 0.04);
+  }
 
-.card-interactive:hover {
-  transform: translateY(-3px);
+  .card-interactive:hover {
+    transform: translateY(-3px);
+  }
 }
 
 /* ── Stat Card ──────────────────────────────────── */
@@ -317,6 +321,23 @@ body {
 
 /* ── Form Inputs ────────────────────────────────── */
 input, textarea, select {
+  color: var(--color-text);
+}
+
+input[type="date"] {
+  color-scheme: light;
+}
+
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
   color: var(--color-text);
 }
 

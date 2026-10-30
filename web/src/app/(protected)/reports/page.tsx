@@ -27,10 +27,10 @@ const STATUS_COLORS: Record<string, string> = {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl px-4 py-3 shadow-xl text-sm">
+      <div className="bg-white dark:bg-slate-900 border border-[var(--color-border)] rounded-xl px-4 py-3 shadow-xl text-sm">
         {label && <p className="font-semibold text-[var(--color-text)] mb-1">{label}</p>}
         {payload.map((p: any, i: number) => (
-          <p key={i} style={{ color: p.color }} className="font-medium">
+          <p key={i} style={{ color: p.color || p.payload?.fill || 'var(--color-text)' }} className="font-semibold">
             {p.name}: {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}
           </p>
         ))}
@@ -203,10 +203,10 @@ export default function ReportsPage() {
   }
 
   const statCards = [
-    { label: t('dashboard_totalRequests'), value: stats.total, icon: FileText, color: '#7c3aed', bg: '#f5f3ff', status: 'All' },
-    { label: t('dashboard_approved'), value: stats.approved, icon: CheckCircle, color: '#059669', bg: '#ecfdf5', status: 'Approved' },
-    { label: t('dashboard_pending'), value: stats.pending, icon: Clock, color: '#d97706', bg: '#fffbeb', status: 'Pending' },
-    { label: t('dashboard_declined'), value: stats.declined, icon: XCircle, color: '#dc2626', bg: '#fef2f2', status: 'Declined' },
+    { label: t('dashboard_totalRequests'), value: stats.total, icon: FileText, iconClass: 'text-violet-600 dark:text-violet-400', bgClass: 'bg-violet-50 dark:bg-violet-950/50', status: 'All' },
+    { label: t('dashboard_approved'), value: stats.approved, icon: CheckCircle, iconClass: 'text-emerald-600 dark:text-emerald-400', bgClass: 'bg-emerald-50 dark:bg-emerald-950/50', status: 'Approved' },
+    { label: t('dashboard_pending'), value: stats.pending, icon: Clock, iconClass: 'text-amber-600 dark:text-amber-400', bgClass: 'bg-amber-50 dark:bg-amber-950/50', status: 'Pending' },
+    { label: t('dashboard_declined'), value: stats.declined, icon: XCircle, iconClass: 'text-red-600 dark:text-red-400', bgClass: 'bg-red-50 dark:bg-red-950/50', status: 'Declined' },
   ]
 
 
@@ -219,8 +219,8 @@ export default function ReportsPage() {
           <p className="text-[var(--color-text-secondary)] text-sm mt-0.5">
             {filteredData.length} of {allData.length} records · 
             {includeDeclined 
-              ? <span className="text-amber-500 font-medium"> {t('reports_allIncluded')}</span> 
-              : <span className="text-emerald-600 font-medium"> {t('reports_declinedExcluded')}</span>}
+              ? <span className="text-amber-600 dark:text-amber-400 font-semibold"> {t('reports_allIncluded')}</span> 
+              : <span className="text-emerald-600 dark:text-emerald-400 font-semibold"> {t('reports_declinedExcluded')}</span>}
           </p>
         </div>
 
@@ -236,7 +236,7 @@ export default function ReportsPage() {
 
       {/* Stat Cards - Interactive Navigation */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map(({ label, value, icon: Icon, color, bg, status }) => (
+        {statCards.map(({ label, value, icon: Icon, iconClass, bgClass, status }) => (
           <Link
             key={label}
             href={status === 'All' ? '/requests' : `/requests?status=${status}`}
@@ -245,8 +245,8 @@ export default function ReportsPage() {
             tabIndex={0}
             title={`View ${label} AICS requests`}
           >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110" style={{ background: bg }}>
-              <Icon size={22} style={{ color }} />
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${bgClass}`}>
+              <Icon size={22} className={iconClass} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[var(--color-text-secondary)] text-xs font-medium">{label}</p>
@@ -257,11 +257,16 @@ export default function ReportsPage() {
       </div>
 
       {/* Total Amount Banner */}
-      <div className="card p-5 flex items-center gap-4 bg-linear-to-r from-blue-600 to-violet-600 border-0">
-        <TrendingUp size={28} className="text-white/80" />
+      <div
+        className="rounded-[20px] p-5 flex items-center gap-4 bg-blue-600 bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-600/20"
+        style={{ background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' }}
+      >
+        <div className="w-12 h-12 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+          <TrendingUp size={24} className="text-white" />
+        </div>
         <div>
-          <p className="text-white/70 text-sm font-medium">{t('reports_totalAmount')}</p>
-          <p className="text-3xl font-bold text-white">
+          <p className="text-sm font-semibold" style={{ color: 'rgba(255, 255, 255, 0.92)' }}>{t('reports_totalAmount')}</p>
+          <p className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: '#ffffff' }}>
             ₱{stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
@@ -344,10 +349,10 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={monthlyData} margin={{ right: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-[var(--color-text-secondary)] font-medium">{value}</span>} />
                   <Line type="monotone" dataKey="count" name="Total" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4, fill: '#3b82f6' }} />
                   <Line type="monotone" dataKey="approved" name="Approved" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4, fill: '#10b981' }} />
                 </LineChart>
@@ -367,7 +372,7 @@ export default function ReportsPage() {
                     <Pie data={byType} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
                       {byType.map(entry => <Cell key={entry.name} fill={(ASSISTANCE_COLORS as any)[entry.name] ?? '#94a3b8'} />)}
                     </Pie>
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-[var(--color-text-secondary)] font-medium">{value}</span>} />
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -390,7 +395,7 @@ export default function ReportsPage() {
                     <Pie data={byStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={50}>
                       {byStatus.map(entry => <Cell key={entry.name} fill={STATUS_COLORS[entry.name] ?? '#94a3b8'} />)}
                     </Pie>
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-[var(--color-text-secondary)] font-medium">{value}</span>} />
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -408,8 +413,8 @@ export default function ReportsPage() {
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={byBarangay} layout="vertical" margin={{ left: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#64748b' }} width={72} axisLine={false} tickLine={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} width={72} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="count" name="Requests" fill="#3b82f6" radius={[0, 6, 6, 0]} />
                   </BarChart>
@@ -450,14 +455,14 @@ export default function ReportsPage() {
                         </td>
                         <td>{r.beneficiaries?.barangay}</td>
                         <td>
-                          <span className="badge" style={{ background: `${(ASSISTANCE_COLORS as any)[r.assistance_type]}20`, color: (ASSISTANCE_COLORS as any)[r.assistance_type] }}>
+                          <span className={`badge ${r.assistance_type === 'Medical' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-800/60' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`}>
                             {r.assistance_type}
                           </span>
                         </td>
                         <td>
                           {assess ? (
                             <div>
-                              <span className={`inline-block font-semibold text-xs ${assess.recommendation === 'Approve' ? 'text-emerald-600' : 'text-red-600'}`}>
+                              <span className={`inline-block font-semibold text-xs ${assess.recommendation === 'Approve' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {assess.recommendation}
                               </span>
                               {assess.assessor_name && (
@@ -471,7 +476,7 @@ export default function ReportsPage() {
                           )}
                         </td>
                         <td>
-                          <span className="badge" style={{ background: `${STATUS_COLORS[r.status]}20`, color: STATUS_COLORS[r.status] }}>
+                          <span className={`badge badge-${(r.status || 'pending').toLowerCase()}`}>
                             {r.status}
                           </span>
                         </td>
@@ -513,13 +518,13 @@ export default function ReportsPage() {
                         {r.beneficiaries?.barangay ? `Brgy. ${r.beneficiaries?.barangay}` : '—'}
                       </p>
                     </div>
-                    <span className="badge" style={{ background: `${STATUS_COLORS[r.status]}20`, color: STATUS_COLORS[r.status] }}>
+                    <span className={`badge badge-${(r.status || 'pending').toLowerCase()}`}>
                       {r.status}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--color-border)]">
-                    <span className="badge" style={{ background: `${(ASSISTANCE_COLORS as any)[r.assistance_type]}20`, color: (ASSISTANCE_COLORS as any)[r.assistance_type] }}>
+                    <span className={`badge ${r.assistance_type === 'Medical' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-800/60' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`}>
                       {r.assistance_type}
                     </span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">

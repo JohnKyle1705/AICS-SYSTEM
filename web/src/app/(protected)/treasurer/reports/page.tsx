@@ -334,21 +334,21 @@ export default function TreasurerReportsPage() {
       {/* ── Summary Financial Cards ───────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card p-5 border-l-4 border-blue-500">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Total Budget Allocated</span>
+          <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Total Budget Allocated</span>
           <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{formatPHP(totalAllocated)}</p>
-          <span className="text-[11px] text-slate-500 mt-1 block">Full Municipal AICS Appropriation</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Full Municipal AICS Appropriation</span>
         </div>
 
         <div className="card p-5 border-l-4 border-orange-500">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Total Assistance Disbursed</span>
+          <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Total Assistance Disbursed</span>
           <p className="text-2xl font-black text-orange-600 dark:text-orange-400 mt-1">{formatPHP(totalDisbursed)}</p>
-          <span className="text-[11px] text-slate-500 mt-1 block">Filtered Disbursement Total</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Filtered Disbursement Total</span>
         </div>
 
         <div className="card p-5 border-l-4 border-emerald-500">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Treasury Available Balance</span>
+          <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Treasury Available Balance</span>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{formatPHP(totalAvailable)}</p>
-          <span className="text-[11px] text-slate-500 mt-1 block">Current Municipal Treasury Reserve</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Current Municipal Treasury Reserve</span>
         </div>
       </div>
 

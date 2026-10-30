@@ -277,7 +277,9 @@ const translations = {
     users_addSuccess: 'User has been added successfully.',
 
     // ── Reports Screen ───────────────────────────────────────
-    reports_title: 'Analytics & Reports',
+    reports_title: 'Reports & Analytics',
+    reports_allIncluded: 'All statuses included',
+    reports_declinedExcluded: 'Declined excluded',
     reports_tabOverview: 'Overview',
     reports_tabCharts: 'Charts',
     reports_tabTable: 'Table',
